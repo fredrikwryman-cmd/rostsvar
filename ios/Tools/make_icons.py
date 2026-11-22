@@ -36,18 +36,23 @@ INK = (0x3f, 0xe0, 0x8a)
 # translate(0,40) inräknad. Öronens hörn är uppmätta efter rotationen.
 SYMBOL = (376.0, 271.8, 648.0, 756.0)
 
-# Platserna i ikonuppsättningen. Pixelstorleken är punkter gånger skalan.
+# Platserna i ikonuppsättningen: (idiom, platform, punkter bredd, höjd, skala).
+# Pixelstorleken är punkter gånger skalan.
+#
+# Uppmätt mot actool i Xcode 26.2, inte gissat. 27x20 och 32x24 måste ha
+# idiom "universal" OCH "platform": "ios". Med idiom iphone eller ipad slängs
+# de tyst, och med universal utan platform slängs de också tyst. Det var
+# därför App Store Connect sa "Missing App Icon" för 54x40, 64x48, 81x60
+# och 96x72. De större platserna har inget platform-fält.
 MESSAGE_SIZES = [
-    ("iphone", 27, 20, 2),   # 54x40
-    ("iphone", 27, 20, 3),   # 81x60
-    ("iphone", 32, 24, 2),   # 64x48
-    ("iphone", 32, 24, 3),   # 96x72
-    ("iphone", 60, 45, 2),   # 120x90
-    ("iphone", 60, 45, 3),   # 180x135
-    ("ipad", 27, 20, 2),     # 54x40
-    ("ipad", 32, 24, 2),     # 64x48
-    ("ipad", 67, 50, 2),     # 134x100
-    ("ipad", 74, 55, 2),     # 148x110
+    ("universal", "ios", 27, 20, 2),   # 54x40
+    ("universal", "ios", 27, 20, 3),   # 81x60
+    ("universal", "ios", 32, 24, 2),   # 64x48
+    ("universal", "ios", 32, 24, 3),   # 96x72
+    ("iphone", None, 60, 45, 2),       # 120x90
+    ("iphone", None, 60, 45, 3),       # 180x135
+    ("ipad", None, 67, 50, 2),         # 134x100
+    ("ipad", None, 74, 55, 2),         # 148x110
 ]
 
 
@@ -151,17 +156,18 @@ def message_icon() -> None:
         }
     )
 
-    for idiom, points_w, points_h, scale in MESSAGE_SIZES:
+    for idiom, platform, points_w, points_h, scale in MESSAGE_SIZES:
         name = f"{idiom}-{points_w}x{points_h}@{scale}x.png"
         write(mark(points_w * scale, points_h * scale), os.path.join(folder, name))
-        images.append(
-            {
-                "filename": name,
-                "idiom": idiom,
-                "scale": f"{scale}x",
-                "size": f"{points_w}x{points_h}",
-            }
-        )
+        entry = {
+            "filename": name,
+            "idiom": idiom,
+            "scale": f"{scale}x",
+            "size": f"{points_w}x{points_h}",
+        }
+        if platform:
+            entry["platform"] = platform
+        images.append(entry)
 
     write_json(
         {"images": images, "info": {"author": "rostsvar", "version": 1}},
@@ -173,10 +179,14 @@ def message_icon() -> None:
     )
 
     # Varje plats i Contents.json ska ha en fil på disk, utan hål.
-    missing = [i["filename"] for i in images
-               if not os.path.exists(os.path.join(folder, i["filename"]))]
+    wanted = {i["filename"] for i in images} | {"Contents.json"}
+    for stray in sorted(set(os.listdir(folder)) - wanted):
+        os.remove(os.path.join(folder, stray))
+        print("tog bort överbliven fil", stray)
+
+    missing = [name for name in wanted if not os.path.exists(os.path.join(folder, name))]
     assert not missing, missing
-    print(f"{len(images)} platser, alla med fil.")
+    print(f"{len(images)} platser, alla med fil, inga överblivna filer.")
 
 
 if __name__ == "__main__":
