@@ -46,16 +46,45 @@ jobs:
           xcodebuild -project Rostsvar.xcodeproj -scheme Rostsvar \
             -showBuildSettings -configuration Release 2>/dev/null \
             | grep -E 'TARGETED_DEVICE_FAMILY' | sort -u
-          echo "--- Apples mall för iMessage App Icon ---"
-          find /Applications/Xcode*.app/Contents/Developer/Library/Xcode/Templates \
-            -name 'Contents.json' -path '*stickersiconset*' 2>/dev/null | while read -r f; do
-              echo "=== $f"; cat "$f"
-            done
-          echo "--- Apples mall för AppIcon (iOS app) ---"
-          find /Applications/Xcode*.app/Contents/Developer/Library/Xcode/Templates \
-            -name 'Contents.json' -path '*AppIcon.appiconset*' 2>/dev/null | head -2 | while read -r f; do
-              echo "=== $f"; cat "$f"
-            done
+
+          src="Messages/Assets.xcassets/iMessage App Icon.stickersiconset"
+          base='
+            {"filename":"iphone-60x45@2x.png","idiom":"iphone","scale":"2x","size":"60x45"},
+            {"filename":"iphone-60x45@3x.png","idiom":"iphone","scale":"3x","size":"60x45"},
+            {"filename":"ipad-67x50@2x.png","idiom":"ipad","scale":"2x","size":"67x50"},
+            {"filename":"ipad-74x55@2x.png","idiom":"ipad","scale":"2x","size":"74x55"},
+            {"filename":"iphone-27x20@2x.png","idiom":"universal","scale":"2x","size":"27x20"},
+            {"filename":"iphone-27x20@3x.png","idiom":"universal","scale":"3x","size":"27x20"},
+            {"filename":"iphone-32x24@2x.png","idiom":"universal","scale":"2x","size":"32x24"},
+            {"filename":"iphone-32x24@3x.png","idiom":"universal","scale":"3x","size":"32x24"}'
+
+          probe () {
+            name="$1"; extra="$2"
+            dir="/tmp/$name.xcassets/iMessage App Icon.stickersiconset"
+            rm -rf "/tmp/$name.xcassets"; mkdir -p "$dir"
+            cp "$src"/*.png "$dir/"
+            printf '{"images":[%s,%s],"info":{"author":"probe","version":1}}' "$base" "$extra" > "$dir/Contents.json"
+            echo "===================== $name"
+            python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$dir/Contents.json" || return 0
+            xcrun actool "/tmp/$name.xcassets" --compile "/tmp/$name-out" \
+              --output-format human-readable-text --notices --warnings \
+              --output-partial-info-plist "/tmp/$name.plist" \
+              --app-icon 'iMessage App Icon' --include-sticker-content \
+              --stickers-icon-role extension --development-region en \
+              --target-device iphone --minimum-deployment-target 16.0 \
+              --platform iphoneos 2>&1 | grep -viE '^/\*|^$' | head -20
+            echo "--- genererad plist ---"
+            plutil -p "/tmp/$name.plist" 2>/dev/null | head -30
+          }
+
+          mkdir -p /tmp
+          probe P1 '{"filename":"Marketing-1024x1024.png","idiom":"ios-marketing","platform":"ios","scale":"1x","size":"1024x1024"},
+                    {"filename":"Marketing-1024x768.png","idiom":"ios-marketing","platform":"ios","scale":"1x","size":"1024x768"}'
+          probe P2 '{"filename":"Marketing-1024x1024.png","idiom":"universal","platform":"ios","size":"1024x1024"},
+                    {"filename":"Marketing-1024x768.png","idiom":"universal","platform":"ios","size":"1024x768"}'
+          probe P3 '{"filename":"Marketing-1024x1024.png","idiom":"ios-marketing","platform":"ios","scale":"1x","size":"1024x1024"},
+                    {"filename":"Marketing-1024x768.png","idiom":"ios-marketing","scale":"1x","size":"1024x768"}'
+          probe P4 '{"filename":"Marketing-1024x1024.png","idiom":"ios-marketing","platform":"ios","scale":"1x","size":"1024x1024"}'
 
       - name: Bygg osignerat för iPhone
         run: |
