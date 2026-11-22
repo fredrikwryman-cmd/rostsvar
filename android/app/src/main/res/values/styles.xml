@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mörkt tema, utan namnlist. Fönstret målas svart redan innan skärmen
+         ritas, så att appen aldrig blinkar vitt vid start. -->
+    <style name="TapAndTalk" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/svart</item>
+        <item name="android:colorBackground">@color/svart</item>
+        <item name="android:statusBarColor">@color/svart</item>
+        <item name="android:navigationBarColor">@color/svart</item>
+        <item name="android:colorAccent">@color/gron</item>
+        <item name="android:colorControlActivated">@color/gron</item>
+        <item name="android:textColorPrimary">@color/ljus</item>
+    </style>
+</resources>

@@ -22,13 +22,13 @@ svenska. Hela testinstruktionen att skicka med filen står i
 [TESTA-ANDROID.md](TESTA-ANDROID.md).
 
 1. Öppna APK-filen på telefonen och installera. Android kan be dig godkänna installation från den app som öppnar filen.
-2. Öppna **Tap & Talk**, tillåt **visning över appar** och **mikrofon**, och tryck på **Starta flytande knapp**. På vissa telefoner behöver du välja Tap & Talk i systemets applista.
-3. För direkt infogning, välj **Aktivera tangentbord** och aktivera Tap & Talk. Gå tillbaka och välj det via **Välj tangentbord**. Det lilla rösttangentbordet har en knapp för att byta tillbaka.
-4. Öppna en chatt, tryck i skrivfältet så att Tap & Talks tangentbord visas, tryck på den flytande **Tala**-knappen och diktera. Pausa eller tryck på **Klar**. Välj **Infoga i chatten**, granska utkastet i chatten och tryck på chattens skickaknapp.
-5. Om du behåller ditt vanliga tangentbord använder du **Kopiera** och sedan **Klistra in** i chatten. Du kan också kopiera om skrivfältet har bytts under dikteringen.
-6. Dra knappen till önskad plats. Stäng av den i Tap & Talk eller via appens avisering.
+2. Öppna **Tap & Talk**. Hela appen är en skärm: en stor **Tala**-knapp, ett textfält och **Skicka**.
+3. Tryck på **Tala**. Första gången frågar Android om mikrofonen — välj **Tillåt**. Säger du nej står det på skärmen vad som fattas, och knappen leder till inställningarna.
+4. Diktera på svenska. Texten fylls i fältet medan du talar. Tryck på **Klar** när du är färdig, eller låt taltjänsten själv sluta lyssna.
+5. Läs igenom texten och rätta den för hand om du vill. Ett nytt tryck på **Tala om** lägger till mer tal efter den text som redan står där.
+6. Tryck på **Skicka**. Androids egen delningsruta öppnas och du väljer själv vilken app texten ska till. Appen skickar aldrig något på egen hand.
 
-Android och den öppna appen styr var överlagringen får visas. Infoga visas endast för ett aktivt textfält i Tap & Talks tangentbord. Appen läser inga chattloggar och sparar ingen meddelandehistorik. Det du kopierar överlämnas till systemets urklipp. Telefonens taltjänst kan använda nätet.
+Appen begär bara mikrofonen. Den har inget konto, ingen analys och når inget nät själv — men telefonens taltjänst, som gör om talet till text, kan använda internet. Inget spelas in och ingen text sparas; stänger du appen är fältet tomt nästa gång.
 
 ## iMessage · inbyggt tillägg
 
@@ -79,6 +79,10 @@ python build_debug.py
 
 Resultatet hamnar i `build/Tap-and-Talk-android-test.apk`. Byggskriptet skapar en lokal testnyckel vid första körningen. En lokalt ombyggd APK kan därför ha en annan signatur än den medföljande.
 
+Appikonen skapas av `android/tools/make_icons.py` (Python med Pillow) och ligger färdig i repot. Den ritar samma kaninmikrofon som iOS-ikonen, men i kvadratisk variant och i Androids lager: en bakgrund, en symbol och en helbild per täthet. Kör skriptet igen bara om grafiken ska bytas.
+
+**Actions → Bygg Tap & Talk för Android (test-APK) → Run workflow** gör samma bygge på en Linux-byggare och lägger APK:n som artefakt. Det bygget använder Gradle och Androids vanliga felsökningsnyckel.
+
 ## Verifieringsstatus
 
 Håll isär de tre stegen. En rad ändras först när steget faktiskt är gjort.
@@ -94,8 +98,11 @@ Xcode 16.4 och iOS 18.5 SDK. Noll varningar. Tillägget bäddas in i appen som
 `com.apple.message-payload-provider`. App- och iMessage-ikoner kompilerar utan
 ozonerade platser. 16 tester gröna på iPhone-simulator.
 
-**Android.** Koden har kompilerats och den paketerade APK-filens signatur har
-verifierats.
+**Android, uppmätt.** Lokalt bygge med Build Tools 36.0.0 mot Platform 35,
+utan fel. `Tap-and-Talk-android-test.apk` är 117 021 byte, versionCode 3, och
+innehåller en `classes.dex` med appens kod. Paketet begär ett enda tillstånd,
+`RECORD_AUDIO`, har en startbar aktivitet, `se.rostsvar.mobile.Home`, och en
+lagerikon i fem tätheter. Signaturen verifierad med apksigner (v3).
 
 **Ingenting är provat på en fysisk telefon.** Taligenkänning, mikrofonens
 beteende i Meddelanden och att ett tryck på Skicka ger exakt ett meddelande går
@@ -131,5 +138,6 @@ och att ett enda tryck på Skicka ger ett enda meddelande. Hela provlistan står
 - [Koppla genvägar till den flytande knappen](https://tidbits.com/2022/07/22/use-assistivetouch-for-customizable-shortcuts-on-the-iphone-and-ipad/)
 - [Apples guide till diktering](https://support.apple.com/sv-se/guide/iphone/iph2c0651d2/ios)
 - [Skicka text i en iMessage-konversation](https://developer.apple.com/documentation/messages/msconversation/sendtext(_:completionhandler:))
-- [Androids fönstertyper](https://developer.android.com/reference/android/view/WindowManager.LayoutParams#TYPE_APPLICATION_OVERLAY)
-- [Androids tangentbordsgränssnitt](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method)
+- [Androids taligenkänning, SpeechRecognizer](https://developer.android.com/reference/android/speech/SpeechRecognizer)
+- [Extrafälten till RecognizerIntent, bland annat språkval](https://developer.android.com/reference/android/speech/RecognizerIntent)
+- [Att skicka enkelt innehåll vidare med ACTION_SEND](https://developer.android.com/training/sharing/send)

@@ -1,20 +1,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <!-- Mikrofonen är det enda appen begär. Inget nät, ingen lagring, ingen
+         visning över andra appar. Taltjänsten frågas om den finns på
+         telefonen; svaret styr om Tala-knappen går att trycka på. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
+    <uses-feature android:name="android.hardware.microphone" android:required="false"/>
     <queries><intent><action android:name="android.speech.RecognitionService"/></intent></queries>
-    <application android:label="Tap &amp; Talk" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false">
-        <activity android:name=".Home" android:exported="true">
+    <application
+        android:label="Tap &amp; Talk"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:theme="@style/TapAndTalk"
+        android:allowBackup="false"
+        android:supportsRtl="true">
+        <activity
+            android:name=".Home"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <service android:name=".Bubble" android:exported="false" android:foregroundServiceType="microphone"/>
-        <service android:name=".VoiceKeys" android:label="Tap &amp; Talk" android:exported="true" android:permission="android.permission.BIND_INPUT_METHOD">
-            <intent-filter><action android:name="android.view.InputMethod"/></intent-filter>
-            <meta-data android:name="android.view.im" android:resource="@xml/keyboard"/>
-        </service>
     </application>
 </manifest>

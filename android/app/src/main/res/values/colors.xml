@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Svart bakgrund och grön accent. Grönt är kupolens färg i appikonen. -->
+<resources>
+    <color name="svart">#FF000000</color>
+    <color name="ljus">#FFF2F4F3</color>
+    <color name="gron">#FF3FE08A</color>
+    <color name="gron_djup">#FF16A35A</color>
+</resources>
