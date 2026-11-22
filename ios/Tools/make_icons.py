@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
-"""Genererar ikonerna för Tap & Talk: appikonen och iMessage-ikonerna.
+"""Genererar iMessage-tilläggets ikoner för Tap & Talk.
 
 Kör från mappen ios:
 
     python Tools/make_icons.py
 
-Skriptet skriver PNG-filer och Contents.json i App/Assets.xcassets och
-Messages/Assets.xcassets. Ikonerna sparas utan alfakanal, vilket App Store
-Connect kräver. Byt gärna ut dem mot riktig grafik senare; behåll bara
-filnamnen och Contents.json.
+Appikonen hör INTE hit. Den ritas ur Tools/appicon.svg av
+Tools/render_appicon.py och skrivs till App/Assets.xcassets. Det här
+skriptet rör bara Messages/Assets.xcassets.
 """
-
 from __future__ import annotations
 
 import json
@@ -117,29 +115,6 @@ def write_json(payload: dict, path: str) -> None:
     print("skrev", os.path.relpath(path, IOS).replace(os.sep, "/"))
 
 
-def app_icon() -> None:
-    folder = os.path.join(IOS, "App", "Assets.xcassets", "AppIcon.appiconset")
-    write(squircle(1024), os.path.join(folder, "AppIcon-1024.png"))
-    write_json(
-        {
-            "images": [
-                {
-                    "filename": "AppIcon-1024.png",
-                    "idiom": "universal",
-                    "platform": "ios",
-                    "size": "1024x1024",
-                }
-            ],
-            "info": {"author": "rostsvar", "version": 1},
-        },
-        os.path.join(folder, "Contents.json"),
-    )
-    write_json(
-        {"info": {"author": "rostsvar", "version": 1}},
-        os.path.join(IOS, "App", "Assets.xcassets", "Contents.json"),
-    )
-
-
 def message_icon() -> None:
     folder = os.path.join(
         IOS, "Messages", "Assets.xcassets", "iMessage App Icon.stickersiconset"
@@ -182,6 +157,5 @@ def message_icon() -> None:
 
 
 if __name__ == "__main__":
-    app_icon()
     message_icon()
     print("klart")
