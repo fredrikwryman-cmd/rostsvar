@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tangentbordets beskrivning för Android. Svensk layout, och raden
+     "byt tillbaka" i tangentbordet använder stödet för att växla vidare. -->
+<input-method xmlns:android="http://schemas.android.com/apk/res/android"
+    android:supportsSwitchingToNextInputMethod="true"
+    android:isDefault="false">
+    <subtype
+        android:label="Svenska"
+        android:imeSubtypeMode="keyboard"
+        android:imeSubtypeLocale="sv_SE"
+        android:languageTag="sv-SE"/>
+</input-method>

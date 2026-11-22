@@ -21,7 +21,7 @@ taltjänst med svenska installerad.
 Har du en tidigare version installerad uppgraderas den. Du behöver inte
 avinstallera först.
 
-## 2 · Hela appen är en skärm
+## 2 · Appens egen skärm
 
 Öppna **Tap & Talk**. Du ser tre saker:
 
@@ -61,7 +61,37 @@ trycker på appens egen skickaknapp.
 
 Gör gärna första försöket i en chatt med dig själv.
 
-## 6 · Det vi särskilt vill veta
+## 6 · Rösttangentbordet
+
+Det här är kärnan: diktera **där du redan skriver**, utan att gå via appen.
+
+Slå på tangentbordet en gång:
+
+1. **Inställningar → System → Språk och inmatning → Skärmtangentbord →
+   Hantera tangentbord.**
+2. Slå på **Tap & Talk · rösttangentbord**. Android varnar att ett tangentbord
+   kan se allt du skriver. Det är standardvarningen för alla tangentbord.
+   Tap & Talk loggar ingenting och skickar ingenting vidare.
+3. Öppna en chatt, tryck i skrivfältet och byt tangentbord med
+   tangentbordsikonen i navigeringsraden, eller genom att hålla in mellanslag i
+   ditt vanliga tangentbord.
+
+Sedan, i chatten:
+
+1. Tryck på den breda gröna **Tala**-knappen längst ned.
+2. Diktera. Texten ska skrivas **rakt in i chattens skrivfält medan du talar**,
+   först som preliminär text och sedan som vanlig text.
+3. Rätta med tangenterna. **⇧** är skift, två tryck låser versaler, **123**
+   växlar till siffror och skiljetecken, **⌫** raderar och fortsätter radera om
+   du håller kvar fingret.
+4. **⌨** tar dig tillbaka till ditt vanliga tangentbord.
+5. Läs texten och tryck på **chattens egen skickaknapp**. Tangentbordet skickar
+   aldrig något själv.
+
+En egen guide i appen som ställer in det här åt dig kommer i nästa version. Nu
+får du gå via inställningarna.
+
+## 7 · Det vi särskilt vill veta
 
 - Blev **å, ä och ö** rätt?
 - Fylldes texten **löpande** medan du talade, eller först efteråt?
@@ -70,6 +100,10 @@ Gör gärna första försöket i en chatt med dig själv.
 - Hur snabbt hörde taltjänsten att du slutat tala?
 - Vad hände när du **lämnade appen mitt i** en diktering? Mikrofonen ska stängas
   och raden överst ska säga det.
+- I tangentbordet: hamnade texten i **rätt** fält, och blev det rätt när du
+  **skrev med tangenterna mitt i** en diktering? Ingen text ska dyka upp två
+  gånger och ingenting ska försvinna.
+- Fungerade **⌨** för att komma tillbaka till ditt vanliga tangentbord?
 
 ---
 
@@ -81,6 +115,8 @@ Gör gärna första försöket i en chatt med dig själv.
 - Inget spelas in och ingen text sparas. Stänger du appen är fältet tomt nästa
   gång du öppnar den.
 - Texten lämnar appen först när du trycker på Skicka och väljer en app.
+- Rösttangentbordet skriver bara i det fält du själv står i. I lösenordsfält är
+  dikteringen avstängd; där fungerar bara tangenterna.
 
 ## Om något inte fungerar
 

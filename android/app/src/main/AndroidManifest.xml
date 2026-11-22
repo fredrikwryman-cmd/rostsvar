@@ -21,5 +21,19 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- Rösttangentbordet. Android binder tjänsten, och bara Android:
+             BIND_INPUT_METHOD gör att ingen annan app kan koppla upp sig
+             mot den. Det som skrivs eller dikteras loggas aldrig. -->
+        <service
+            android:name=".VoiceKeys"
+            android:label="Tap &amp; Talk · rösttangentbord"
+            android:exported="true"
+            android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod"/>
+            </intent-filter>
+            <meta-data android:name="android.view.im" android:resource="@xml/method"/>
+        </service>
     </application>
 </manifest>

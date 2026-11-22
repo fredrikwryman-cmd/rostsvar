@@ -22,13 +22,31 @@ svenska. Hela testinstruktionen att skicka med filen står i
 [TESTA-ANDROID.md](TESTA-ANDROID.md).
 
 1. Öppna APK-filen på telefonen och installera. Android kan be dig godkänna installation från den app som öppnar filen.
-2. Öppna **Tap & Talk**. Hela appen är en skärm: en stor **Tala**-knapp, ett textfält och **Skicka**.
+2. Öppna **Tap & Talk**. Appens egen skärm är en stor **Tala**-knapp, ett textfält och **Skicka**.
 3. Tryck på **Tala**. Första gången frågar Android om mikrofonen — välj **Tillåt**. Säger du nej står det på skärmen vad som fattas, och knappen leder till inställningarna.
 4. Diktera på svenska. Texten fylls i fältet medan du talar. Tryck på **Klar** när du är färdig, eller låt taltjänsten själv sluta lyssna.
 5. Läs igenom texten och rätta den för hand om du vill. Ett nytt tryck på **Tala om** lägger till mer tal efter den text som redan står där.
 6. Tryck på **Skicka**. Androids egen delningsruta öppnas och du väljer själv vilken app texten ska till. Appen skickar aldrig något på egen hand.
 
 Appen begär bara mikrofonen. Den har inget konto, ingen analys och når inget nät själv — men telefonens taltjänst, som gör om talet till text, kan använda internet. Inget spelas in och ingen text sparas; stänger du appen är fältet tomt nästa gång.
+
+### Rösttangentbordet
+
+Kärnidén är att diktera **där man redan skriver**. Därför följer ett
+rösttangentbord med appen: en vanlig svensk layout med å, ä och ö, siffror och
+skiljetecken, och längst ned en bred grön **Tala**-knapp.
+
+Slå på det i **Inställningar → System → Språk och inmatning → Skärmtangentbord →
+Hantera tangentbord**, och välj det sedan i chatten via tangentbordsväljaren.
+En egen onboarding som gör det här åt användaren kommer i ett senare steg.
+
+I chatten: tryck i skrivfältet, tryck på **Tala** och diktera. Texten skrivs rakt
+in i fältet medan du talar, som preliminär text, och blir vanlig text när
+taltjänsten är klar. Rätta med tangenterna, tryck på **⌨** för att gå tillbaka
+till ditt vanliga tangentbord, och skicka med chattens egen knapp.
+
+Tangentbordet loggar ingenting och når inget nät. I lösenordsfält är dikteringen
+avstängd; där fungerar bara tangenterna.
 
 ## iMessage · inbyggt tillägg
 
@@ -99,10 +117,12 @@ Xcode 16.4 och iOS 18.5 SDK. Noll varningar. Tillägget bäddas in i appen som
 ozonerade platser. 16 tester gröna på iPhone-simulator.
 
 **Android, uppmätt.** Lokalt bygge med Build Tools 36.0.0 mot Platform 35,
-utan fel. `Tap-and-Talk-android-test.apk` är 117 021 byte, versionCode 3, och
-innehåller en `classes.dex` med appens kod. Paketet begär ett enda tillstånd,
-`RECORD_AUDIO`, har en startbar aktivitet, `se.rostsvar.mobile.Home`, och en
-lagerikon i fem tätheter. Signaturen verifierad med apksigner (v3).
+utan fel. `Tap-and-Talk-android-test.apk` är 129 373 byte, versionCode 4, med en
+`classes.dex` på 27 636 byte. Paketet begär ett enda tillstånd, `RECORD_AUDIO`,
+har en startbar aktivitet, `se.rostsvar.mobile.Home`, rösttangentbordet
+`se.rostsvar.mobile.VoiceKeys` bundet med `BIND_INPUT_METHOD` och beskrivet av
+`res/xml/method.xml`, och en lagerikon i fem tätheter. Signaturen verifierad med
+apksigner (v3).
 
 **Ingenting är provat på en fysisk telefon.** Taligenkänning, mikrofonens
 beteende i Meddelanden och att ett tryck på Skicka ger exakt ett meddelande går
