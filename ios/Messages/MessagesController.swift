@@ -5,7 +5,11 @@ import UIKit
 
 final class MessagesController: MSMessagesAppViewController {
     private var state = DraftState()
+    /// Vakt för taligenkänningen. Byts när dikteringen avbryts eller går om.
     private var generation = UUID()
+    /// Egen vakt för skickningen. Skild från generation, eftersom en
+    /// ihopfälld panel avbryter dikteringen men aldrig en pågående skickning.
+    private var sendToken = UUID()
     private var note = "Tryck på Tala för att svara."
 
     private let engine = AVAudioEngine()
@@ -110,7 +114,7 @@ final class MessagesController: MSMessagesAppViewController {
     override func willBecomeActive(with conversation: MSConversation) {
         super.willBecomeActive(with: conversation)
         state.becomeActive(conversation: fingerprint(conversation))
-        reset(state.hasDraft ? "Läs igenom och tryck på Skicka." : "Tryck på Tala för att svara.")
+        settle(state.hasDraft ? "Läs igenom och tryck på Skicka." : "Tryck på Tala för att svara.")
     }
 
     override func didBecomeActive(with conversation: MSConversation) {
@@ -121,20 +125,27 @@ final class MessagesController: MSMessagesAppViewController {
     override func willResignActive(with conversation: MSConversation) {
         super.willResignActive(with: conversation)
         state.resignActive()
-        reset("Tryck på Tala för att svara.")
+        settle("Tryck på Tala för att svara.")
     }
 
     override func willTransition(to presentationStyle: MSMessagesAppPresentationStyle) {
         super.willTransition(to: presentationStyle)
         guard presentationStyle == .compact else { return }
         if state.phase != .idle {
-            reset("Mikrofonen stängdes. Tryck på Tala igen.")
+            settle("Mikrofonen stängdes. Tryck på Tala igen.")
         }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        if state.phase != .idle { reset("Mikrofonen stängdes.") }
+        if state.phase != .idle { settle("Mikrofonen stängdes.") }
+    }
+
+    /// Går till vila med ett nytt besked, utom medan ett meddelande skickas.
+    /// Då äger skickningen både texten och beskedet tills svaret kommit.
+    private func settle(_ message: String) {
+        guard state.phase != .sending else { render(); return }
+        reset(message)
     }
 
     // MARK: - Diktering
@@ -270,14 +281,14 @@ final class MessagesController: MSMessagesAppViewController {
         guard state.canSend,
               presentationContext == .messages,
               let conversation = activeConversation else { return }
-        let id = UUID()
-        generation = id
+        let token = UUID()
+        sendToken = token
         state.beginSending()
         note = "Skickar …"
         render()
         conversation.sendText(text) { error in
             DispatchQueue.main.async {
-                guard self.generation == id else { return }
+                guard self.sendToken == token else { return }
                 self.state.finishSending(failed: error != nil)
                 self.note = error == nil ? "Skickat." : "Kunde inte skicka. Ditt utkast finns kvar."
                 self.render()

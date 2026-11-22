@@ -1,4 +1,9 @@
-"""Build a locally signed test APK using the Android SDK and JDK on Windows."""
+"""Bygger en lokalt signerad test-APK med Android SDK och JDK pa Windows.
+
+Resultatet heter Tap-and-Talk-android-test.apk och ligger i mappen build.
+Paket-ID och den lokala testnyckeln ar oforandrade, sa en ny APK
+uppgraderar en tidigare installation i stallet for att krocka med den.
+"""
 import os
 from pathlib import Path
 import shutil
@@ -25,8 +30,8 @@ with tempfile.TemporaryDirectory() as tmp:
     manifest.getroot().set("package", namespace)
     ns = "{http://schemas.android.com/apk/res/android}"
     ET.register_namespace("android", ns[1:-1])
-    manifest.getroot().set(ns + "versionCode", "1")
-    manifest.getroot().set(ns + "versionName", "0.1")
+    manifest.getroot().set(ns + "versionCode", "2")
+    manifest.getroot().set(ns + "versionName", "0.2")
     manifest.write(out / "AndroidManifest.xml", encoding="utf-8")
     run(tools / "aapt2.exe", "compile", "--dir", source / "res", "-o", out / "res.zip")
     run(tools / "aapt2.exe", "link", "-I", android, "--manifest", out / "AndroidManifest.xml",
@@ -47,7 +52,7 @@ with tempfile.TemporaryDirectory() as tmp:
         run("keytool", "-genkeypair", "-alias", "debug", "-keystore", key, "-storepass", "android",
             "-keypass", "android", "-keyalg", "RSA", "-keysize", "2048", "-validity", "3650",
             "-dname", "CN=Rostsvar Local Debug")
-    dest = build / "Rostsvar-Android.apk"
+    dest = build / "Tap-and-Talk-android-test.apk"
     run(tools / "apksigner.bat", "sign", "--ks", key, "--ks-key-alias", "debug", "--ks-pass",
         "pass:android", "--out", dest, out / "aligned.apk")
     run(tools / "apksigner.bat", "verify", "--verbose", dest)

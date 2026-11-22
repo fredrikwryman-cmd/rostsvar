@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
     <queries><intent><action android:name="android.speech.RecognitionService"/></intent></queries>
-    <application android:label="Röstsvar" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false">
+    <application android:label="Tap &amp; Talk" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false">
         <activity android:name=".Home" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -12,7 +12,7 @@
             </intent-filter>
         </activity>
         <service android:name=".Bubble" android:exported="false" android:foregroundServiceType="microphone"/>
-        <service android:name=".VoiceKeys" android:label="Röstsvar" android:exported="true" android:permission="android.permission.BIND_INPUT_METHOD">
+        <service android:name=".VoiceKeys" android:label="Tap &amp; Talk" android:exported="true" android:permission="android.permission.BIND_INPUT_METHOD">
             <intent-filter><action android:name="android.view.InputMethod"/></intent-filter>
             <meta-data android:name="android.view.im" android:resource="@xml/keyboard"/>
         </service>

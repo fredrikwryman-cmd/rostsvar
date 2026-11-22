@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genererar ikonerna för Röstsvar: appikonen och iMessage-ikonerna.
+"""Genererar ikonerna för Tap & Talk: appikonen och iMessage-ikonerna.
 
 Kör från mappen ios:
 

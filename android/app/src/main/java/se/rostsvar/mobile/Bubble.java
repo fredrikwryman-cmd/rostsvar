@@ -39,7 +39,7 @@ public class Bubble extends Service {
         PendingIntent home = PendingIntent.getActivity(this, 0, new Intent(this, Home.class), PendingIntent.FLAG_IMMUTABLE);
         PendingIntent stop = PendingIntent.getService(this, 1, new Intent(this, Bubble.class).setAction("STOP"), PendingIntent.FLAG_IMMUTABLE);
         Notification note = new Notification.Builder(this, "bubble").setSmallIcon(android.R.drawable.ic_btn_speak_now)
-            .setContentTitle("Röstsvar är aktivt").setContentText("Tryck på Tala i chatten för att diktera.")
+            .setContentTitle("Tap & Talk är aktivt").setContentText("Tryck på Tala i chatten för att diktera.")
             .setContentIntent(home).setOngoing(true).addAction(new Notification.Action.Builder(null, "Stäng av", stop).build()).build();
         startForeground(1, note);
         running = this;
@@ -169,7 +169,7 @@ public class Bubble extends Service {
             });
         }
         action("Kopiera", () -> {
-            ClipData clip = ClipData.newPlainText("Röstsvar", text);
+            ClipData clip = ClipData.newPlainText("Tap & Talk", text);
             if (Build.VERSION.SDK_INT >= 33) {
                 PersistableBundle extras = new PersistableBundle();
                 extras.putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true);

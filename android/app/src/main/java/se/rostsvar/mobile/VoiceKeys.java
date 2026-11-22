@@ -44,7 +44,7 @@ public class VoiceKeys extends InputMethodService {
         LinearLayout row = new LinearLayout(this);
         Button talk = new Button(this);
         talk.setText("Tala"); talk.setOnClickListener(v -> {
-            if (!Bubble.fromKeyboard()) android.widget.Toast.makeText(this, "Starta den flytande knappen i Röstsvar.", 1).show();
+            if (!Bubble.fromKeyboard()) android.widget.Toast.makeText(this, "Starta den flytande knappen i Tap & Talk.", 1).show();
         });
         row.addView(talk);
         Button switcher = new Button(this);

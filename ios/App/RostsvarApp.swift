@@ -8,23 +8,23 @@ struct RostsvarApp: App {
                 List {
                     Section("Så gör du") {
                         Step(1, "Öppna en konversation i Meddelanden.")
-                        Step(2, "Tryck på plustecknet vid skrivfältet och välj Röstsvar bland iMessage-apparna.")
+                        Step(2, "Tryck på plustecknet vid skrivfältet och välj Tap & Talk bland iMessage-apparna.")
                         Step(3, "Tryck på Tala och diktera på svenska.")
                         Step(4, "Tryck på Klar, läs igenom utkastet och tryck på Skicka.")
                     }
                     Section("Avbryta") {
                         Text("Avbryt stänger mikrofonen och rensar utkastet. Inget skickas förrän du trycker på Skicka.")
-                        Text("Utkastet rensas också när du lämnar Röstsvar eller byter konversation.")
+                        Text("Utkastet rensas också när du lämnar Tap & Talk eller byter konversation.")
                     }
                     Section("Om mikrofonen") {
-                        Text("Mikrofonen är igång bara mellan Tala och Klar. Röstsvar sparar ingen inspelning och ingen meddelandehistorik.")
-                        Text("Röstsvar väljer taligenkänning på enheten när den svenska igenkännaren stöder det. Annars kan Apples taltjänst använda nätet.")
+                        Text("Mikrofonen är igång bara mellan Tala och Klar. Tap & Talk sparar ingen inspelning och ingen meddelandehistorik.")
+                        Text("Tap & Talk väljer taligenkänning på enheten när den svenska igenkännaren stöder det. Annars kan Apples taltjänst använda nätet.")
                     }
                     Section("Version") {
-                        LabeledContent("Röstsvar", value: Self.version)
+                        LabeledContent("Tap & Talk", value: Self.version)
                     }
                 }
-                .navigationTitle("Röstsvar")
+                .navigationTitle("Tap & Talk")
             }
         }
     }

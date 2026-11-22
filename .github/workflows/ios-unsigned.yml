@@ -1,4 +1,4 @@
-name: Bygg Röstsvar för iPhone (osignerat)
+name: Bygg Tap & Talk för iPhone (osignerat)
 
 on:
   workflow_dispatch:
@@ -9,21 +9,48 @@ on:
 permissions:
   contents: read
 
+env:
+  # Samma fasta Xcode i båda flödena. Byt bara på ett ställe per fil, och
+  # kontrollera att samma version står i ios-testflight.yml.
+  XCODE_VERSION: "26.2"
+  MIN_IOS_SDK: "26"
+
 jobs:
   build:
     runs-on: macos-15
-    timeout-minutes: 40
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: ios
     steps:
       - uses: actions/checkout@v4
 
-      - name: Visa byggmiljön
+      - name: Välj och kontrollera Xcode och iOS SDK
         run: |
+          app="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ ! -d "$app" ]; then
+            echo "FEL: $app finns inte på byggaren. Tillgängliga Xcode-versioner:"
+            ls -1 /Applications | grep -i '^Xcode' | sort -u
+            exit 1
+          fi
+          sudo xcode-select -s "$app/Contents/Developer"
           sw_vers
-          ls /Applications | grep -i '^Xcode' || true
+          echo "--- Xcode ---"
           xcodebuild -version
+          echo "--- iOS SDK:er ---"
+          xcodebuild -showsdks | grep -iE 'ios' || true
+          xcode=$(xcodebuild -version | head -1 | awk '{print $2}')
+          sdk=$(xcrun --sdk iphoneos --show-sdk-version)
+          echo "Uppmätt: Xcode $xcode, iOS SDK $sdk"
+          case "$xcode" in
+            "$XCODE_VERSION"|"$XCODE_VERSION".*) ;;
+            *) echo "FEL: bygget körde Xcode $xcode, inte $XCODE_VERSION."; exit 1 ;;
+          esac
+          if [ "${sdk%%.*}" -lt "$MIN_IOS_SDK" ]; then
+            echo "FEL: iOS SDK $sdk är äldre än $MIN_IOS_SDK."
+            exit 1
+          fi
+          echo "Godkänt: Xcode $xcode med iOS SDK $sdk."
           swift --version
 
       - name: Installera XcodeGen
@@ -55,7 +82,10 @@ jobs:
               f.write('SIMULATOR_ID=' + pick['udid'] + '\n')
           PY
 
-      - name: Kör testerna för utkastet
+      # Loggen sparas med tee, men stegets status kommer från xcodebuild.
+      # pipefail gör att tee inte kan dölja ett misslyckat testbygge, och
+      # ingenting avslutas med "|| true".
+      - name: Kör testerna
         run: |
           set -o pipefail
           mkdir -p build
@@ -65,8 +95,24 @@ jobs:
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
             -resultBundlePath build/Rostsvar-tester.xcresult \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            2>&1 | tee build/xcodebuild-test.log | grep -E "Test Case|Executed|error:|\*\* TEST" || true
-          grep -E "^Test Suite .* (passed|failed)|Executed [0-9]+ test" build/xcodebuild-test.log | tail -5
+            2>&1 | tee build/xcodebuild-test.log
+
+      - name: Sammanfatta testerna
+        if: always()
+        run: |
+          log=build/xcodebuild-test.log
+          if [ ! -f "$log" ]; then
+            echo "FEL: ingen testlogg skrevs."
+            exit 1
+          fi
+          grep -E "^Test Suite .* (passed|failed)" "$log" | tail -3 || true
+          grep -E "error:|XCTAssert.*failed" "$log" | sort -u | head -20 || true
+          antal=$(grep -oE "Executed [0-9]+ test" "$log" | tail -1 | grep -oE "[0-9]+" || true)
+          echo "Antal körda tester: ${antal:-0}"
+          if [ "${antal:-0}" -lt 1 ]; then
+            echo "FEL: inga tester kördes."
+            exit 1
+          fi
 
       - name: Bygg osignerat för iPhone
         run: |
@@ -111,29 +157,35 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$ext/Info.plist"
           /usr/libexec/PlistBuddy -c 'Print :NSExtension:NSExtensionPointIdentifier' "$ext/Info.plist"
-          echo "Appikon i appens plist:"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleIcons' "$app/Info.plist" || echo "saknas"
+          echo "Visningsnamn (ska vara Tap & Talk):"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$app/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$ext/Info.plist"
+          namn=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$app/Info.plist")
+          if [ "$namn" != "Tap & Talk" ]; then
+            echo "FEL: appens visningsnamn är \"$namn\", inte \"Tap & Talk\"."
+            exit 1
+          fi
 
       - name: Paketera osignerad IPA
         run: |
           mkdir -p build/Package/Payload
           ditto build/DerivedData/Build/Products/Release-iphoneos/Rostsvar.app \
                 build/Package/Payload/Rostsvar.app
-          cd build/Package && zip -qr ../Rostsvar-unsigned.ipa Payload
-          ls -lh ../Rostsvar-unsigned.ipa
+          cd build/Package && zip -qr ../Tap-and-Talk-unsigned.ipa Payload
+          ls -lh ../Tap-and-Talk-unsigned.ipa
 
       - name: Ladda upp osignerad IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Rostsvar-osignerad-IPA
-          path: ios/build/Rostsvar-unsigned.ipa
+          name: Tap-and-Talk-osignerad-IPA
+          path: ios/build/Tap-and-Talk-unsigned.ipa
           if-no-files-found: error
 
-      - name: Ladda upp bygglogg
+      - name: Ladda upp loggar
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Rostsvar-bygglogg
+          name: Tap-and-Talk-bygglogg
           path: |
             ios/build/xcodebuild-unsigned.log
             ios/build/xcodebuild-test.log

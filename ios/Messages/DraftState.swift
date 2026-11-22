@@ -1,6 +1,6 @@
 import Foundation
 
-/// Tillståndet i Röstsvar, skilt från vyn så att det går att mäta med tester.
+/// Tillståndet i Tap & Talk, skilt från vyn så att det går att mäta med tester.
 ///
 /// Tre regler bär hela funktionen och testas i RostsvarTests:
 /// mikrofonen är öppen bara under inspelning, Avbryt rensar utkastet utan att
@@ -32,24 +32,33 @@ struct DraftState: Equatable {
 
     var canTalk: Bool { phase == .idle || phase == .recording }
 
-    /// Avbryt går att trycka på så snart det finns något att avbryta.
-    var canCancel: Bool { phase != .idle || hasDraft }
+    /// Avbryt går att trycka på så snart det finns något att avbryta. Aldrig
+    /// medan ett meddelande skickas: då är det för sent att ångra sig.
+    var canCancel: Bool { phase != .sending && (phase != .idle || hasDraft) }
 
     // MARK: - Konversationen
 
-    /// Röstsvar blir aktivt i en konversation. Byts konversationen rensas
+    /// Tap & Talk blir aktivt i en konversation. Byts konversationen rensas
     /// utkastet, så att text aldrig följer med till fel mottagare.
     mutating func becomeActive(conversation identifier: String) {
         if conversation != identifier {
             conversation = identifier
             draft = ""
         }
-        phase = .idle
+        leaveUnlessSending()
     }
 
-    /// Röstsvar lämnas. Utkastet rensas.
+    /// Tap & Talk lämnas. Utkastet rensas.
     mutating func resignActive() {
         draft = ""
+        leaveUnlessSending()
+    }
+
+    /// En pågående skickning får bara avslutas av finishSending. Att fälla
+    /// ihop panelen, lämna Tap & Talk eller komma tillbaka ska aldrig göra ett
+    /// utkast som redan lämnats till Meddelanden skickbart en gång till.
+    private mutating func leaveUnlessSending() {
+        guard phase != .sending else { return }
         phase = .idle
     }
 
@@ -77,11 +86,13 @@ struct DraftState: Equatable {
 
     /// Allt pågående arbete avslutas. Utkastet lämnas orört.
     mutating func rest() {
-        phase = .idle
+        leaveUnlessSending()
     }
 
-    /// Avbryt. Utkastet rensas och ingenting skickas.
+    /// Avbryt. Utkastet rensas och ingenting skickas. Går inte att använda
+    /// medan ett meddelande skickas.
     mutating func cancel() {
+        guard phase != .sending else { return }
         draft = ""
         phase = .idle
     }
@@ -93,7 +104,10 @@ struct DraftState: Equatable {
         phase = .sending
     }
 
+    /// Enda vägen ut ur .sending. Vid bekräftat fel behålls utkastet så att
+    /// det går att skicka om.
     mutating func finishSending(failed: Bool) {
+        guard phase == .sending else { return }
         if !failed { draft = "" }
         phase = .idle
     }

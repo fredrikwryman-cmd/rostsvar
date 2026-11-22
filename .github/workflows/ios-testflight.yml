@@ -1,4 +1,4 @@
-name: Skicka Röstsvar till TestFlight
+name: Skicka Tap & Talk till TestFlight
 
 # Startas för hand. Kräver tre hemligheter i repots inställningar
 # (Settings → Secrets and variables → Actions):
@@ -31,10 +31,15 @@ on:
 permissions:
   contents: read
 
+env:
+  # Samma fasta Xcode som i ios-unsigned.yml. Ändras den där ska den ändras här.
+  XCODE_VERSION: "26.2"
+  MIN_IOS_SDK: "26"
+
 jobs:
   testflight:
     runs-on: macos-15
-    timeout-minutes: 60
+    timeout-minutes: 70
     defaults:
       run:
         working-directory: ios
@@ -60,6 +65,33 @@ jobs:
           fi
           echo "Alla uppgifter finns."
 
+      - name: Välj och kontrollera Xcode och iOS SDK
+        run: |
+          app="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ ! -d "$app" ]; then
+            echo "FEL: $app finns inte på byggaren. Tillgängliga Xcode-versioner:"
+            ls -1 /Applications | grep -i '^Xcode' | sort -u
+            exit 1
+          fi
+          sudo xcode-select -s "$app/Contents/Developer"
+          sw_vers
+          echo "--- Xcode ---"
+          xcodebuild -version
+          echo "--- iOS SDK:er ---"
+          xcodebuild -showsdks | grep -iE 'ios' || true
+          xcode=$(xcodebuild -version | head -1 | awk '{print $2}')
+          sdk=$(xcrun --sdk iphoneos --show-sdk-version)
+          echo "Uppmätt: Xcode $xcode, iOS SDK $sdk"
+          case "$xcode" in
+            "$XCODE_VERSION"|"$XCODE_VERSION".*) ;;
+            *) echo "FEL: bygget körde Xcode $xcode, inte $XCODE_VERSION."; exit 1 ;;
+          esac
+          if [ "${sdk%%.*}" -lt "$MIN_IOS_SDK" ]; then
+            echo "FEL: iOS SDK $sdk är äldre än $MIN_IOS_SDK. App Store Connect avvisar bygget."
+            exit 1
+          fi
+          echo "Godkänt: Xcode $xcode med iOS SDK $sdk."
+
       - name: Lägg nyckeln på byggarens disk
         run: |
           mkdir -p "$HOME/private_keys"
@@ -73,8 +105,11 @@ jobs:
         run: |
           brew install xcodegen
           xcodegen generate
-          xcodebuild -version
 
+      # Varje steg nedan använder tee för att spara loggen, men set -o pipefail
+      # gör att stegets status kommer från xcodebuild respektive altool.
+      # Ett misslyckat arkiv, en underkänd validering eller en avvisad
+      # uppladdning ger röd körning.
       - name: Arkivera signerat
         run: |
           set -o pipefail
@@ -121,6 +156,7 @@ jobs:
 
       - name: Kontrollera paketet före uppladdning
         run: |
+          set -o pipefail
           ipa=$(ls build/Export/*.ipa | head -1)
           echo "IPA: $ipa"
           xcrun altool --validate-app -f "$ipa" -t ios \
@@ -129,6 +165,7 @@ jobs:
       - name: Ladda upp till TestFlight
         if: ${{ inputs.ladda_upp }}
         run: |
+          set -o pipefail
           ipa=$(ls build/Export/*.ipa | head -1)
           xcrun altool --upload-app -f "$ipa" -t ios \
             --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID" 2>&1 | tee build/upload.log
@@ -138,7 +175,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Rostsvar-signerad-IPA
+          name: Tap-and-Talk-signerad-IPA
           path: ios/build/Export/*.ipa
           if-no-files-found: ignore
 
@@ -146,7 +183,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Rostsvar-testflight-loggar
+          name: Tap-and-Talk-testflight-loggar
           path: |
             ios/build/*.log
             ios/build/Rostsvar.xcarchive/Info.plist

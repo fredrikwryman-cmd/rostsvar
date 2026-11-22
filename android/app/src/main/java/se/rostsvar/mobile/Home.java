@@ -23,7 +23,7 @@ public class Home extends Activity {
         page.setPadding(dp(22), dp(48), dp(22), dp(52));
         scroll.addView(page);
         setContentView(scroll);
-        label("Röstsvar", 32);
+        label("Tap & Talk", 32);
         label("Öppna en chatt och tryck på den flytande knappen Tala. Läs texten och skicka med chattens egen knapp.", 18);
         status = label("", 16);
         button("Tillåt visning över appar", () -> startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()))));
@@ -34,7 +34,7 @@ public class Home extends Activity {
         });
         button("Stäng av knappen", () -> stopService(new Intent(this, Bubble.class)));
         label("Infoga direkt i chatten", 23);
-        label("Aktivera och välj Röstsvar som tangentbord för direkt infogning. Med ditt vanliga tangentbord kan du välja Kopiera och sedan klistra in. Talet behandlas av telefonens taltjänst som kan använda internet.", 16);
+        label("Aktivera och välj Tap & Talk som tangentbord för direkt infogning. Med ditt vanliga tangentbord kan du välja Kopiera och sedan klistra in. Talet behandlas av telefonens taltjänst som kan använda internet.", 16);
         button("Aktivera tangentbord", () -> startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)));
         button("Välj tangentbord", () -> getSystemService(InputMethodManager.class).showInputMethodPicker());
     }

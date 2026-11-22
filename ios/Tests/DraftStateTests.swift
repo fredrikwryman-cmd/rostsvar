@@ -181,6 +181,110 @@ final class DraftStateTests: XCTestCase {
         XCTAssertTrue(state.canSend, "Utkastet ska gå att skicka om")
     }
 
+    // MARK: - Regression: skickningen går inte att ångra eller göra om
+
+    /// sendText har anropats. Då är det för sent att avbryta.
+    func testAvbrytÄrInaktiveratMedanMeddelandetSkickas() {
+        var state = dictated()
+        XCTAssertTrue(state.canCancel)
+
+        state.beginSending()
+
+        XCTAssertFalse(state.canCancel, "Avbryt får inte gå att trycka på efter sendText")
+        XCTAssertFalse(state.canTalk, "Tala får inte gå att trycka på medan det skickas")
+        XCTAssertFalse(state.canSend)
+    }
+
+    func testAvbrytGörIngentingMedanMeddelandetSkickas() {
+        var state = dictated("Redan överlämnad text")
+        state.beginSending()
+
+        state.cancel()
+
+        XCTAssertEqual(state.phase, .sending, "Avbryt får inte lämna skickningen")
+        XCTAssertEqual(state.draft, "Redan överlämnad text")
+    }
+
+    /// Panelen fälls ihop och öppnas igen medan skickningen pågår. Utkastet
+    /// får inte bli skickbart en andra gång.
+    func testIhopfälldOchÖppnadPanelUnderSändningGerInteEttAndraMeddelande() {
+        var state = dictated("Skickas just nu")
+        state.beginSending()
+
+        state.rest()                              // panelen fälls ihop
+        XCTAssertEqual(state.phase, .sending)
+        XCTAssertFalse(state.canSend, "Ett ihopfällt läge får inte frigöra utkastet")
+
+        state.becomeActive(conversation: "A")     // panelen öppnas igen
+        XCTAssertEqual(state.phase, .sending)
+        XCTAssertFalse(state.canSend, "Utkastet får inte gå att skicka om innan svaret kommit")
+        XCTAssertFalse(state.canCancel)
+
+        state.finishSending(failed: false)         // svaret kommer till slut
+        XCTAssertEqual(state.phase, .idle)
+        XCTAssertEqual(state.draft, "", "Ett lyckat skick lämnar inget kvar att skicka om")
+        XCTAssertFalse(state.canSend)
+    }
+
+    func testAttLämnaOchKommaTillbakaUnderSändningGerInteEttAndraMeddelande() {
+        var state = dictated("Skickas just nu")
+        state.beginSending()
+
+        state.resignActive()
+        XCTAssertEqual(state.phase, .sending, "Skickningen äger läget tills svaret kommit")
+        XCTAssertFalse(state.canSend)
+
+        state.becomeActive(conversation: "A")
+        XCTAssertFalse(state.canSend)
+    }
+
+    func testBytePåKonversationUnderSändningRensarUtkastet() {
+        var state = dictated("Till A")
+        state.beginSending()
+
+        state.becomeActive(conversation: "B")
+
+        XCTAssertEqual(state.draft, "", "Texten får inte ligga kvar i en annan konversation")
+        XCTAssertFalse(state.canSend)
+    }
+
+    /// Bekräftat fel efter en ihopfälld panel: utkastet ska finnas kvar.
+    func testBekräftatFelBehållerUtkastetÄvenEfterIhopfälldPanel() {
+        var state = dictated("Kom aldrig fram")
+        state.beginSending()
+        state.rest()
+        state.becomeActive(conversation: "A")
+
+        state.finishSending(failed: true)
+
+        XCTAssertEqual(state.phase, .idle)
+        XCTAssertEqual(state.draft, "Kom aldrig fram")
+        XCTAssertTrue(state.canSend, "Efter ett bekräftat fel ska det gå att skicka om")
+        XCTAssertTrue(state.canCancel, "Och att kasta utkastet")
+    }
+
+    func testEttSvarSomKommerTvåGångerGerInteTvåMeddelanden() {
+        var state = dictated()
+        state.beginSending()
+        state.finishSending(failed: false)
+        XCTAssertEqual(state.phase, .idle)
+
+        state.finishSending(failed: true)
+
+        XCTAssertEqual(state.draft, "", "Ett sent svar får inte återuppliva utkastet")
+        XCTAssertFalse(state.canSend)
+    }
+
+    func testSkickningenKanInteStartasTvåGånger() {
+        var state = dictated()
+        state.beginSending()
+        let efterFörsta = state
+
+        state.beginSending()
+
+        XCTAssertEqual(state, efterFörsta, "Ett andra beginSending får inte ändra något")
+    }
+
     // MARK: - Tala om
 
     func testTalaOmErsätterUtkastet() {
