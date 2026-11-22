@@ -38,15 +38,28 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # Körning 1 föll här med "sdkmanager: command not found" (exit 127):
+      # binären ligger under cmdline-tools och inte i PATH, och mappnamnet
+      # där växlar mellan "latest" och ett versionsnummer beroende på
+      # byggarens avbild. Den officiella action:en installerar den
+      # cmdline-tools-version den behöver, lägger sdkmanager i PATH, sätter
+      # ANDROID_HOME och ANDROID_SDK_ROOT och godkänner licenserna. Det är
+      # stabilare än en sökväg som beror på avbildens mappnamn.
       - name: Installera Android-SDK:ns delar
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-${{ env.ANDROID_PLATFORM }} build-tools;${{ env.ANDROID_BUILD_TOOLS }}"
+          accept-android-sdk-licenses: true
+
+      # Att delarna verkligen finns kontrolleras i ett eget steg, så att ett
+      # tomt ANDROID_HOME eller en utebliven build-tools-installation blir
+      # rött här och inte först i bygget.
+      - name: Kontrollera SDK-delarna
         run: |
           set -o pipefail
           echo "ANDROID_HOME=$ANDROID_HOME"
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager --install \
-            "platform-tools" \
-            "platforms;android-${ANDROID_PLATFORM}" \
-            "build-tools;${ANDROID_BUILD_TOOLS}"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          command -v sdkmanager
           "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/aapt2" version
 
       - name: Förbered Gradle
