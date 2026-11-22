@@ -27,8 +27,8 @@ import android.widget.TextView;
 import java.util.List;
 
 /**
- * Kom igång-guiden: tre steg som gör rösttangentbordet användbart, och ett
- * fält där man provar att det fungerar.
+ * Kom igång-guiden: fem steg som gör bubblan och rösttangentbordet
+ * användbara, och ett fält där man provar att det fungerar.
  *
  * Guiden kan inte slå på något åt användaren — Android kräver att man gör det
  * själv i systemets egna rutor. Det guiden gör är att förklara varför, öppna
@@ -42,15 +42,23 @@ public class Guide extends Activity {
     private static final int MIC_PERMISSION = 1;
     private static final int TEST_ID = 0x7EAD0002;
 
-    /** Stegen i ordning. Steg 3 är provet, som inte kan bockas av i förväg. */
+    /**
+     * Stegen i ordning: mikrofonen först, sedan de två som bubblan behöver,
+     * sist tangentbordet som är reserven. Sista steget är provet, som inte
+     * kan bockas av i förväg.
+     */
     private static final int STEP_MIC = 0;
-    private static final int STEP_ENABLE = 1;
-    private static final int STEP_CHOOSE = 2;
-    private static final int STEP_TEST = 3;
+    private static final int STEP_SHOW = 1;
+    private static final int STEP_REACH = 2;
+    private static final int STEP_ENABLE = 3;
+    private static final int STEP_CHOOSE = 4;
+    private static final int STEP_TEST = 5;
+    /** Antalet steg som går att bocka av. */
+    private static final int STEPS = 5;
 
     private TextView counter;
-    private final TextView[] marks = new TextView[3];
-    private final TextView[] labels = new TextView[3];
+    private final TextView[] marks = new TextView[STEPS];
+    private final TextView[] labels = new TextView[STEPS];
     private TextView heading;
     private TextView body;
     private Button action;
@@ -92,16 +100,31 @@ public class Guide extends Activity {
     }
 
     static boolean allDone(Context context) {
-        return micOk(context) && enabledOk(context) && chosenOk(context);
+        for (int i = 0; i < STEPS; i++) {
+            if (!done(context, i)) return false;
+        }
+        return true;
     }
 
     static boolean done(Context context, int which) {
         switch (which) {
             case STEP_MIC: return micOk(context);
+            case STEP_SHOW: return Bubble.mayShow(context);
+            case STEP_REACH: return Writer.enabled(context);
             case STEP_ENABLE: return enabledOk(context);
             case STEP_CHOOSE: return chosenOk(context);
             default: return false;
         }
+    }
+
+    /** En kort rad om vad som fattas, eller null när allt är på plats. */
+    static String missing(Context context) {
+        if (!micOk(context)) return "Mikrofonen är inte tillåten än.";
+        if (!Bubble.mayShow(context)) return "Bubblan får inte visas över andra appar än.";
+        if (!Writer.enabled(context)) return "Appen får inte skriva i dina textfält än.";
+        if (!enabledOk(context)) return "Rösttangentbordet är inte påslaget än.";
+        if (!chosenOk(context)) return "Rösttangentbordet är påslaget men inte valt.";
+        return null;
     }
 
     // ---------------------------------------------------------------- skärmen
@@ -133,10 +156,12 @@ public class Guide extends Activity {
 
         String[] names = {
                 "Tillåt mikrofonen",
+                "Visa över andra appar",
+                "Låt appen skriva i fältet",
                 "Slå på tangentbordet",
                 "Byt till Tap & Talk"
         };
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < STEPS; i++) {
             LinearLayout rad = new LinearLayout(this);
             rad.setOrientation(LinearLayout.HORIZONTAL);
             rad.setGravity(Gravity.CENTER_VERTICAL);
@@ -273,7 +298,7 @@ public class Guide extends Activity {
     }
 
     private void render() {
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < STEPS; i++) {
             boolean klar = done(this, i);
             marks[i].setText(klar ? "✓" : (i == step ? "›" : "○"));
             marks[i].setTextColor(klar ? Look.GREEN : (i == step ? Look.INK : Look.OFF));
@@ -282,7 +307,7 @@ public class Guide extends Activity {
 
         boolean testing = step == STEP_TEST;
         counter.setText(testing ? "Allt är påslaget. Prova att diktera."
-                : "Steg " + (step + 1) + " av 3");
+                : "Steg " + (step + 1) + " av " + STEPS);
         proof.setVisibility(testing ? View.VISIBLE : View.GONE);
 
         switch (step) {
@@ -298,11 +323,34 @@ public class Guide extends Activity {
                         + "Mikrofon under Behörigheter."
                         : "");
                 break;
+            case STEP_SHOW:
+                heading.setText("Visa över andra appar");
+                body.setText("Det här är själva idén: en liten knapp som ligger kvar över "
+                        + "alla appar. Ett tryck, du talar, och texten hamnar där du "
+                        + "skriver. För att knappen alls ska få synas ovanpå andra appar "
+                        + "måste du släppa fram den i systemets inställningar.");
+                action.setText("Öppna Visa över andra appar");
+                aside.setText("Knappen går att dra var du vill och fastnar vid kanten. Du "
+                        + "stänger av den på hemskärmen när du inte vill ha den framme.");
+                break;
+            case STEP_REACH:
+                heading.setText("Låt appen skriva i fältet");
+                body.setText("Android låter bara en tillgänglighetstjänst skriva i andra "
+                        + "appars textfält. Utan den kan bubblan lyssna, men bara lägga "
+                        + "texten i urklipp. Slå på Tap & Talk · skriv i fältet i listan "
+                        + "som öppnas.");
+                action.setText("Öppna tillgänglighet");
+                aside.setText("Android varnar att tjänsten kan läsa vad som visas. Tap & Talk "
+                        + "läser bara det fält du står i, för att kunna skriva din text "
+                        + "där. Ingenting loggas, sparas eller skickas vidare. Samma text "
+                        + "står i Androids egen ruta.");
+                break;
             case STEP_ENABLE:
                 heading.setText("Slå på tangentbordet");
-                body.setText("Tap & Talk är ett tangentbord. Android kräver att du själv slår "
-                        + "på det i listan över tangentbord. Knappen nedan öppnar den listan: "
-                        + "leta upp Tap & Talk · rösttangentbord och slå på det.");
+                body.setText("Tap & Talk är också ett tangentbord, reserven för de fält där "
+                        + "bubblan inte kommer åt. Android kräver att du själv slår på det i "
+                        + "listan över tangentbord. Knappen nedan öppnar den listan: leta upp "
+                        + "Tap & Talk · rösttangentbord och slå på det.");
                 action.setText("Öppna listan över tangentbord");
                 aside.setText("Android varnar att ett tangentbord kan se allt du skriver. Det "
                         + "är samma varning för alla tangentbord. Tap & Talk loggar ingenting "
@@ -319,9 +367,9 @@ public class Guide extends Activity {
                 break;
             default:
                 heading.setText("Prova att diktera");
-                body.setText("Tryck i fältet nedan så kommer Tap & Talk upp. Tryck på den "
-                        + "breda gröna Tala-knappen och säg en mening. Texten ska skrivas i "
-                        + "fältet medan du talar.");
+                body.setText("Tryck i fältet nedan. Tryck sedan på den gröna bubblan, eller "
+                        + "på Tala-knappen i tangentbordet, och säg en mening. Texten ska "
+                        + "hamna i fältet.");
                 action.setText("Klart");
                 aside.setText("Samma sak fungerar nu i Messenger, Signal, Meddelanden och "
                         + "alla andra appar där du skriver.");
@@ -338,13 +386,14 @@ public class Guide extends Activity {
             receipt.setText("");
             return;
         }
-        if (chosenOk(this)) {
+        if (Bubble.running() || chosenOk(this)) {
             receipt.setTextColor(Look.GREEN);
-            receipt.setText("✓ Det fungerar. Tap & Talk skriver i fältet.");
+            receipt.setText("✓ Det fungerar. Texten kom in i fältet.");
         } else {
             receipt.setTextColor(Look.WARN);
-            receipt.setText("Texten kom in, men från ett annat tangentbord. Byt till "
-                    + "Tap & Talk för att prova dikteringen.");
+            receipt.setText("Texten kom in, men varken bubblan eller Tap & Talk-tangentbordet "
+                    + "är igång, så den kom från något annat. Starta bubblan på hemskärmen "
+                    + "eller byt tangentbord för att prova dikteringen.");
         }
     }
 
@@ -360,8 +409,18 @@ public class Guide extends Activity {
                     requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION);
                 }
                 break;
+            case STEP_SHOW:
+                // Rutan är appens egen, därav package-adressen. Saknas den på
+                // telefonen landar vi på den allmänna listan i stället.
+                open(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                Uri.parse("package:" + getPackageName())),
+                        new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION));
+                break;
+            case STEP_REACH:
+                open(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS), null);
+                break;
             case STEP_ENABLE:
-                startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS));
+                open(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS), null);
                 break;
             case STEP_CHOOSE:
                 InputMethodManager boards = getSystemService(InputMethodManager.class);
@@ -371,6 +430,30 @@ public class Guide extends Activity {
                 finish();
                 break;
         }
+    }
+
+    /**
+     * Öppnar en systemruta. Tillverkarnas Android-skal har inte alla rutor,
+     * så en avvisad adress ska inte krascha guiden: då provas reserven, och
+     * finns ingen sådan får användaren veta var inställningen ligger.
+     */
+    private void open(Intent first, Intent spare) {
+        try {
+            startActivity(first);
+            return;
+        } catch (RuntimeException missing) {
+            // Rutan finns inte under den adressen på den här telefonen.
+        }
+        if (spare != null) {
+            try {
+                startActivity(spare);
+                return;
+            } catch (RuntimeException missing) {
+                // Inte heller. Då säger vi det i stället för att tiga.
+            }
+        }
+        aside.setText("Telefonen öppnade inte den rutan. Leta upp inställningen för hand "
+                + "under Appar eller Tillgänglighet och slå på Tap & Talk.");
     }
 
     @Override public void onRequestPermissionsResult(int code, String[] perms, int[] result) {

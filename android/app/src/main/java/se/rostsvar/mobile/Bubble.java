@@ -1,0 +1,444 @@
+package se.rostsvar.mobile;
+
+import android.Manifest;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.Service;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.pm.ServiceInfo;
+import android.graphics.PixelFormat;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.Icon;
+import android.os.Bundle;
+import android.os.IBinder;
+import android.provider.Settings;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import java.util.ArrayList;
+
+/**
+ * Den flytande knappen: ligger över alla appar, lyssnar när man trycker och
+ * lägger texten i det fält man står i.
+ *
+ * Tjänsten körs i förgrunden, som Android kräver av något som håller
+ * mikrofonen igång utanför sin egen skärm. Notisen är avsiktligt tyst och
+ * lägst möjliga vikt — den finns för att Android kräver den och för att man
+ * ska kunna stänga bubblan utan att leta upp appen.
+ *
+ * Inget spelas in och ingenting sparas. Det enda som lämnar telefonen är
+ * talet, till telefonens egen taltjänst.
+ */
+public class Bubble extends Service {
+
+    static final String START = "se.rostsvar.mobile.START_BUBBLA";
+    static final String STOP = "se.rostsvar.mobile.STOPPA_BUBBLA";
+
+    private static final String CHANNEL = "bubbla";
+    private static final int NOTE_ID = 11;
+    /** Var bubblan låg sist. Sparas så att den ligger kvar där man lade den. */
+    private static final String AT_X = "bubbla_x";
+    private static final String AT_Y = "bubbla_y";
+
+    private static boolean alive;
+
+    private WindowManager windows;
+    private WindowManager.LayoutParams where;
+    private TextView knob;
+
+    private SpeechRecognizer speech;
+    private boolean listening;
+    /** Sista tolkningen. Finns den kvar vid ett fel levereras den ändå. */
+    private String heard = "";
+
+    /** Sant mellan start och stopp. Hemskärmens strömbrytare läser den. */
+    static boolean running() {
+        return alive;
+    }
+
+    /** Sant när Android låter appen rita över andra appar. */
+    static boolean mayShow(Context context) {
+        return Settings.canDrawOverlays(context);
+    }
+
+    static void start(Context context) {
+        Intent order = new Intent(context, Bubble.class).setAction(START);
+        context.startForegroundService(order);
+    }
+
+    static void stop(Context context) {
+        context.startService(new Intent(context, Bubble.class).setAction(STOP));
+    }
+
+    // ------------------------------------------------------------- livscykeln
+
+    @Override public void onCreate() {
+        super.onCreate();
+        windows = getSystemService(WindowManager.class);
+    }
+
+    @Override public int onStartCommand(Intent order, int flags, int id) {
+        if (order != null && STOP.equals(order.getAction())) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
+        // Bubblan är meningslös utan rätten att ligga över andra appar, och
+        // en förgrundstjänst av typen mikrofon får inte startas utan
+        // mikrofontillstånd. Hellre ett tydligt nej än en krasch.
+        if (!mayShow(this)) {
+            say("Tap & Talk får inte visas över andra appar. Slå på det i guiden.");
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            say("Mikrofonen behövs för att diktera. Tillåt den i appen.");
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
+        raise();
+        if (knob == null) show();
+        return START_STICKY;
+    }
+
+    @Override public IBinder onBind(Intent order) {
+        return null;
+    }
+
+    @Override public void onDestroy() {
+        alive = false;
+        quiet();
+        if (knob != null && windows != null) {
+            try {
+                windows.removeView(knob);
+            } catch (IllegalArgumentException gone) {
+                // Vyn kan redan vara borta om fönstret rivits. Inget att göra.
+            }
+            knob = null;
+        }
+        super.onDestroy();
+    }
+
+    // -------------------------------------------------------------- notisen
+
+    /** Tyst notis med lägsta vikt, plus en knapp som stänger bubblan. */
+    private void raise() {
+        NotificationManager shade = getSystemService(NotificationManager.class);
+        if (shade != null && shade.getNotificationChannel(CHANNEL) == null) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL, "Bubblan", NotificationManager.IMPORTANCE_MIN);
+            channel.setDescription("Visas så länge den flytande knappen ligger framme.");
+            channel.setShowBadge(false);
+            channel.setSound(null, null);
+            channel.enableVibration(false);
+            shade.createNotificationChannel(channel);
+        }
+
+        PendingIntent open = PendingIntent.getActivity(this, 0,
+                new Intent(this, Home.class), PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent off = PendingIntent.getService(this, 1,
+                new Intent(this, Bubble.class).setAction(STOP), PendingIntent.FLAG_IMMUTABLE);
+
+        Notification note = new Notification.Builder(this, CHANNEL)
+                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+                .setContentTitle("Tap & Talk")
+                .setContentText("Tryck på bubblan och tala.")
+                .setContentIntent(open)
+                .setOngoing(true)
+                .setShowWhen(false)
+                .addAction(new Notification.Action.Builder(
+                        Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                        "Stäng", off).build())
+                .build();
+
+        startForeground(NOTE_ID, note, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
+        alive = true;
+    }
+
+    // --------------------------------------------------------------- bubblan
+
+    private int dp(int value) {
+        return Look.dp(this, value);
+    }
+
+    private void show() {
+        int size = dp(66);
+
+        knob = new TextView(this);
+        knob.setText("Tala");
+        knob.setAllCaps(false);
+        knob.setGravity(Gravity.CENTER);
+        knob.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        knob.setContentDescription("Tap & Talk, tryck för att diktera");
+        paint();
+
+        where = new WindowManager.LayoutParams(
+                size, size,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                // Får aldrig ta skrivfokus. Tar bubblan fokus tappar fältet
+                // under den sin markör, och då finns inget att skriva i.
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                PixelFormat.TRANSLUCENT);
+        where.gravity = Gravity.TOP | Gravity.START;
+
+        SharedPreferences saved = getSharedPreferences(Guide.SETTINGS, MODE_PRIVATE);
+        int wide = getResources().getDisplayMetrics().widthPixels;
+        int high = getResources().getDisplayMetrics().heightPixels;
+        where.x = saved.getInt(AT_X, wide - size);
+        where.y = saved.getInt(AT_Y, high / 2);
+
+        knob.setOnTouchListener(new Drag(size));
+        try {
+            windows.addView(knob, where);
+        } catch (RuntimeException refused) {
+            // Händer om rätten dras tillbaka i samma stund. Bubblan kan inte
+            // visas, och då ska tjänsten inte ligga kvar och låtsas.
+            knob = null;
+            say("Bubblan kunde inte visas. Kontrollera Visa över andra appar.");
+            stopSelf();
+        }
+    }
+
+    /** Grönt i vila, djupare grönt medan mikrofonen är på. */
+    private void paint() {
+        if (knob == null) return;
+        GradientDrawable circle = new GradientDrawable();
+        circle.setShape(GradientDrawable.OVAL);
+        circle.setColor(listening ? Look.GREEN_DEEP : Look.GREEN);
+        circle.setStroke(dp(2), listening ? Look.GREEN : 0x55000000);
+        knob.setBackground(circle);
+        knob.setTextColor(Look.DARK_INK);
+        knob.setText(listening ? "Klar" : "Tala");
+        if (!listening) {
+            knob.setScaleX(1f);
+            knob.setScaleY(1f);
+        }
+    }
+
+    /** Drar man bubblan flyttar den sig och fastnar vid närmaste kant. */
+    private final class Drag implements View.OnTouchListener {
+        private final int size;
+        private float fromX, fromY;
+        private int wasX, wasY;
+        private boolean moved;
+        private long down;
+
+        Drag(int size) {
+            this.size = size;
+        }
+
+        @Override public boolean onTouch(View view, MotionEvent touch) {
+            switch (touch.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    fromX = touch.getRawX();
+                    fromY = touch.getRawY();
+                    wasX = where.x;
+                    wasY = where.y;
+                    moved = false;
+                    down = System.currentTimeMillis();
+                    return true;
+                case MotionEvent.ACTION_MOVE:
+                    int dx = Math.round(touch.getRawX() - fromX);
+                    int dy = Math.round(touch.getRawY() - fromY);
+                    if (Math.abs(dx) > dp(8) || Math.abs(dy) > dp(8)) moved = true;
+                    if (!moved) return true;
+                    where.x = wasX + dx;
+                    where.y = wasY + dy;
+                    hold();
+                    windows.updateViewLayout(knob, where);
+                    return true;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    boolean quick = System.currentTimeMillis() - down < 500;
+                    if (!moved && quick && touch.getAction() == MotionEvent.ACTION_UP) {
+                        tapped();
+                        return true;
+                    }
+                    snap();
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /** Håller bubblan inom skärmen medan den dras. */
+        private void hold() {
+            int wide = getResources().getDisplayMetrics().widthPixels;
+            int high = getResources().getDisplayMetrics().heightPixels;
+            where.x = Math.max(0, Math.min(where.x, wide - size));
+            where.y = Math.max(0, Math.min(where.y, high - size));
+        }
+
+        private void snap() {
+            hold();
+            int wide = getResources().getDisplayMetrics().widthPixels;
+            where.x = where.x + size / 2 < wide / 2 ? 0 : wide - size;
+            windows.updateViewLayout(knob, where);
+            getSharedPreferences(Guide.SETTINGS, MODE_PRIVATE).edit()
+                    .putInt(AT_X, where.x).putInt(AT_Y, where.y).apply();
+        }
+    }
+
+    // ------------------------------------------------------------------ talet
+
+    private void tapped() {
+        if (listening) {
+            if (speech != null) speech.stopListening();
+            listening = false;
+            paint();
+            return;
+        }
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            say("Telefonen har ingen taltjänst som kan tolka tal.");
+            return;
+        }
+        if (speech == null) {
+            speech = SpeechRecognizer.createSpeechRecognizer(this);
+            speech.setRecognitionListener(new Ears());
+        }
+        heard = "";
+
+        Intent ask = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        ask.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        ask.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "sv-SE");
+        ask.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "sv-SE");
+        ask.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+        ask.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+        ask.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
+
+        listening = true;
+        paint();
+        speech.startListening(ask);
+    }
+
+    private void quiet() {
+        listening = false;
+        if (speech != null) {
+            speech.cancel();
+            speech.destroy();
+            speech = null;
+        }
+    }
+
+    /**
+     * Levererar texten. Går den inte in i något fält hamnar den i urklipp,
+     * så att det som sagts aldrig är förlorat.
+     */
+    private void deliver(String text) {
+        if (text == null) return;
+        String clean = text.trim();
+        if (clean.length() == 0) return;
+
+        if (Writer.write(clean)) return;
+
+        ClipboardManager clip = getSystemService(ClipboardManager.class);
+        if (clip != null) {
+            clip.setPrimaryClip(ClipData.newPlainText("Tap & Talk", clean));
+            say(Writer.ready()
+                    ? "Hittade inget textfält. Texten ligger i urklipp — håll in i fältet och välj Klistra in."
+                    : "Tillgänglighetstjänsten är inte påslagen. Texten ligger i urklipp — klistra in den.");
+        } else {
+            say("Texten gick inte att leverera: " + clean);
+        }
+    }
+
+    private void say(String text) {
+        Toast.makeText(this, text, Toast.LENGTH_LONG).show();
+    }
+
+    private String first(Bundle box) {
+        if (box == null) return null;
+        ArrayList<String> words = box.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+        if (words == null || words.isEmpty()) return null;
+        return words.get(0);
+    }
+
+    /**
+     * Lyssnaren skriver inte löpande i fältet. Varje skrivning i en annan app
+     * sätter om hela fältets text, och gjordes det för varje preliminär
+     * tolkning skulle användarens markör hoppa och texten blinka. Partialen
+     * sparas i stället, syns som rörelse i bubblan och levereras en gång.
+     */
+    private final class Ears implements RecognitionListener {
+        @Override public void onReadyForSpeech(Bundle params) { }
+        @Override public void onBeginningOfSpeech() { }
+
+        @Override public void onRmsChanged(float rms) {
+            if (knob == null || !listening) return;
+            // Bubblan andas med rösten, så det syns att mikrofonen är på.
+            float grow = 1f + Math.max(0f, Math.min(rms, 10f)) / 45f;
+            knob.setScaleX(grow);
+            knob.setScaleY(grow);
+        }
+
+        @Override public void onBufferReceived(byte[] buffer) { }
+
+        @Override public void onEndOfSpeech() {
+            listening = false;
+            paint();
+        }
+
+        @Override public void onPartialResults(Bundle partial) {
+            String text = first(partial);
+            if (text != null) heard = text;
+        }
+
+        @Override public void onResults(Bundle results) {
+            listening = false;
+            paint();
+            String text = first(results);
+            deliver(text != null && text.length() > 0 ? text : heard);
+            heard = "";
+        }
+
+        @Override public void onError(int code) {
+            listening = false;
+            paint();
+            // Hann något sägas innan felet ska det levereras ändå.
+            if (heard.length() > 0) {
+                deliver(heard);
+                heard = "";
+                return;
+            }
+            switch (code) {
+                case SpeechRecognizer.ERROR_NO_MATCH:
+                case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
+                    say("Hörde inget. Tryck på bubblan och prova igen.");
+                    break;
+                case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
+                    say("Taltjänsten fick inte använda mikrofonen. Tillåt mikrofonen i appen.");
+                    break;
+                case SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED:
+                case SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE:
+                    say("Taltjänsten har inte svenska installerad.");
+                    break;
+                case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
+                    say("Taltjänsten var upptagen. Tryck igen.");
+                    break;
+                default:
+                    say("Taltjänsten svarade med ett fel (" + code + ").");
+                    break;
+            }
+        }
+
+        @Override public void onEvent(int type, Bundle params) { }
+    }
+}

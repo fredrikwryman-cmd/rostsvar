@@ -1,10 +1,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Mikrofonen är det enda appen begär. Inget nät, ingen lagring, ingen
-         visning över andra appar. Taltjänsten frågas om den finns på
-         telefonen; svaret styr om Tala-knappen går att trycka på. -->
+    <!-- Mikrofonen är det enda som rör dina uppgifter. Taltjänsten frågas om
+         den finns på telefonen; svaret styr om Tala-knappen går att trycka på.
+         Inget nät, ingen lagring, ingen plats, inga kontakter. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-feature android:name="android.hardware.microphone" android:required="false"/>
     <queries><intent><action android:name="android.speech.RecognitionService"/></intent></queries>
+
+    <!-- Den flytande knappen. SYSTEM_ALERT_WINDOW måste dessutom slås på för
+         hand av användaren; guiden tar hand om det. Förgrundstjänsten är
+         Androids krav på något som håller mikrofonen igång utanför sin egen
+         skärm, och notisen är kravet som följer med den. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
     <application
         android:label="Tap &amp; Talk"
         android:icon="@mipmap/ic_launcher"
@@ -30,9 +40,35 @@
             android:windowSoftInputMode="adjustResize"
             android:parentActivityName=".Home"/>
 
-        <!-- Rösttangentbordet. Android binder tjänsten, och bara Android:
-             BIND_INPUT_METHOD gör att ingen annan app kan koppla upp sig
-             mot den. Det som skrivs eller dikteras loggas aldrig. -->
+        <!-- Bubblan. Startas bara av appen själv och av sin egen notis, därav
+             exported="false". Typen microphone är den Android kräver för en
+             tjänst som dikterar utanför appens egen skärm. -->
+        <service
+            android:name=".Bubble"
+            android:exported="false"
+            android:foregroundServiceType="microphone"/>
+
+        <!-- Tjänsten som skriver i det fokuserade fältet. Android binder
+             den, och bara Android: BIND_ACCESSIBILITY_SERVICE gör att ingen
+             annan app kan koppla upp sig mot den. Beskrivningen som visas i
+             inställningarna står i res/values/strings.xml. -->
+        <service
+            android:name=".Writer"
+            android:label="@string/tillganglighet_namn"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/writer"/>
+        </service>
+
+        <!-- Rösttangentbordet, reserven när bubblan inte passar. Android
+             binder tjänsten, och bara Android: BIND_INPUT_METHOD gör att
+             ingen annan app kan koppla upp sig mot den. Det som skrivs eller
+             dikteras loggas aldrig. -->
         <service
             android:name=".VoiceKeys"
             android:label="Tap &amp; Talk · rösttangentbord"

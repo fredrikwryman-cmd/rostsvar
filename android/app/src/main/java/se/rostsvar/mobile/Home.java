@@ -21,6 +21,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.Switch;
 import android.widget.TextView;
 
 /**
@@ -45,11 +46,15 @@ public class Home extends Activity {
     private static final int WARN = Look.WARN;
 
     private static final int MIC_PERMISSION = 1;
+    private static final int NOTE_PERMISSION = 2;
     /** Fast id, så att texten överlever en vridning av telefonen. */
     private static final int DRAFT_ID = 0x7EAD0001;
 
     private TextView status;
     private LinearLayout warning;
+    private TextView warnText;
+    private Switch bubble;
+    private TextView bubbleNote;
     private EditText draft;
     private Button mic;
     private Button send;
@@ -60,6 +65,8 @@ public class Home extends Activity {
     private String base = "";
     /** Sant när mikrofonen är avslagen för appen i systeminställningarna. */
     private boolean micBlocked;
+    /** Vad användaren bad strömbrytaren om, senast. */
+    private boolean wantBubble;
     private String note = "Tryck på Tala och diktera. Du läser texten och väljer själv var den skickas.";
 
     // ---------------------------------------------------------------- skärmen
@@ -103,6 +110,44 @@ public class Home extends Activity {
         status.setLineSpacing(0, 1.3f);
         page.addView(status, row(dp(8), 0));
 
+        // Strömbrytaren för bubblan. Den ligger högst upp eftersom den är
+        // appens egentliga funktion: knappen som följer med överallt.
+        LinearLayout power = new LinearLayout(this);
+        power.setOrientation(LinearLayout.HORIZONTAL);
+        power.setGravity(Gravity.CENTER_VERTICAL);
+        power.setBackground(box(FIELD, BORDER, dp(14)));
+        power.setPadding(dp(14), dp(12), dp(10), dp(12));
+
+        LinearLayout words = new LinearLayout(this);
+        words.setOrientation(LinearLayout.VERTICAL);
+
+        TextView powerTitle = new TextView(this);
+        powerTitle.setText("Flytande knapp");
+        powerTitle.setTextColor(INK);
+        powerTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        words.addView(powerTitle, row(0, 0));
+
+        bubbleNote = new TextView(this);
+        bubbleNote.setTextColor(DIM);
+        bubbleNote.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        bubbleNote.setLineSpacing(0, 1.25f);
+        words.addView(bubbleNote, row(dp(3), 0));
+
+        power.addView(words, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        bubble = new Switch(this);
+        bubble.setContentDescription("Starta eller stoppa den flytande knappen");
+        bubble.setMinimumWidth(dp(56));
+        bubble.setMinimumHeight(dp(48));
+        bubble.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { bubbleToggled(); }
+        });
+        power.addView(bubble, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)));
+
+        page.addView(power, row(dp(14), 0));
+
         // Varningen står kvar så länge något steg i guiden fattas, eftersom
         // appen då bara kan diktera här inne och inte i chattarna.
         warning = new LinearLayout(this);
@@ -110,12 +155,10 @@ public class Home extends Activity {
         warning.setBackground(box(0xFF1A1407, WARN, dp(14)));
         warning.setPadding(dp(14), dp(14), dp(14), dp(14));
 
-        TextView warnText = new TextView(this);
+        warnText = new TextView(this);
         warnText.setTextColor(WARN);
         warnText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         warnText.setLineSpacing(0, 1.3f);
-        warnText.setText("Rösttangentbordet är inte igång. Du kan diktera här i appen, "
-                + "men ännu inte direkt i dina chattar.");
         warning.addView(warnText, row(0, 0));
 
         Button fix = new Button(this);
@@ -196,6 +239,49 @@ public class Home extends Activity {
         startActivity(new Intent(this, Guide.class));
     }
 
+    // ------------------------------------------------------------- bubblan
+
+    /**
+     * Strömbrytaren. Switch:en har redan vänt sig själv när vi kommer hit,
+     * så dess läge är vad användaren bad om.
+     */
+    private void bubbleToggled() {
+        if (!bubble.isChecked()) {
+            Bubble.stop(this);
+            wantBubble = false;
+            note = "Bubblan är stängd. Slå på den igen när du vill ha den framme.";
+            render();
+            return;
+        }
+        if (!granted()) {
+            wantBubble = false;
+            note = "Bubblan behöver mikrofonen. Välj Tillåt i rutan som visas.";
+            render();
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION);
+            return;
+        }
+        if (!Bubble.mayShow(this)) {
+            wantBubble = false;
+            note = "Bubblan får inte visas över andra appar än. Guiden visar var det slås på.";
+            render();
+            openGuide();
+            return;
+        }
+        // Notisen är Androids krav på en förgrundstjänst. Nekas den körs
+        // bubblan ändå, men då syns den inte i notisfältet.
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTE_PERMISSION);
+        }
+        Bubble.start(this);
+        wantBubble = true;
+        note = Writer.enabled(this)
+                ? "Bubblan ligger framme. Lämna appen, tryck på den och tala."
+                : "Bubblan ligger framme. Slå på tillgängligheten i guiden för att texten "
+                + "ska hamna direkt i fältet.";
+        render();
+    }
+
     private LinearLayout.LayoutParams row(int top, int bottom) {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -223,7 +309,32 @@ public class Home extends Activity {
         boolean canTalk = SpeechRecognizer.isRecognitionAvailable(this);
 
         status.setText(note);
-        warning.setVisibility(Guide.allDone(this) ? View.GONE : View.VISIBLE);
+
+        // Varningen namnger det som faktiskt fattas, i stället för att säga
+        // samma sak vad det än är.
+        String gap = Guide.missing(this);
+        warning.setVisibility(gap == null ? View.GONE : View.VISIBLE);
+        if (gap != null) {
+            warnText.setText(gap + " Du kan diktera här i appen, men ännu inte "
+                    + "direkt där du skriver.");
+        }
+
+        // Strömbrytaren visar vad användaren bad om, inte vad tjänsten hunnit
+        // göra: en tjänst startar och stoppar inte i samma andetag som ett
+        // tryck, och knappen ska inte hoppa tillbaka under fingret.
+        boolean mayStart = granted() && Bubble.mayShow(this);
+        bubble.setChecked(wantBubble);
+        bubble.setEnabled(mayStart || wantBubble);
+        if (wantBubble) {
+            bubbleNote.setText(Writer.enabled(this)
+                    ? "Bubblan ligger framme. Tryck på den, tala, och texten hamnar där du skriver."
+                    : "Bubblan ligger framme, men får inte skriva i andra appar än. Texten "
+                    + "hamnar i urklipp tills du slår på tillgängligheten i guiden.");
+        } else {
+            bubbleNote.setText(mayStart
+                    ? "Lägg en knapp över alla appar. Ett tryck, du talar, texten hamnar i fältet."
+                    : "Behöver mikrofon och Visa över andra appar. Öppna guiden.");
+        }
 
         mic.setText(listening ? "Klar" : (micBlocked ? "Tillåt mikrofon" : (hasText ? "Tala om" : "Tala")));
         mic.setContentDescription(listening
@@ -267,6 +378,7 @@ public class Home extends Activity {
 
     @Override public void onRequestPermissionsResult(int code, String[] perms, int[] result) {
         super.onRequestPermissionsResult(code, perms, result);
+        if (code == NOTE_PERMISSION) return;
         if (code != MIC_PERMISSION) return;
         if (granted()) {
             micBlocked = false;
@@ -331,6 +443,8 @@ public class Home extends Activity {
     @Override protected void onResume() {
         super.onResume();
         if (granted()) micBlocked = false;
+        // Bubblan kan ha stängts från sin egen notis medan appen låg undan.
+        wantBubble = Bubble.running();
         render();
     }
 

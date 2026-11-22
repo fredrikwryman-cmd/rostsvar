@@ -30,11 +30,29 @@ svenska. Hela testinstruktionen att skicka med filen står i
 
 Appen begär bara mikrofonen. Den har inget konto, ingen analys och når inget nät själv — men telefonens taltjänst, som gör om talet till text, kan använda internet. Inget spelas in och ingen text sparas; stänger du appen är fältet tomt nästa gång.
 
+### Den flytande knappen
+
+Appens egentliga idé: en liten grön knapp som ligger kvar **över alla appar**.
+Ett tryck, du talar, och texten hamnar i det fält du står i. Knappen går att dra
+dit du vill och fastnar vid närmaste kant. Du startar och stoppar den med
+strömbrytaren högst upp på hemskärmen, eller med **Stäng** i dess egen notis.
+
+Knappen körs som en förgrundstjänst, eftersom Android kräver det av något som
+håller mikrofonen igång utanför sin egen skärm. Notisen som följer med ligger på
+lägsta vikt, utan ljud och utan bricka.
+
+Texten skrivs in av en tillgänglighetstjänst — det är enda vägen för en app att
+skriva i en annan app på Android. Tjänsten frågar systemet vilket fält som har
+skrivfokus och lägger texten efter den som redan står där. Den läser inget
+annat, loggar ingenting, sparar ingenting och når inget nät. Hittas inget fält
+hamnar texten i **urklipp** med en notis om att den kan klistras in, så att det
+som sagts aldrig går förlorat.
+
 ### Rösttangentbordet
 
-Kärnidén är att diktera **där man redan skriver**. Därför följer ett
-rösttangentbord med appen: en vanlig svensk layout med å, ä och ö, siffror och
-skiljetecken, och längst ned en bred grön **Tala**-knapp.
+Reserven, för de fält bubblan inte kommer åt, och för den som hellre skriver än
+dikterar. En vanlig svensk layout med å, ä och ö, siffror och skiljetecken, och
+längst ned en bred grön **Tala**-knapp.
 
 Appen slår inte på det åt dig — Android kräver att du gör det själv — men
 **kom igång-guiden** öppnar rätt systemruta med ett tryck och läser av när
@@ -52,12 +70,23 @@ avstängd; där fungerar bara tangenterna.
 
 ### Kom igång-guiden
 
-Tre steg, ett i taget, var och en med skälet till att Android kräver det:
-mikrofontillståndet (som frågas i appen, eftersom ett tangentbord inte får
-fråga själv), tangentbordslistan och tangentbordsväljaren. Varje steg bockas av
-när appen själv ser att det är gjort — läget läses om varje gång appen kommer
+Fem steg, ett i taget, var och en med skälet till att Android kräver det:
+
+1. **mikrofontillståndet**, som frågas i appen eftersom varken ett tangentbord
+   eller en tjänst får fråga själv,
+2. **visa över andra appar**, som bubblan behöver för att alls få synas,
+3. **tillgängligheten**, som bubblan behöver för att få skriva i fältet,
+4. **tangentbordslistan** och
+5. **tangentbordsväljaren**.
+
+Varje steg bockas av när appen själv ser att det är gjort: tillståndet via
+`checkSelfPermission`, bubblans rätt via `Settings.canDrawOverlays`,
+tillgängligheten via `AccessibilityManager.getEnabledAccessibilityServiceList`,
+tangentbordet via `getEnabledInputMethodList` och valet via
+`Settings.Secure.DEFAULT_INPUT_METHOD`. Läget läses om varje gång appen kommer
 fram igen, så guiden följer med utan att man trycker vidare. Sist ett provfält
-där man dikterar och får kvittot att det fungerar.
+där man dikterar och får kvittot att det fungerar. Så länge något steg fattas
+står en varning kvar på hemskärmen, som namnger just det som fattas.
 
 ## iMessage · inbyggt tillägg
 
@@ -136,12 +165,17 @@ Xcode 16.4 och iOS 18.5 SDK. Noll varningar. Tillägget bäddas in i appen som
 ozonerade platser. 16 tester gröna på iPhone-simulator.
 
 **Android, uppmätt.** Lokalt bygge med Build Tools 36.0.0 mot Platform 35,
-utan fel. `Tap-and-Talk-android-test.apk` är 141 661 byte, versionCode 5, med en
-`classes.dex` på 38 200 byte. Paketet begär ett enda tillstånd, `RECORD_AUDIO`,
-har en startbar aktivitet, `se.rostsvar.mobile.Home`, kom igång-guiden
-`se.rostsvar.mobile.Guide`, rösttangentbordet `se.rostsvar.mobile.VoiceKeys`
-bundet med `BIND_INPUT_METHOD` och beskrivet av `res/xml/method.xml`, och en
-lagerikon i fem tätheter. Signaturen verifierad med apksigner (v3).
+utan fel. `Tap-and-Talk-android-test.apk` är 158 109 byte, versionCode 6, med en
+`classes.dex` på 54 544 byte. Paketet begär `RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`,
+`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MICROPHONE` och `POST_NOTIFICATIONS` —
+inget nät, ingen lagring, ingen plats. Det har en startbar aktivitet,
+`se.rostsvar.mobile.Home`, kom igång-guiden `se.rostsvar.mobile.Guide`, bubblans
+förgrundstjänst `se.rostsvar.mobile.Bubble` med `foregroundServiceType`
+mikrofon, skrivtjänsten `se.rostsvar.mobile.Writer` bunden med
+`BIND_ACCESSIBILITY_SERVICE` och beskriven av `res/xml/writer.xml`,
+rösttangentbordet `se.rostsvar.mobile.VoiceKeys` bundet med `BIND_INPUT_METHOD`
+och beskrivet av `res/xml/method.xml`, och en lagerikon i fem tätheter.
+Signaturen verifierad med apksigner (v3).
 
 **Ingenting är provat på en fysisk telefon.** Taligenkänning, mikrofonens
 beteende i Meddelanden och att ett tryck på Skicka ger exakt ett meddelande går

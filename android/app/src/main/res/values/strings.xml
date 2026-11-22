@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Texten Android visar under tjänsten i tillgänglighetsinställningarna.
+        Den ska svara på frågan användaren faktiskt ställer sig i den rutan:
+        vad får appen se, och vad gör den med det.
+    -->
+    <string name="tillganglighet_beskrivning">Tap &amp; Talk läser bara det textfält du står i, och bara för att kunna skriva din dikterade text där. Ingenting loggas, ingenting sparas och ingenting skickas till något nät. Hittas inget fält hamnar texten i urklipp i stället, så att det du sagt aldrig går förlorat.</string>
+    <string name="tillganglighet_namn">Tap &amp; Talk · skriv i fältet</string>
+</resources>

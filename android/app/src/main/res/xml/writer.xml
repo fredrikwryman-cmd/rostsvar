@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Inställningarna för tjänsten som skriver i det fokuserade fältet.
+
+    canRetrieveWindowContent krävs för att alls få fråga systemet vilket fält
+    som har skrivfokus. Det är den rätt som gör att bubblan kan skriva.
+
+    typeViewFocused är den smalaste händelsetypen som finns, och tjänsten
+    kastar ändå varje händelse den får. Den läser bara när bubblan ber om
+    det, och bara det fält som har fokus.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/tillganglighet_beskrivning"
+    android:accessibilityEventTypes="typeViewFocused"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault"
+    android:canRetrieveWindowContent="true"
+    android:notificationTimeout="0"/>
