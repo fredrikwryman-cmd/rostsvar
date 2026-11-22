@@ -65,16 +65,21 @@ Gör gärna första försöket i en chatt med dig själv.
 
 Det här är kärnan: diktera **där du redan skriver**, utan att gå via appen.
 
-Slå på tangentbordet en gång:
+**Guiden gör det åt dig.** Den öppnas av sig själv första gången du startar
+appen, och finns annars bakom **Guide**-knappen uppe till höger på hemskärmen.
+Den tar dig genom tre steg och bockar av dem när de är gjorda:
 
-1. **Inställningar → System → Språk och inmatning → Skärmtangentbord →
-   Hantera tangentbord.**
-2. Slå på **Tap & Talk · rösttangentbord**. Android varnar att ett tangentbord
-   kan se allt du skriver. Det är standardvarningen för alla tangentbord.
+1. **Tillåt mikrofonen.** Frågan ställs i appen, eftersom ett tangentbord inte
+   får fråga själv.
+2. **Slå på tangentbordet.** Knappen öppnar Androids lista över tangentbord.
+   Slå på **Tap & Talk · rösttangentbord**. Android varnar att ett tangentbord
+   kan se allt du skriver — det är standardvarningen för alla tangentbord.
    Tap & Talk loggar ingenting och skickar ingenting vidare.
-3. Öppna en chatt, tryck i skrivfältet och byt tangentbord med
-   tangentbordsikonen i navigeringsraden, eller genom att hålla in mellanslag i
-   ditt vanliga tangentbord.
+3. **Byt till Tap & Talk.** Knappen öppnar tangentbordsväljaren.
+
+Sist i guiden finns ett **provfält**. Diktera en mening där; står det
+*"Det fungerar"* är allt på plats. Så länge något steg fattas står en gul
+varning kvar på hemskärmen med en knapp tillbaka till guiden.
 
 Sedan, i chatten:
 
@@ -87,9 +92,6 @@ Sedan, i chatten:
 4. **⌨** tar dig tillbaka till ditt vanliga tangentbord.
 5. Läs texten och tryck på **chattens egen skickaknapp**. Tangentbordet skickar
    aldrig något själv.
-
-En egen guide i appen som ställer in det här åt dig kommer i nästa version. Nu
-får du gå via inställningarna.
 
 ## 7 · Det vi särskilt vill veta
 
@@ -104,6 +106,8 @@ får du gå via inställningarna.
   **skrev med tangenterna mitt i** en diktering? Ingen text ska dyka upp två
   gånger och ingenting ska försvinna.
 - Fungerade **⌨** för att komma tillbaka till ditt vanliga tangentbord?
+- I guiden: bockades varje steg av **av sig själv** när du kom tillbaka från
+  Androids inställningar, utan att du behövde trycka vidare?
 
 ---
 

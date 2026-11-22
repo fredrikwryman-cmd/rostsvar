@@ -33,21 +33,23 @@ import android.widget.TextView;
  */
 public class Home extends Activity {
 
-    /** Svart bakgrund och grön accent, samma visuella linje som iOS-appen. */
-    private static final int BG = 0xFF000000;
-    private static final int INK = 0xFFF2F4F3;
-    private static final int DIM = 0xFF9AA3A0;
-    private static final int GREEN = 0xFF3FE08A;
-    private static final int GREEN_DEEP = 0xFF16A35A;
-    private static final int FIELD = 0xFF111315;
-    private static final int BORDER = 0xFF2A2F31;
-    private static final int OFF = 0xFF3A3F42;
+    /** Svart bakgrund och grön accent. Färgerna står i Look. */
+    private static final int BG = Look.BG;
+    private static final int INK = Look.INK;
+    private static final int DIM = Look.DIM;
+    private static final int GREEN = Look.GREEN;
+    private static final int GREEN_DEEP = Look.GREEN_DEEP;
+    private static final int FIELD = Look.FIELD;
+    private static final int BORDER = Look.BORDER;
+    private static final int OFF = Look.OFF;
+    private static final int WARN = Look.WARN;
 
     private static final int MIC_PERMISSION = 1;
     /** Fast id, så att texten överlever en vridning av telefonen. */
     private static final int DRAFT_ID = 0x7EAD0001;
 
     private TextView status;
+    private LinearLayout warning;
     private EditText draft;
     private Button mic;
     private Button send;
@@ -71,17 +73,65 @@ public class Home extends Activity {
         page.setPadding(dp(20), dp(28), dp(20), dp(24));
         page.setFitsSystemWindows(true);
 
+        LinearLayout head = new LinearLayout(this);
+        head.setOrientation(LinearLayout.HORIZONTAL);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+
         TextView title = new TextView(this);
         title.setText("Tap & Talk");
         title.setTextColor(INK);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 30);
-        page.addView(title, row(0, 0));
+        head.addView(title, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        Button guide = new Button(this);
+        guide.setAllCaps(false);
+        guide.setText("Guide");
+        guide.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        guide.setTextColor(DIM);
+        guide.setBackground(box(0x00000000, BORDER, dp(12)));
+        guide.setContentDescription("Öppna kom igång-guiden");
+        guide.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { openGuide(); }
+        });
+        head.addView(guide, new LinearLayout.LayoutParams(dp(92), dp(46)));
+        page.addView(head, row(0, 0));
 
         status = new TextView(this);
         status.setTextColor(DIM);
         status.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         status.setLineSpacing(0, 1.3f);
         page.addView(status, row(dp(8), 0));
+
+        // Varningen står kvar så länge något steg i guiden fattas, eftersom
+        // appen då bara kan diktera här inne och inte i chattarna.
+        warning = new LinearLayout(this);
+        warning.setOrientation(LinearLayout.VERTICAL);
+        warning.setBackground(box(0xFF1A1407, WARN, dp(14)));
+        warning.setPadding(dp(14), dp(14), dp(14), dp(14));
+
+        TextView warnText = new TextView(this);
+        warnText.setTextColor(WARN);
+        warnText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        warnText.setLineSpacing(0, 1.3f);
+        warnText.setText("Rösttangentbordet är inte igång. Du kan diktera här i appen, "
+                + "men ännu inte direkt i dina chattar.");
+        warning.addView(warnText, row(0, 0));
+
+        Button fix = new Button(this);
+        fix.setAllCaps(false);
+        fix.setText("Öppna guiden");
+        fix.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        fix.setTextColor(0xFF1A1407);
+        fix.setBackground(box(WARN, 0, dp(12)));
+        fix.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { openGuide(); }
+        });
+        LinearLayout.LayoutParams fixRow = row(dp(12), 0);
+        fixRow.height = dp(48);
+        warning.addView(fix, fixRow);
+
+        page.addView(warning, row(dp(14), 0));
 
         draft = new EditText(this);
         draft.setId(DRAFT_ID);
@@ -134,6 +184,16 @@ public class Home extends Activity {
             note = "Telefonen har ingen taltjänst som kan tolka tal. Installera eller aktivera en rösttjänst med svenska.";
         }
         render();
+
+        // Första starten går direkt till guiden. Den visas en gång av sig
+        // själv; sedan når man den med Guide-knappen.
+        boolean seen = getSharedPreferences(Guide.SETTINGS, MODE_PRIVATE)
+                .getBoolean(Guide.SEEN, false);
+        if (!seen) openGuide();
+    }
+
+    private void openGuide() {
+        startActivity(new Intent(this, Guide.class));
     }
 
     private LinearLayout.LayoutParams row(int top, int bottom) {
@@ -163,6 +223,7 @@ public class Home extends Activity {
         boolean canTalk = SpeechRecognizer.isRecognitionAvailable(this);
 
         status.setText(note);
+        warning.setVisibility(Guide.allDone(this) ? View.GONE : View.VISIBLE);
 
         mic.setText(listening ? "Klar" : (micBlocked ? "Tillåt mikrofon" : (hasText ? "Tala om" : "Tala")));
         mic.setContentDescription(listening

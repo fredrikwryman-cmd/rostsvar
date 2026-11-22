@@ -22,6 +22,14 @@
             </intent-filter>
         </activity>
 
+        <!-- Kom igång-guiden. Startas av appen själv första gången och från
+             Guide-knappen på hemskärmen. -->
+        <activity
+            android:name=".Guide"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:parentActivityName=".Home"/>
+
         <!-- Rösttangentbordet. Android binder tjänsten, och bara Android:
              BIND_INPUT_METHOD gör att ingen annan app kan koppla upp sig
              mot den. Det som skrivs eller dikteras loggas aldrig. -->

@@ -36,9 +36,11 @@ Kärnidén är att diktera **där man redan skriver**. Därför följer ett
 rösttangentbord med appen: en vanlig svensk layout med å, ä och ö, siffror och
 skiljetecken, och längst ned en bred grön **Tala**-knapp.
 
-Slå på det i **Inställningar → System → Språk och inmatning → Skärmtangentbord →
-Hantera tangentbord**, och välj det sedan i chatten via tangentbordsväljaren.
-En egen onboarding som gör det här åt användaren kommer i ett senare steg.
+Appen slår inte på det åt dig — Android kräver att du gör det själv — men
+**kom igång-guiden** öppnar rätt systemruta med ett tryck och läser av när
+steget är gjort. Den visas vid första starten och nås sedan med **Guide**-knappen
+uppe till höger på hemskärmen. Så länge något steg fattas står en varning kvar på
+hemskärmen med en väg tillbaka till guiden.
 
 I chatten: tryck i skrivfältet, tryck på **Tala** och diktera. Texten skrivs rakt
 in i fältet medan du talar, som preliminär text, och blir vanlig text när
@@ -47,6 +49,15 @@ till ditt vanliga tangentbord, och skicka med chattens egen knapp.
 
 Tangentbordet loggar ingenting och når inget nät. I lösenordsfält är dikteringen
 avstängd; där fungerar bara tangenterna.
+
+### Kom igång-guiden
+
+Tre steg, ett i taget, var och en med skälet till att Android kräver det:
+mikrofontillståndet (som frågas i appen, eftersom ett tangentbord inte får
+fråga själv), tangentbordslistan och tangentbordsväljaren. Varje steg bockas av
+när appen själv ser att det är gjort — läget läses om varje gång appen kommer
+fram igen, så guiden följer med utan att man trycker vidare. Sist ett provfält
+där man dikterar och får kvittot att det fungerar.
 
 ## iMessage · inbyggt tillägg
 
@@ -117,12 +128,12 @@ Xcode 16.4 och iOS 18.5 SDK. Noll varningar. Tillägget bäddas in i appen som
 ozonerade platser. 16 tester gröna på iPhone-simulator.
 
 **Android, uppmätt.** Lokalt bygge med Build Tools 36.0.0 mot Platform 35,
-utan fel. `Tap-and-Talk-android-test.apk` är 129 373 byte, versionCode 4, med en
-`classes.dex` på 27 636 byte. Paketet begär ett enda tillstånd, `RECORD_AUDIO`,
-har en startbar aktivitet, `se.rostsvar.mobile.Home`, rösttangentbordet
-`se.rostsvar.mobile.VoiceKeys` bundet med `BIND_INPUT_METHOD` och beskrivet av
-`res/xml/method.xml`, och en lagerikon i fem tätheter. Signaturen verifierad med
-apksigner (v3).
+utan fel. `Tap-and-Talk-android-test.apk` är 141 661 byte, versionCode 5, med en
+`classes.dex` på 38 200 byte. Paketet begär ett enda tillstånd, `RECORD_AUDIO`,
+har en startbar aktivitet, `se.rostsvar.mobile.Home`, kom igång-guiden
+`se.rostsvar.mobile.Guide`, rösttangentbordet `se.rostsvar.mobile.VoiceKeys`
+bundet med `BIND_INPUT_METHOD` och beskrivet av `res/xml/method.xml`, och en
+lagerikon i fem tätheter. Signaturen verifierad med apksigner (v3).
 
 **Ingenting är provat på en fysisk telefon.** Taligenkänning, mikrofonens
 beteende i Meddelanden och att ett tryck på Skicka ger exakt ett meddelande går

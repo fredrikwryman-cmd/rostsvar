@@ -38,17 +38,17 @@ import java.util.Locale;
  */
 public class VoiceKeys extends InputMethodService {
 
-    /** Samma svarta yta och gröna accent som appens skärm. */
-    private static final int BOARD = 0xFF000000;
+    /** Samma svarta yta och gröna accent som appens skärm. Se Look. */
+    private static final int BOARD = Look.BG;
     private static final int KEY = 0xFF1B1F21;
     private static final int KEY_DOWN = 0xFF2E3437;
     private static final int TOOL = 0xFF101315;
     private static final int TOOL_DOWN = 0xFF1E2325;
-    private static final int INK = 0xFFF2F4F3;
-    private static final int DIM = 0xFF9AA3A0;
-    private static final int GREEN = 0xFF3FE08A;
-    private static final int GREEN_DEEP = 0xFF16A35A;
-    private static final int DARK_INK = 0xFF05140C;
+    private static final int INK = Look.INK;
+    private static final int DIM = Look.DIM;
+    private static final int GREEN = Look.GREEN;
+    private static final int GREEN_DEEP = Look.GREEN_DEEP;
+    private static final int DARK_INK = Look.DARK_INK;
 
     /** Svensk layout. Tre rader bokstäver, med å ä ö på sina vanliga platser. */
     private static final String[] LETTERS = {"qwertyuiopå", "asdfghjklöä", "zxcvbnm"};
