@@ -40,6 +40,34 @@ jobs:
             | grep -E 'PRODUCT_BUNDLE_IDENTIFIER|MARKETING_VERSION|CURRENT_PROJECT_VERSION|IPHONEOS_DEPLOYMENT_TARGET|TARGETED_DEVICE_FAMILY' \
             | sort -u
 
+      - name: Välj iPhone-simulator
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+          data = json.loads(subprocess.check_output(
+              ['xcrun', 'simctl', 'list', 'devices', 'available', '--json']))
+          units = [d for group in data['devices'].values() for d in group if 'iPhone' in d['name']]
+          if not units:
+              raise SystemExit('Ingen tillgänglig iPhone-simulator')
+          pick = sorted(units, key=lambda d: d['name'])[-1]
+          print('Simulator:', pick['name'], pick['udid'])
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write('SIMULATOR_ID=' + pick['udid'] + '\n')
+          PY
+
+      - name: Kör testerna för utkastet
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild test \
+            -project Rostsvar.xcodeproj \
+            -scheme Rostsvar \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -resultBundlePath build/Rostsvar-tester.xcresult \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            2>&1 | tee build/xcodebuild-test.log | grep -E "Test Case|Executed|error:|\*\* TEST" || true
+          grep -E "^Test Suite .* (passed|failed)|Executed [0-9]+ test" build/xcodebuild-test.log | tail -5
+
       - name: Bygg osignerat för iPhone
         run: |
           set -o pipefail
@@ -106,5 +134,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Rostsvar-bygglogg
-          path: ios/build/xcodebuild-unsigned.log
+          path: |
+            ios/build/xcodebuild-unsigned.log
+            ios/build/xcodebuild-test.log
+            ios/build/Rostsvar-tester.xcresult
           if-no-files-found: ignore

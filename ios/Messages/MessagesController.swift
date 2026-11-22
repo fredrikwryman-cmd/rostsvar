@@ -4,11 +4,8 @@ import Speech
 import UIKit
 
 final class MessagesController: MSMessagesAppViewController {
-    private enum Phase { case idle, asking, recording, finishing, sending }
-
-    private var phase = Phase.idle
+    private var state = DraftState()
     private var generation = UUID()
-    private var conversationKey: String?
     private var note = "Tryck på Tala för att svara."
 
     private let engine = AVAudioEngine()
@@ -92,17 +89,15 @@ final class MessagesController: MSMessagesAppViewController {
         button.heightAnchor.constraint(greaterThanOrEqualToConstant: 50).isActive = true
     }
 
-    private var draftIsEmpty: Bool {
-        draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
     private func render() {
         status.text = note
-        mic.setTitle(phase == .recording ? "Klar" : (draftIsEmpty ? "Tala" : "Tala om"), for: .normal)
-        mic.accessibilityLabel = phase == .recording ? "Klar, stäng mikrofonen" : "Tala, starta mikrofonen"
-        mic.isEnabled = phase == .idle || phase == .recording
-        stop.isEnabled = phase == .asking || phase == .recording || phase == .finishing || !draftIsEmpty
-        send.isEnabled = phase == .idle && !draftIsEmpty && activeConversation != nil
+        if draft.text != state.draft { draft.text = state.draft }
+        let talking = state.phase == .recording
+        mic.setTitle(talking ? "Klar" : (state.hasDraft ? "Tala om" : "Tala"), for: .normal)
+        mic.accessibilityLabel = talking ? "Klar, stäng mikrofonen" : "Tala, starta mikrofonen"
+        mic.isEnabled = state.canTalk
+        stop.isEnabled = state.canCancel
+        send.isEnabled = state.canSend && activeConversation != nil
     }
 
     // MARK: - Meddelanden
@@ -114,12 +109,8 @@ final class MessagesController: MSMessagesAppViewController {
 
     override func willBecomeActive(with conversation: MSConversation) {
         super.willBecomeActive(with: conversation)
-        let current = fingerprint(conversation)
-        if conversationKey != current {
-            conversationKey = current
-            draft.text = ""
-        }
-        reset(draftIsEmpty ? "Tryck på Tala för att svara." : "Läs igenom och tryck på Skicka.")
+        state.becomeActive(conversation: fingerprint(conversation))
+        reset(state.hasDraft ? "Läs igenom och tryck på Skicka." : "Tryck på Tala för att svara.")
     }
 
     override func didBecomeActive(with conversation: MSConversation) {
@@ -129,31 +120,31 @@ final class MessagesController: MSMessagesAppViewController {
 
     override func willResignActive(with conversation: MSConversation) {
         super.willResignActive(with: conversation)
-        draft.text = ""
+        state.resignActive()
         reset("Tryck på Tala för att svara.")
     }
 
     override func willTransition(to presentationStyle: MSMessagesAppPresentationStyle) {
         super.willTransition(to: presentationStyle)
         guard presentationStyle == .compact else { return }
-        if phase == .asking || phase == .recording || phase == .finishing {
+        if state.phase != .idle {
             reset("Mikrofonen stängdes. Tryck på Tala igen.")
         }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        if phase != .idle { reset("Mikrofonen stängdes.") }
+        if state.phase != .idle { reset("Mikrofonen stängdes.") }
     }
 
     // MARK: - Diktering
 
     @objc private func talk() {
-        if phase == .recording { finish(); return }
-        guard phase == .idle else { return }
+        if state.phase == .recording { finish(); return }
+        guard state.phase == .idle else { return }
         let id = UUID()
         generation = id
-        phase = .asking
+        state.ask()
         note = "Kontrollerar mikrofon och taligenkänning …"
         render()
         SFSpeechRecognizer.requestAuthorization { auth in
@@ -204,21 +195,23 @@ final class MessagesController: MSMessagesAppViewController {
             hasTap = true
             engine.prepare()
             try engine.start()
-            draft.text = ""
-            phase = .recording
+            state.beginRecording()
             note = "Lyssnar på svenska. Tryck på Klar när du talat."
             render()
             task = recognizer.recognitionTask(with: buffer) { result, error in
                 DispatchQueue.main.async {
                     guard self.generation == id else { return }
-                    if let result { self.draft.text = result.bestTranscription.formattedString }
+                    if let result {
+                        self.state.transcribe(result.bestTranscription.formattedString)
+                        self.render()
+                    }
                     if result?.isFinal == true || error != nil {
-                        self.reset(self.draftIsEmpty ? "Inget tal uppfattades. Försök igen." : "Läs igenom och tryck på Skicka.")
+                        self.reset(self.state.hasDraft ? "Läs igenom och tryck på Skicka." : "Inget tal uppfattades. Försök igen.")
                     }
                 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 55) {
-                if self.generation == id, self.phase == .recording { self.finish() }
+                if self.generation == id, self.state.phase == .recording { self.finish() }
             }
         } catch {
             reset("Mikrofonen kunde inte starta. Försök igen.")
@@ -226,8 +219,8 @@ final class MessagesController: MSMessagesAppViewController {
     }
 
     private func finish() {
-        guard phase == .recording else { return }
-        phase = .finishing
+        guard state.phase == .recording else { return }
+        state.finishRecording()
         closeMicrophone()
         request?.endAudio()
         note = "Slutför texten …"
@@ -235,12 +228,12 @@ final class MessagesController: MSMessagesAppViewController {
         let id = generation
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
             guard self.generation == id else { return }
-            self.reset(self.draftIsEmpty ? "Inget tal uppfattades. Försök igen." : "Läs igenom och tryck på Skicka.")
+            self.reset(self.state.hasDraft ? "Läs igenom och tryck på Skicka." : "Inget tal uppfattades. Försök igen.")
         }
     }
 
     @objc private func abandon() {
-        draft.text = ""
+        state.cancel()
         reset("Avbrutet. Inget skickades.")
     }
 
@@ -265,7 +258,7 @@ final class MessagesController: MSMessagesAppViewController {
         task?.cancel()
         task = nil
         request = nil
-        phase = .idle
+        state.rest()
         note = message
         render()
     }
@@ -273,20 +266,19 @@ final class MessagesController: MSMessagesAppViewController {
     // MARK: - Skicka
 
     @objc private func sendDraft() {
-        let text = draft.text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard phase == .idle, !text.isEmpty,
+        let text = state.trimmedDraft
+        guard state.canSend,
               presentationContext == .messages,
               let conversation = activeConversation else { return }
         let id = UUID()
         generation = id
-        phase = .sending
+        state.beginSending()
         note = "Skickar …"
         render()
         conversation.sendText(text) { error in
             DispatchQueue.main.async {
                 guard self.generation == id else { return }
-                self.phase = .idle
-                if error == nil { self.draft.text = "" }
+                self.state.finishSending(failed: error != nil)
                 self.note = error == nil ? "Skickat." : "Kunde inte skicka. Ditt utkast finns kvar."
                 self.render()
             }

@@ -39,6 +39,9 @@ targets:
     dependencies:
       - target: RostsvarMessages
         embed: true
+    scheme:
+      testTargets:
+        - RostsvarTests
   RostsvarMessages:
     type: app-extension.messages
     platform: iOS
@@ -52,3 +55,14 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: iMessage App Icon
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
+  RostsvarTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+      - path: Messages/DraftState.swift
+    settings:
+      base:
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: se.rostsvar.mobile.Tests
