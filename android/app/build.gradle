@@ -1,0 +1,13 @@
+plugins { id 'com.android.application' version '8.9.2' }
+
+android {
+    namespace 'se.rostsvar.mobile'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'se.rostsvar.mobile'
+        minSdk 30
+        targetSdk 35
+        versionCode 1
+        versionName '0.1'
+    }
+}

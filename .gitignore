@@ -1,0 +1,25 @@
+# Xcode-projektet genereras av XcodeGen och versionshanteras inte.
+ios/Rostsvar.xcodeproj/
+ios/build/
+ios/DerivedData/
+ios/App/Info.plist
+xcuserdata/
+*.xcuserstate
+*.xcarchive
+
+# Android-bygget. Innehåller bland annat en lokal testnyckel som
+# aldrig ska in i historiken.
+android/build/
+android/.gradle/
+android/app/build/
+*.p12
+*.keystore
+*.jks
+*.p8
+*.mobileprovision
+*.cer
+
+# Skräp
+.DS_Store
+Thumbs.db
+__pycache__/

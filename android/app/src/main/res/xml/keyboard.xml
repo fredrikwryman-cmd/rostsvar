@@ -1,0 +1,3 @@
+<input-method xmlns:android="http://schemas.android.com/apk/res/android" android:supportsSwitchingToNextInputMethod="true">
+    <subtype android:imeSubtypeMode="voice" android:imeSubtypeLocale="sv_SE" android:languageTag="sv-SE"/>
+</input-method>

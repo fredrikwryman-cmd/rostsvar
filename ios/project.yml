@@ -1,0 +1,53 @@
+name: Rostsvar
+options:
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    MARKETING_VERSION: "0.1"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+targets:
+  Rostsvar:
+    type: application
+    platform: iOS
+    sources:
+      - App
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: se.rostsvar.mobile
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Röstsvar
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
+        NSMicrophoneUsageDescription: Mikrofonen används när du väljer Tala.
+        NSSpeechRecognitionUsageDescription: Ditt tal görs om till ett textutkast.
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    dependencies:
+      - target: RostsvarMessages
+        embed: true
+  RostsvarMessages:
+    type: app-extension.messages
+    platform: iOS
+    sources:
+      - Messages
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: se.rostsvar.mobile.Messages
+        INFOPLIST_FILE: Messages/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: iMessage App Icon
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES

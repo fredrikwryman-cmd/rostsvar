@@ -1,0 +1,157 @@
+name: Skicka Röstsvar till TestFlight
+
+# Startas för hand. Kräver tre hemligheter i repots inställningar
+# (Settings → Secrets and variables → Actions):
+#
+#   APP_STORE_CONNECT_KEY_ID      t.ex. 2X9ABC3DEF
+#   APP_STORE_CONNECT_ISSUER_ID   UUID från App Store Connect → Integrationer
+#   APP_STORE_CONNECT_PRIVATE_KEY hela innehållet i .p8-filen, inklusive
+#                                 BEGIN- och END-raderna
+#
+# samt en variabel (Settings → Secrets and variables → Actions → Variables):
+#
+#   APPLE_TEAM_ID                 tiotecknet från Apple Developer → Membership
+#
+# Nyckeln skrivs bara till byggarens egen disk och raderas i sista steget.
+# Xcode skapar certifikat och provisioneringsprofiler själv via
+# -allowProvisioningUpdates, så ingen Mac behövs hos oss.
+
+on:
+  workflow_dispatch:
+    inputs:
+      byggnummer:
+        description: "Byggnummer (CURRENT_PROJECT_VERSION). Måste vara högre än förra uppladdningen."
+        required: true
+        default: "1"
+      ladda_upp:
+        description: "Ladda upp till TestFlight efter arkiveringen"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  testflight:
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: ios
+    env:
+      KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Kontrollera att hemligheterna finns
+        run: |
+          missing=0
+          for name in KEY_ID ISSUER_ID TEAM_ID; do
+            if [ -z "${!name}" ]; then echo "Saknas: $name"; missing=1; fi
+          done
+          if [ -z "${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}" ]; then
+            echo "Saknas: APP_STORE_CONNECT_PRIVATE_KEY"; missing=1
+          fi
+          if [ "$missing" = "1" ]; then
+            echo "Lägg in dem under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          echo "Alla uppgifter finns."
+
+      - name: Lägg nyckeln på byggarens disk
+        run: |
+          mkdir -p "$HOME/private_keys"
+          chmod 700 "$HOME/private_keys"
+          printf '%s\n' "${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}" \
+            > "$HOME/private_keys/AuthKey_${KEY_ID}.p8"
+          chmod 600 "$HOME/private_keys/AuthKey_${KEY_ID}.p8"
+          head -1 "$HOME/private_keys/AuthKey_${KEY_ID}.p8"
+
+      - name: Installera XcodeGen och generera projektet
+        run: |
+          brew install xcodegen
+          xcodegen generate
+          xcodebuild -version
+
+      - name: Arkivera signerat
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild archive \
+            -project Rostsvar.xcodeproj \
+            -scheme Rostsvar \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/Rostsvar.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/private_keys/AuthKey_${KEY_ID}.p8" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CURRENT_PROJECT_VERSION="${{ inputs.byggnummer }}" \
+            2>&1 | tee build/xcodebuild-archive.log
+
+      - name: Exportera för App Store Connect
+        run: |
+          set -o pipefail
+          cat > build/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>method</key><string>app-store-connect</string>
+          <key>teamID</key><string>${TEAM_ID}</string>
+          <key>destination</key><string>export</string>
+          <key>signingStyle</key><string>automatic</string>
+          <key>uploadSymbols</key><true/>
+          <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath build/Rostsvar.xcarchive \
+            -exportPath build/Export \
+            -exportOptionsPlist build/ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/private_keys/AuthKey_${KEY_ID}.p8" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            2>&1 | tee build/xcodebuild-export.log
+          ls -lh build/Export
+
+      - name: Kontrollera paketet före uppladdning
+        run: |
+          ipa=$(ls build/Export/*.ipa | head -1)
+          echo "IPA: $ipa"
+          xcrun altool --validate-app -f "$ipa" -t ios \
+            --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID" 2>&1 | tee build/validate.log
+
+      - name: Ladda upp till TestFlight
+        if: ${{ inputs.ladda_upp }}
+        run: |
+          ipa=$(ls build/Export/*.ipa | head -1)
+          xcrun altool --upload-app -f "$ipa" -t ios \
+            --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID" 2>&1 | tee build/upload.log
+          echo "Uppladdat. Bearbetningen i App Store Connect tar oftast 5–20 minuter."
+
+      - name: Ladda upp IPA som artefakt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rostsvar-signerad-IPA
+          path: ios/build/Export/*.ipa
+          if-no-files-found: ignore
+
+      - name: Ladda upp loggar
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rostsvar-testflight-loggar
+          path: |
+            ios/build/*.log
+            ios/build/Rostsvar.xcarchive/Info.plist
+          if-no-files-found: ignore
+
+      - name: Radera nyckeln
+        if: always()
+        run: rm -rf "$HOME/private_keys"
