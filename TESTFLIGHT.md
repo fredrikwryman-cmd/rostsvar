@@ -94,6 +94,48 @@ Gör provet i en konversation med dig själv.
 6. Lämna Tap & Talk, öppna en annan konversation och öppna Tap & Talk där.
    Kontrollera att utkastfältet är tomt.
 
+## Steg 8 · Messenger och Signal på iPhone
+
+Tillägget i steg 7 fungerar **bara i Meddelanden**. iOS släpper inte in ett
+iMessage-tillägg i andra chattappar. För Messenger och Signal finns ett annat
+flöde som bygger på iOS egna delar: en genväg som dikterar och kopierar, kopplad
+till den flytande AssistiveTouch-knappen. Ingenting av Tap & Talks egen kod är
+inblandad — det här är ett alternativ att jämföra med, inte appen vi bygger.
+
+Ställ in en gång:
+
+1. Öppna **Genvägar**, tryck på plus och döp genvägen till **Tap & Talk**.
+2. Lägg till åtgärden **Diktera text**. Välj språk **Svenska** och låt
+   dikteringen avslutas **efter en paus**.
+3. Lägg till **Kopiera till urklipp** med den dikterade texten som indata.
+   Visas valet **Lokalt urklipp**, slå på det — annars kan texten hoppa till
+   dina andra Apple-enheter.
+4. Kör genvägen en gång från Genvägar och godkänn åtkomsten den ber om.
+5. Öppna **Inställningar → Hjälpmedel → Tryck → AssistiveTouch** och slå på
+   knappen. Under **Dubbeltryck**, bläddra till genvägarna och välj
+   **Tap & Talk**. Saknas den i listan, koppla den i stället till
+   **Tryck på baksidan** under samma tryckinställningar.
+
+Så här provar du, i **Messenger** och sedan i **Signal**:
+
+1. Öppna en chatt.
+2. Dubbeltryck på den flytande AssistiveTouch-knappen och säg din mening på
+   svenska med å, ä och ö.
+3. Håll fingret i chattens skrivfält och välj **Klistra in**.
+4. Läs texten och tryck på **chattens egen skickaknapp**.
+
+Kontrollera samma saker som i Meddelanden: att å, ä och ö blev rätt, att texten
+hamnade i rätt fält, och att **ett** tryck på skickaknappen gav **ett**
+meddelande. Kontrollera dessutom att inget klistras in av sig självt när du
+byter chatt — urklippet ligger kvar tills du klistrar in det eller kopierar
+något annat.
+
+Två skillnader mot Meddelanden som är värda att notera i rapporten:
+
+- Texten går via iOS urklipp, så den kan nås av andra appar. I tillägget i
+  Meddelanden rör texten aldrig urklippet.
+- Det finns ingen **Avbryt**. Vill du ångra dig låter du bli att klistra in.
+
 ## Om något fryser
 
 Går uppladdningen fel laddas loggarna upp som artefakter på körningen
