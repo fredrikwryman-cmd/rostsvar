@@ -1,6 +1,4 @@
-import AVFoundation
 import Messages
-import Speech
 import UIKit
 
 final class MessagesController: MSMessagesAppViewController {
@@ -12,12 +10,10 @@ final class MessagesController: MSMessagesAppViewController {
     private var sendToken = UUID()
     private var note = "Tryck på Tala för att svara."
 
-    private let engine = AVAudioEngine()
-    private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "sv-SE"))
-    private var request: SFSpeechAudioBufferRecognitionRequest?
-    private var task: SFSpeechRecognitionTask?
-    private var hasTap = false
-    private var audioActive = false
+    /// Dikteringen är delad med tangentbordet. Rättningen av buggen där
+    /// texten försvann när taltjänsten avslutade med fel ligger i Dictation,
+    /// så att den gäller båda.
+    private let ears = Dictation()
 
     private let status = UILabel()
     private let draft = UITextView()
@@ -25,7 +21,7 @@ final class MessagesController: MSMessagesAppViewController {
     private let stop = UIButton(type: .system)
     private let send = UIButton(type: .system)
 
-    deinit { closeMicrophone() }
+    deinit { ears.cancel() }
 
     // MARK: - Vy
 
@@ -158,89 +154,51 @@ final class MessagesController: MSMessagesAppViewController {
         state.ask()
         note = "Kontrollerar mikrofon och taligenkänning …"
         render()
-        SFSpeechRecognizer.requestAuthorization { auth in
-            DispatchQueue.main.async {
-                guard self.generation == id else { return }
-                guard auth == .authorized else { self.reset("Tillåt taligenkänning i Inställningar."); return }
-                self.askMicrophone { granted in
-                    guard self.generation == id else { return }
-                    guard granted else { self.reset("Tillåt mikrofon i Inställningar."); return }
-                    self.start(id)
-                }
-            }
-        }
-    }
-
-    private func askMicrophone(_ done: @escaping (Bool) -> Void) {
-        let hand: (Bool) -> Void = { granted in DispatchQueue.main.async { done(granted) } }
-        if #available(iOS 17.0, *) {
-            AVAudioApplication.requestRecordPermission(completionHandler: hand)
-        } else {
-            AVAudioSession.sharedInstance().requestRecordPermission(hand)
+        ears.authorize { [weak self] refused in
+            guard let self, self.generation == id else { return }
+            if let refused { self.reset(refused); return }
+            self.start(id)
         }
     }
 
     private func start(_ id: UUID) {
-        guard let recognizer, recognizer.isAvailable else {
-            reset("Svensk taligenkänning är inte tillgänglig just nu.")
-            return
-        }
-        do {
-            let audio = AVAudioSession.sharedInstance()
-            try audio.setCategory(.record, mode: .measurement, options: [])
-            try audio.setActive(true, options: [])
-            audioActive = true
-            let input = engine.inputNode
-            let format = input.outputFormat(forBus: 0)
-            guard format.sampleRate > 0, format.channelCount > 0 else {
-                reset("Ingen mikrofon tillgänglig.")
-                return
+        // Mikrofonen startas före beginRecording, eftersom beginRecording
+        // rensar utkastet. Går mikrofonen inte igång ska den gamla texten
+        // ligga kvar.
+        let refused = ears.start(partial: { [weak self] text in
+            guard let self, self.generation == id else { return }
+            self.state.transcribe(text)
+            self.render()
+        }, ending: { [weak self] how in
+            guard let self, self.generation == id else { return }
+            switch how {
+            case .done(let text):
+                self.state.transcribe(text)
+                self.reset("Läs igenom och tryck på Skicka.")
+            case .salvaged(let text, let why):
+                // Texten hördes. Då säger vi aldrig att inget uppfattades.
+                self.state.transcribe(text)
+                self.reset(why + " Läs igenom och tryck på Skicka.")
+            case .nothing(let why):
+                self.reset(self.state.hasDraft ? "Läs igenom och tryck på Skicka." : why)
             }
-            let buffer = SFSpeechAudioBufferRecognitionRequest()
-            buffer.shouldReportPartialResults = true
-            buffer.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
-            buffer.taskHint = .dictation
-            buffer.addsPunctuation = true
-            request = buffer
-            input.installTap(onBus: 0, bufferSize: 1024, format: format) { sample, _ in buffer.append(sample) }
-            hasTap = true
-            engine.prepare()
-            try engine.start()
-            state.beginRecording()
-            note = "Lyssnar på svenska. Tryck på Klar när du talat."
-            render()
-            task = recognizer.recognitionTask(with: buffer) { result, error in
-                DispatchQueue.main.async {
-                    guard self.generation == id else { return }
-                    if let result {
-                        self.state.transcribe(result.bestTranscription.formattedString)
-                        self.render()
-                    }
-                    if result?.isFinal == true || error != nil {
-                        self.reset(self.state.hasDraft ? "Läs igenom och tryck på Skicka." : "Inget tal uppfattades. Försök igen.")
-                    }
-                }
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 55) {
-                if self.generation == id, self.state.phase == .recording { self.finish() }
-            }
-        } catch {
-            reset("Mikrofonen kunde inte starta. Försök igen.")
-        }
+        })
+        if let refused { reset(refused); return }
+        state.beginRecording()
+        note = "Lyssnar på svenska. Tryck på Klar när du talat."
+        render()
     }
 
+    /// Användaren är klar. Dikteringen avslutar ljudet själv och svarar
+    /// genom sin ending-stängning; här väntar vi bara på svaret. Tidigare
+    /// stängdes sessionen här, och det var det som fick taltjänsten att
+    /// avsluta med fel efter att redan ha hört rätt.
     private func finish() {
         guard state.phase == .recording else { return }
         state.finishRecording()
-        closeMicrophone()
-        request?.endAudio()
         note = "Slutför texten …"
         render()
-        let id = generation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-            guard self.generation == id else { return }
-            self.reset(self.state.hasDraft ? "Läs igenom och tryck på Skicka." : "Inget tal uppfattades. Försök igen.")
-        }
+        ears.finish()
     }
 
     @objc private func abandon() {
@@ -248,27 +206,10 @@ final class MessagesController: MSMessagesAppViewController {
         reset("Avbrutet. Inget skickades.")
     }
 
-    /// Stänger mikrofonen och ljudsessionen. Tål att kallas flera gånger.
-    private func closeMicrophone() {
-        if engine.isRunning { engine.stop() }
-        if hasTap {
-            engine.inputNode.removeTap(onBus: 0)
-            hasTap = false
-        }
-        engine.reset()
-        if audioActive {
-            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-            audioActive = false
-        }
-    }
-
     /// Avslutar allt pågående arbete, stänger mikrofonen och går till vila.
     private func reset(_ message: String) {
         generation = UUID()
-        closeMicrophone()
-        task?.cancel()
-        task = nil
-        request = nil
+        ears.cancel()
         state.rest()
         note = message
         render()

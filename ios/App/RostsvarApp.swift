@@ -12,6 +12,13 @@ struct RostsvarApp: App {
                         Step(3, "Tryck på Tala och diktera på svenska.")
                         Step(4, "Tryck på Klar, läs igenom utkastet och tryck på Skicka.")
                     }
+                    Section("Tangentbordet") {
+                        Text("Tap & Talk är också ett tangentbord, så du kan diktera i varje app där du skriver.")
+                        Step(1, "Inställningar → Allmänt → Tangentbord → Tangentbord → Lägg till nytt tangentbord, och välj Tap & Talk.")
+                        Step(2, "Tryck på Tap & Talk i listan och slå på Tillåt fullständig åtkomst. Utan den får tangentbordet inte använda mikrofonen, och kan inte be om den själv.")
+                        Step(3, "Tryck på jordgloben i ditt vanliga tangentbord tills Tap & Talk kommer fram, och tryck på Tala.")
+                        Text("Tangentbordet skriver bara i det fält du står i. Ingenting av det du skriver sparas eller lämnar telefonen.")
+                    }
                     Section("Avbryta") {
                         Text("Avbryt stänger mikrofonen och rensar utkastet. Inget skickas förrän du trycker på Skicka.")
                         Text("Utkastet rensas också när du lämnar Tap & Talk eller byter konversation.")

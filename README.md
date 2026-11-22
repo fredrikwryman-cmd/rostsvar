@@ -88,6 +88,24 @@ fram igen, så guiden följer med utan att man trycker vidare. Sist ett provfäl
 där man dikterar och får kvittot att det fungerar. Så länge något steg fattas
 står en varning kvar på hemskärmen, som namnger just det som fattas.
 
+## iPhone · tangentbordet
+
+Tap & Talk är också ett tangentbord på iPhone, så dikteringen går att använda i
+varje app där man skriver och inte bara i Meddelanden. Svensk layout med å, ä
+och ö, siffror och skiljetecken i två uppsättningar, skift med lås, backsteg,
+mellanslag, retur och en **⌨**-knapp tillbaka till föregående tangentbord.
+Längst ned en bred grön **Tala**-knapp.
+
+Mikrofonen kräver **Tillåt fullständig åtkomst** (`RequestsOpenAccess`). Ett
+tangentbord får inte be om det själv, så saknas åtkomsten säger tangentbordet
+det i klartext och hänvisar till appen, som visar vägen steg för steg.
+
+Dikteringen skriver löpande medan man talar. Ett `textDocumentProxy` går bara
+att skriva i och radera bakåt i, så tangentbordet håller reda på vad det självt
+har skrivit: den gemensamma början av gamla och nya tolkningen behålls, resten
+raderas tecken för tecken och det nya läggs till. Användarens egen text rörs
+aldrig.
+
 ## iMessage · inbyggt tillägg
 
 Källkoden under **ios** innehåller en iPhone-app och ett tillägg för Meddelanden.
@@ -156,6 +174,7 @@ Håll isär de tre stegen. En rad ändras först när steget faktiskt är gjort.
 | Del | Kompilerat | Uppladdat till TestFlight | Provat på iPhone |
 | --- | --- | --- | --- |
 | iOS-app och iMessage-tillägg | ja | nej | nej |
+| iOS-tangentbord | nej | nej | nej |
 | Android | ja | — | nej |
 
 **iOS, uppmätt.** Osignerat Release-bygge för iPhone på macOS-byggare med
@@ -163,6 +182,12 @@ Xcode 16.4 och iOS 18.5 SDK. Noll varningar. Tillägget bäddas in i appen som
 `PlugIns/RostsvarMessages.appex` med rätt bundle-ID och
 `com.apple.message-payload-provider`. App- och iMessage-ikoner kompilerar utan
 ozonerade platser. 16 tester gröna på iPhone-simulator.
+
+**iOS, ännu inte mätt.** Tangentbordstillägget `se.rostsvar.mobile.Keyboard`,
+den delade dikteringen i `ios/Shared/Dictation.swift` och de sex nya testerna i
+`DictationEndingTests` är skrivna men **inte kompilerade** — det kräver en Mac
+eller en körning av iOS-flödet, och ingen körning har startats. Siffrorna ovan
+gäller bygget före de ändringarna.
 
 **Android, uppmätt.** Lokalt bygge med Build Tools 36.0.0 mot Platform 35,
 utan fel. `Tap-and-Talk-android-test.apk` är 158 109 byte, versionCode 6, med en
@@ -184,7 +209,8 @@ Meddelanden behöver också bekräftas där.
 
 ### Vad testerna mäter
 
-`ios/Tests` provar reglerna i `DraftState`, samma typ som vykontrollern använder:
+`ios/Tests` provar reglerna i `DraftState` och i `Dictation`, samma typer som
+vykontrollern och tangentbordet använder:
 
 - mikrofonen är öppen bara under inspelning, aldrig medan behörighet frågas,
   efter Klar, efter Avbryt, när Tap & Talk lämnas eller vid konversationsbyte
@@ -193,6 +219,14 @@ Meddelanden behöver också bekräftas där.
 - ett byte av konversation rensar utkastet, även mitt i en inspelning
 - ett andra tryck på Skicka kan inte ge ett andra meddelande
 - ett misslyckat skick behåller utkastet; ett lyckat rensar det
+
+`DictationEndingTests` mäter rättningen av buggen där texten försvann:
+
+- ett slutresultat levererar texten
+- ett **fel** efter att något hörts behåller texten, och beskedet får inte säga
+  att inget uppfattades
+- uteblivet svar från taltjänsten levererar ändå det som hörts
+- bara när ingenting hörts rapporteras skälet
 
 Testerna rör inte mikrofonen, taligenkänningen eller Meddelanden. De mäter
 reglerna, inte enheten.

@@ -123,10 +123,11 @@ jobs:
           xcodegen generate
 
       # Automatisk signering plus -allowProvisioningUpdates: Xcode skapar
-      # eller uppdaterar en ad hoc-profil per paket-id, alltså både för
-      # se.rostsvar.mobile och för tillägget se.rostsvar.mobile.Messages,
-      # eftersom tillägget är ett eget mål i project.yml som bäddas in i
-      # appen. Båda profilerna får samma enhetslista.
+      # eller uppdaterar en ad hoc-profil per paket-id, alltså för alla tre:
+      # appen se.rostsvar.mobile, iMessage-tillägget
+      # se.rostsvar.mobile.Messages och tangentbordet
+      # se.rostsvar.mobile.Keyboard. Alla tre är egna mål i project.yml som
+      # bäddas in i appen, och alla tre profilerna får samma enhetslista.
       - name: Arkivera signerat för ad hoc
         run: |
           set -o pipefail
@@ -231,8 +232,14 @@ jobs:
             fi
           done
           echo "Antal profiler i paketet: $hittade"
-          if [ "$hittade" -lt 2 ]; then
-            echo "OBS: färre än två profiler. iMessage-tillägget ska ha en egen."
+          # Tre paket, tre profiler: appen, iMessage-tillägget och
+          # tangentbordet. Färre betyder att ett tillägg inte är täckt, och
+          # då går bygget inte att installera som det ska.
+          if [ "$hittade" -lt 3 ]; then
+            echo "FEL: hittade $hittade profiler, väntade 3 (appen,"
+            echo "iMessage-tillägget se.rostsvar.mobile.Messages och"
+            echo "tangentbordet se.rostsvar.mobile.Keyboard)."
+            exit 1
           fi
           rm -rf build/kontroll
 
