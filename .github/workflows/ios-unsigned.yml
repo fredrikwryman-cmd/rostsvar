@@ -132,10 +132,13 @@ jobs:
         run: |
           log=build/xcodebuild-unsigned.log
           fel=0
+          # actool kallar platser den inte känner igen för "unassigned children".
+          # Det fälls INTE längre. Den porten tvingade tidigare bort 27x20 och
+          # 32x24, som App Store Connect sedan krävde. Det som räknas är vilka
+          # storlekar som hamnar i tillägget, och det mäts i nästa steg.
           if grep -q "unassigned children" "$log"; then
-            echo "FEL: ikonuppsättningen har platser som actool inte känner igen."
+            echo "Notis: actool rapporterar ozonerade platser i ikonuppsättningen."
             grep "unassigned children" "$log" | sort -u
-            fel=1
           fi
           if grep -q "All interface orientations must be supported" "$log"; then
             echo "FEL: målet byggs för iPad. TARGETED_DEVICE_FAMILY ska vara 1."
@@ -165,6 +168,46 @@ jobs:
             echo "FEL: appens visningsnamn är \"$namn\", inte \"Tap & Talk\"."
             exit 1
           fi
+
+      # Det enda som skyddar mot "Missing App Icon" vid uppladdning är att
+      # storlekarna faktiskt ligger i tillägget. Mäts i det byggda paketet.
+      - name: Kontrollera iMessage-ikonens storlekar i bygget
+        run: |
+          appex=build/DerivedData/Build/Products/Release-iphoneos/Rostsvar.app/PlugIns/RostsvarMessages.appex
+          xcrun assetutil --info "$appex/Assets.car" > build/appex-assets.json 2>/dev/null || true
+          python3 - "$appex" build/appex-assets.json <<'PY'
+          import json, os, subprocess, sys
+          appex, info = sys.argv[1], sys.argv[2]
+          need = {(54, 40), (81, 60), (64, 48), (96, 72),
+                  (120, 90), (180, 135), (134, 100), (148, 110), (1024, 768)}
+          have = set()
+          try:
+              for item in json.load(open(info)):
+                  if isinstance(item, dict) and "PixelWidth" in item:
+                      have.add((item["PixelWidth"], item["PixelHeight"]))
+          except Exception as problem:
+              print("kunde inte lasa assetutil:", problem)
+          for name in sorted(os.listdir(appex)):
+              if name.endswith(".png"):
+                  out = subprocess.run(
+                      ["sips", "-g", "pixelWidth", "-g", "pixelHeight",
+                       os.path.join(appex, name)],
+                      capture_output=True, text=True).stdout
+                  size = {}
+                  for line in out.splitlines():
+                      for key in ("pixelWidth", "pixelHeight"):
+                          if key in line:
+                              size[key] = int(line.split(":")[1])
+                  if len(size) == 2:
+                      have.add((size["pixelWidth"], size["pixelHeight"]))
+          print("Storlekar i tillagget:", sorted(have))
+          gap = sorted(need - have)
+          if gap:
+              print("FEL: dessa storlekar saknas i bygget:", gap)
+              print('App Store Connect avvisar paketet med "Missing App Icon".')
+              raise SystemExit(1)
+          print("Alla", len(need), "kravda storlekar finns i tillagget.")
+          PY
 
       - name: Paketera osignerad IPA
         run: |

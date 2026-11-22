@@ -162,6 +162,22 @@ jobs:
           xcrun altool --validate-app -f "$ipa" -t ios \
             --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID" 2>&1 | tee build/validate.log
 
+      # altool avslutar med noll även när paketet avvisas. Felen står bara i
+      # loggen, så den måste läsas. Annars blir en avvisad uppladdning grön.
+      - name: Kontrollera valideringen
+        run: |
+          log=build/validate.log
+          if [ ! -f "$log" ]; then
+            echo "FEL: ingen valideringenlogg skrevs."
+            exit 1
+          fi
+          if grep -qE "UPLOAD FAILED|Failed to upload package|ERROR:" "$log"; then
+            echo "FEL: App Store Connect avvisade paketet."
+            grep -nE "UPLOAD FAILED|Failed to upload package|ERROR:" "$log" | head -40
+            exit 1
+          fi
+          echo "Valideringen hittade inga fel i loggen."
+
       - name: Ladda upp till TestFlight
         if: ${{ inputs.ladda_upp }}
         run: |
@@ -169,7 +185,24 @@ jobs:
           ipa=$(ls build/Export/*.ipa | head -1)
           xcrun altool --upload-app -f "$ipa" -t ios \
             --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID" 2>&1 | tee build/upload.log
-          echo "Uppladdat. Bearbetningen i App Store Connect tar oftast 5–20 minuter."
+          echo "Uppladdat enligt altool. Loggen granskas i nästa steg."
+
+      # altool avslutar med noll även när paketet avvisas. Felen står bara i
+      # loggen, så den måste läsas. Annars blir en avvisad uppladdning grön.
+      - name: Kontrollera uppladdningen
+        if: ${{ inputs.ladda_upp }}
+        run: |
+          log=build/upload.log
+          if [ ! -f "$log" ]; then
+            echo "FEL: ingen uppladdningenlogg skrevs."
+            exit 1
+          fi
+          if grep -qE "UPLOAD FAILED|Failed to upload package|ERROR:" "$log"; then
+            echo "FEL: App Store Connect avvisade paketet."
+            grep -nE "UPLOAD FAILED|Failed to upload package|ERROR:" "$log" | head -40
+            exit 1
+          fi
+          echo "Uppladdningen gick igenom. Bearbetningen i App Store Connect tar oftast 5-20 minuter."
 
       - name: Ladda upp IPA som artefakt
         if: always()
