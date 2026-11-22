@@ -40,6 +40,23 @@ jobs:
             | grep -E 'PRODUCT_BUNDLE_IDENTIFIER|MARKETING_VERSION|CURRENT_PROJECT_VERSION|IPHONEOS_DEPLOYMENT_TARGET' \
             | sort -u
 
+      - name: DIAGNOS tillfällig
+        run: |
+          echo "--- TARGETED_DEVICE_FAMILY ---"
+          xcodebuild -project Rostsvar.xcodeproj -scheme Rostsvar \
+            -showBuildSettings -configuration Release 2>/dev/null \
+            | grep -E 'TARGETED_DEVICE_FAMILY' | sort -u
+          echo "--- Apples mall för iMessage App Icon ---"
+          find /Applications/Xcode*.app/Contents/Developer/Library/Xcode/Templates \
+            -name 'Contents.json' -path '*stickersiconset*' 2>/dev/null | while read -r f; do
+              echo "=== $f"; cat "$f"
+            done
+          echo "--- Apples mall för AppIcon (iOS app) ---"
+          find /Applications/Xcode*.app/Contents/Developer/Library/Xcode/Templates \
+            -name 'Contents.json' -path '*AppIcon.appiconset*' 2>/dev/null | head -2 | while read -r f; do
+              echo "=== $f"; cat "$f"
+            done
+
       - name: Bygg osignerat för iPhone
         run: |
           set -o pipefail
