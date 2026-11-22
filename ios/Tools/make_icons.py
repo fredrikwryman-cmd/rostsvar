@@ -26,16 +26,12 @@ BOTTOM = (10, 24, 58)
 INK = (255, 255, 255)
 ACCENT = (90, 170, 255)
 
-# iMessage-ikonens storlekar: (idiom, punkter bredd x höjd, skala)
+# iMessage-ikonens platser. Uppmätta mot actool i Xcode 16.4: ikonuppsättningen
+# för ett Messages-tillägg har exakt dessa platser plus 1024x768. Storlekarna
+# 27x20 och 32x24 hör till klisterpaket och matchar ingen plats här.
 MESSAGE_SIZES = [
-    ("iphone", 27, 20, 2),
-    ("iphone", 27, 20, 3),
-    ("iphone", 32, 24, 2),
-    ("iphone", 32, 24, 3),
     ("iphone", 60, 45, 2),
     ("iphone", 60, 45, 3),
-    ("ipad", 27, 20, 2),
-    ("ipad", 32, 24, 2),
     ("ipad", 67, 50, 2),
     ("ipad", 74, 55, 2),
 ]
@@ -150,20 +146,18 @@ def message_icon() -> None:
     )
     images = []
 
-    for name, points_w, points_h in (
-        ("Marketing-1024x1024.png", 1024, 1024),
-        ("Marketing-1024x768.png", 1024, 768),
-    ):
-        write(mark(points_w, points_h), os.path.join(folder, name))
-        images.append(
-            {
-                "filename": name,
-                "idiom": "ios-marketing",
-                "platform": "ios",
-                "scale": "1x",
-                "size": f"{points_w}x{points_h}",
-            }
-        )
+    # Messages App Store-ikonen. Enda marknadsforingsplatsen i uppsattningen;
+    # appens egen 1024x1024 ligger i App/Assets.xcassets.
+    write(mark(1024, 768), os.path.join(folder, "Marketing-1024x768.png"))
+    images.append(
+        {
+            "filename": "Marketing-1024x768.png",
+            "idiom": "ios-marketing",
+            "platform": "ios",
+            "scale": "1x",
+            "size": "1024x768",
+        }
+    )
 
     for idiom, points_w, points_h, scale in MESSAGE_SIZES:
         name = f"{idiom}-{points_w}x{points_h}@{scale}x.png"

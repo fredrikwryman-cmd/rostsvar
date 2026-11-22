@@ -37,51 +37,8 @@ jobs:
           xcodebuild -list -project Rostsvar.xcodeproj
           xcodebuild -project Rostsvar.xcodeproj -scheme Rostsvar \
             -showBuildSettings -configuration Release 2>/dev/null \
-            | grep -E 'PRODUCT_BUNDLE_IDENTIFIER|MARKETING_VERSION|CURRENT_PROJECT_VERSION|IPHONEOS_DEPLOYMENT_TARGET' \
+            | grep -E 'PRODUCT_BUNDLE_IDENTIFIER|MARKETING_VERSION|CURRENT_PROJECT_VERSION|IPHONEOS_DEPLOYMENT_TARGET|TARGETED_DEVICE_FAMILY' \
             | sort -u
-
-      - name: DIAGNOS tillfällig
-        run: |
-          src="Messages/Assets.xcassets/iMessage App Icon.stickersiconset"
-          dir="/tmp/Probe.xcassets/iMessage App Icon.stickersiconset"
-          rm -rf /tmp/Probe.xcassets /tmp/Probe-out
-          mkdir -p "$dir" /tmp/Probe-out
-          cp "$src"/*.png "$dir/"
-          cp "$dir/iphone-27x20@2x.png" "$dir/u-27x20@2x.png"
-          cp "$dir/iphone-27x20@3x.png" "$dir/u-27x20@3x.png"
-          cp "$dir/iphone-32x24@2x.png" "$dir/u-32x24@2x.png"
-          cp "$dir/iphone-32x24@3x.png" "$dir/u-32x24@3x.png"
-          cp "$dir/iphone-60x45@2x.png" "$dir/u-60x45@2x.png"
-          cat > "$dir/Contents.json" <<'JSON'
-          {"images":[
-            {"filename":"iphone-27x20@2x.png","idiom":"iphone","scale":"2x","size":"27x20"},
-            {"filename":"iphone-27x20@3x.png","idiom":"iphone","scale":"3x","size":"27x20"},
-            {"filename":"iphone-32x24@2x.png","idiom":"iphone","scale":"2x","size":"32x24"},
-            {"filename":"iphone-32x24@3x.png","idiom":"iphone","scale":"3x","size":"32x24"},
-            {"filename":"ipad-27x20@2x.png","idiom":"ipad","scale":"2x","size":"27x20"},
-            {"filename":"ipad-32x24@2x.png","idiom":"ipad","scale":"2x","size":"32x24"},
-            {"filename":"u-27x20@2x.png","idiom":"universal","scale":"2x","size":"27x20"},
-            {"filename":"u-27x20@3x.png","idiom":"universal","scale":"3x","size":"27x20"},
-            {"filename":"u-32x24@2x.png","idiom":"universal","scale":"2x","size":"32x24"},
-            {"filename":"u-32x24@3x.png","idiom":"universal","scale":"3x","size":"32x24"},
-            {"filename":"iphone-60x45@2x.png","idiom":"iphone","scale":"2x","size":"60x45"},
-            {"filename":"iphone-60x45@3x.png","idiom":"iphone","scale":"3x","size":"60x45"},
-            {"filename":"u-60x45@2x.png","idiom":"universal","scale":"2x","size":"60x45"},
-            {"filename":"ipad-67x50@2x.png","idiom":"ipad","scale":"2x","size":"67x50"},
-            {"filename":"ipad-74x55@2x.png","idiom":"ipad","scale":"2x","size":"74x55"},
-            {"filename":"Marketing-1024x1024.png","idiom":"ios-marketing","platform":"ios","scale":"1x","size":"1024x1024"},
-            {"filename":"Marketing-1024x768.png","idiom":"ios-marketing","platform":"ios","scale":"1x","size":"1024x768"}
-          ],"info":{"author":"probe","version":1}}
-          JSON
-          python3 -c "import json;json.load(open('$dir/Contents.json'))" && echo "JSON ok"
-          echo "===== actool, alla notiser ====="
-          xcrun actool /tmp/Probe.xcassets --compile /tmp/Probe-out             --output-format human-readable-text --notices --warnings             --output-partial-info-plist /tmp/Probe.plist             --app-icon 'iMessage App Icon' --include-sticker-content             --stickers-icon-role extension --development-region en             --target-device iphone --target-device ipad             --minimum-deployment-target 16.0 --platform iphoneos 2>&1 | head -60
-          echo "===== partiell Info.plist ====="
-          plutil -p /tmp/Probe.plist 2>&1 | head -40
-          echo "===== emplaced filer ====="
-          ls -1 /tmp/Probe-out
-          echo "===== renditions i Assets.car ====="
-          xcrun assetutil --info /tmp/Probe-out/Assets.car 2>/dev/null             | grep -E '"Name"|"SizeOnDisk"|"Idiom"|"Scale"|"RenditionName"|"Subtype"|"PixelWidth"|"PixelHeight"' | head -80
 
       - name: Bygg osignerat för iPhone
         run: |
@@ -96,6 +53,23 @@ jobs:
             -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             2>&1 | tee build/xcodebuild-unsigned.log
+
+      - name: Kontrollera ikoner och varningar
+        run: |
+          log=build/xcodebuild-unsigned.log
+          fel=0
+          if grep -q "unassigned children" "$log"; then
+            echo "FEL: ikonuppsättningen har platser som actool inte känner igen."
+            grep "unassigned children" "$log" | sort -u
+            fel=1
+          fi
+          if grep -q "All interface orientations must be supported" "$log"; then
+            echo "FEL: målet byggs för iPad. TARGETED_DEVICE_FAMILY ska vara 1."
+            fel=1
+          fi
+          echo "Kvarvarande varningar i bygget:"
+          grep "warning:" "$log" | grep -v "No AppIntents.framework" | sort -u | head -20
+          exit $fel
 
       - name: Kontrollera att tillägget följde med
         run: |
