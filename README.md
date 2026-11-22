@@ -85,6 +85,14 @@ Bygget körs på en macOS-byggare hos GitHub Actions. Ingen Mac behövs lokalt.
 - **Actions → Skicka Tap & Talk till TestFlight → Run workflow.** Arkiverar
   signerat och laddar upp. Kräver tre hemligheter och en variabel i repot.
   Stegen står i [TESTFLIGHT.md](TESTFLIGHT.md).
+- **Actions → Bygg Tap & Talk som Ad Hoc (utan granskning) → Run workflow.**
+  Vägen förbi väntan på Apples Beta App Review. Tar byggnummer, UDID och namn
+  som indata, registrerar telefonen hos Apple om den saknas, arkiverar och
+  exporterar ad hoc-signerat, och lägger paketet som artefakten
+  `Tap-and-Talk-adhoc-IPA`. Laddar aldrig upp något till App Store Connect.
+  Enheten registreras av `ios/Tools/registrera_enhet.py` mot App Store
+  Connect-API:t, med samma hemligheter som TestFlight-flödet. Nyckeln behöver
+  rollen App Manager eller Admin för att få registrera enheter.
 
 Ikonerna skapas av `ios/Tools/make_icons.py` (Python med Pillow) och ligger
 färdiga i repot. Kör skriptet igen bara om grafiken ska bytas.

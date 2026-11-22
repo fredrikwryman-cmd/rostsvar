@@ -1,0 +1,259 @@
+name: Bygg Tap & Talk som Ad Hoc (utan granskning)
+
+# Ett bygge som går att installera direkt på egna, registrerade iPhones utan
+# att vänta på Apples Beta App Review. Samma upplägg som i Tech Rabbit
+# Remote-repot. Startas för hand och laddar aldrig upp något till
+# App Store Connect.
+#
+# Kräver samma hemligheter som ios-testflight.yml
+# (Settings -> Secrets and variables -> Actions):
+#
+#   APP_STORE_CONNECT_KEY_ID      t.ex. 2X9ABC3DEF
+#   APP_STORE_CONNECT_ISSUER_ID   UUID från App Store Connect -> Integrationer
+#   APP_STORE_CONNECT_PRIVATE_KEY hela .p8-filen, med BEGIN- och END-raderna
+#
+# samt variabeln APPLE_TEAM_ID. Nyckeln skrivs bara till byggarens egen disk
+# och raderas i sista steget.
+#
+# Nyckeln behöver rollen App Manager eller Admin. En nyckel med bara
+# Developer-roll får inte registrera enheter; då faller steget
+# "Registrera telefonen hos Apple" med 403.
+
+on:
+  workflow_dispatch:
+    inputs:
+      byggnummer:
+        description: "Byggnummer (CURRENT_PROJECT_VERSION)."
+        required: true
+        default: "1"
+      enhetens_udid:
+        description: "UDID på telefonen som ska få bygget."
+        required: true
+        default: "00008101-000408DA0102001E"
+      enhetens_namn:
+        description: "Namnet enheten får i Apples lista."
+        required: true
+        default: "Fredriks iPhone"
+
+permissions:
+  contents: read
+
+env:
+  # Samma fasta Xcode som i ios-unsigned.yml och ios-testflight.yml.
+  # Ändras den där ska den ändras här.
+  XCODE_VERSION: "26.2"
+  MIN_IOS_SDK: "26"
+
+jobs:
+  adhoc:
+    runs-on: macos-15
+    timeout-minutes: 70
+    defaults:
+      run:
+        working-directory: ios
+    env:
+      KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Kontrollera att hemligheterna finns
+        run: |
+          missing=0
+          for name in KEY_ID ISSUER_ID TEAM_ID; do
+            if [ -z "${!name}" ]; then echo "Saknas: $name"; missing=1; fi
+          done
+          if [ -z "${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}" ]; then
+            echo "Saknas: APP_STORE_CONNECT_PRIVATE_KEY"; missing=1
+          fi
+          if [ "$missing" = "1" ]; then
+            echo "Lägg in dem under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          echo "Alla uppgifter finns."
+
+      - name: Välj och kontrollera Xcode och iOS SDK
+        run: |
+          app="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ ! -d "$app" ]; then
+            echo "FEL: $app finns inte på byggaren. Tillgängliga Xcode-versioner:"
+            ls -1 /Applications | grep -i '^Xcode' | sort -u
+            exit 1
+          fi
+          sudo xcode-select -s "$app/Contents/Developer"
+          xcodebuild -version
+          xcode=$(xcodebuild -version | head -1 | awk '{print $2}')
+          sdk=$(xcrun --sdk iphoneos --show-sdk-version)
+          echo "Uppmätt: Xcode $xcode, iOS SDK $sdk"
+          case "$xcode" in
+            "$XCODE_VERSION"|"$XCODE_VERSION".*) ;;
+            *) echo "FEL: bygget körde Xcode $xcode, inte $XCODE_VERSION."; exit 1 ;;
+          esac
+          if [ "${sdk%%.*}" -lt "$MIN_IOS_SDK" ]; then
+            echo "FEL: iOS SDK $sdk är äldre än $MIN_IOS_SDK."
+            exit 1
+          fi
+          echo "Godkänt: Xcode $xcode med iOS SDK $sdk."
+
+      - name: Lägg nyckeln på byggarens disk
+        run: |
+          mkdir -p "$HOME/private_keys"
+          chmod 700 "$HOME/private_keys"
+          printf '%s\n' "${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}" \
+            > "$HOME/private_keys/AuthKey_${KEY_ID}.p8"
+          chmod 600 "$HOME/private_keys/AuthKey_${KEY_ID}.p8"
+          head -1 "$HOME/private_keys/AuthKey_${KEY_ID}.p8"
+
+      # Måste ske före arkiveringen. Den ad hoc-profil som Xcode skapar med
+      # -allowProvisioningUpdates får bara med de enheter som är registrerade
+      # i det ögonblicket. Skriptet lägger in enheten om den saknas, slår på
+      # den igen om den är avstängd, och säger bara "fanns redan" annars.
+      - name: Registrera telefonen hos Apple
+        env:
+          UDID: ${{ inputs.enhetens_udid }}
+          DEVICE_NAME: ${{ inputs.enhetens_namn }}
+        run: |
+          export KEY_PATH="$HOME/private_keys/AuthKey_${KEY_ID}.p8"
+          python3 Tools/registrera_enhet.py
+
+      - name: Installera XcodeGen och generera projektet
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      # Automatisk signering plus -allowProvisioningUpdates: Xcode skapar
+      # eller uppdaterar en ad hoc-profil per paket-id, alltså både för
+      # se.rostsvar.mobile och för tillägget se.rostsvar.mobile.Messages,
+      # eftersom tillägget är ett eget mål i project.yml som bäddas in i
+      # appen. Båda profilerna får samma enhetslista.
+      - name: Arkivera signerat för ad hoc
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild archive \
+            -project Rostsvar.xcodeproj \
+            -scheme Rostsvar \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/Rostsvar.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/private_keys/AuthKey_${KEY_ID}.p8" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CURRENT_PROJECT_VERSION="${{ inputs.byggnummer }}" \
+            2>&1 | tee build/xcodebuild-archive.log
+
+      # Xcode döpte om method ad-hoc till release-testing i 15.3. Det gamla
+      # namnet tas fortfarande emot, men inte för evigt. Därför provas ad-hoc
+      # först, och faller exporten görs ett försök med release-testing.
+      # Båda ger samma ad hoc-signerade paket.
+      - name: Exportera ad hoc-paketet
+        run: |
+          set -o pipefail
+          skriv_plist () {
+            cat > build/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>method</key><string>$1</string>
+          <key>teamID</key><string>${TEAM_ID}</string>
+          <key>destination</key><string>export</string>
+          <key>signingStyle</key><string>automatic</string>
+          <key>stripSwiftSymbols</key><true/>
+          <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          PLIST
+          }
+          exportera () {
+            xcodebuild -exportArchive \
+              -archivePath build/Rostsvar.xcarchive \
+              -exportPath build/Export \
+              -exportOptionsPlist build/ExportOptions.plist \
+              -allowProvisioningUpdates \
+              -authenticationKeyPath "$HOME/private_keys/AuthKey_${KEY_ID}.p8" \
+              -authenticationKeyID "$KEY_ID" \
+              -authenticationKeyIssuerID "$ISSUER_ID" \
+              2>&1 | tee -a build/xcodebuild-export.log
+          }
+          skriv_plist "ad-hoc"
+          if exportera; then
+            echo "Exporterat med method ad-hoc."
+          else
+            echo "Exporten med ad-hoc föll. Provar namnet release-testing."
+            rm -rf build/Export
+            skriv_plist "release-testing"
+            if ! exportera; then
+              echo "FEL: exporten föll med båda namnen. Slutet på loggen:"
+              tail -40 build/xcodebuild-export.log || true
+              exit 1
+            fi
+            echo "Exporterat med method release-testing."
+          fi
+          ls -lh build/Export || true
+
+      # Exporten kan avsluta med noll och ändå inte ha lagt något paket på
+      # disken. Utan det här steget blir en tom körning grön.
+      - name: Kontrollera att en IPA producerades
+        run: |
+          ipa=$(ls build/Export/*.ipa 2>/dev/null | head -1)
+          if [ -z "$ipa" ]; then
+            echo "FEL: ingen .ipa producerades. Innehållet i build/Export:"
+            ls -laR build/Export 2>/dev/null || echo "(mappen finns inte)"
+            exit 1
+          fi
+          echo "IPA: $ipa"
+          ls -lh "$ipa"
+
+      # Läser profilerna i det färdiga paketet och skriver ut vilket paket-id
+      # var och en gäller och om telefonen finns med. Går att läsa i loggen
+      # utan att packa upp artefakten.
+      - name: Visa profilerna i paketet
+        run: |
+          ipa=$(ls build/Export/*.ipa | head -1)
+          rm -rf build/kontroll && mkdir -p build/kontroll
+          unzip -q "$ipa" -d build/kontroll
+          hittade=0
+          for profil in $(find build/kontroll/Payload -name embedded.mobileprovision); do
+            hittade=$((hittade + 1))
+            echo "--- $profil"
+            security cms -D -i "$profil" > build/kontroll/profil.plist
+            /usr/libexec/PlistBuddy -c "Print :Name" build/kontroll/profil.plist || true
+            /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" \
+              build/kontroll/profil.plist || true
+            if /usr/libexec/PlistBuddy -c "Print :ProvisionedDevices" \
+                 build/kontroll/profil.plist 2>/dev/null \
+               | grep -qi "${{ inputs.enhetens_udid }}"; then
+              echo "    telefonen finns med i profilen"
+            else
+              echo "    OBS: ${{ inputs.enhetens_udid }} hittades inte i den här profilen"
+            fi
+          done
+          echo "Antal profiler i paketet: $hittade"
+          if [ "$hittade" -lt 2 ]; then
+            echo "OBS: färre än två profiler. iMessage-tillägget ska ha en egen."
+          fi
+          rm -rf build/kontroll
+
+      - name: Ladda upp IPA som artefakt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tap-and-Talk-adhoc-IPA
+          path: ios/build/Export/*.ipa
+          if-no-files-found: ignore
+
+      - name: Ladda upp loggar
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tap-and-Talk-adhoc-loggar
+          path: |
+            ios/build/*.log
+            ios/build/ExportOptions.plist
+          if-no-files-found: ignore
+
+      - name: Radera nyckeln
+        if: always()
+        run: rm -rf "$HOME/private_keys"
