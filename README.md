@@ -75,22 +75,49 @@ Resultatet hamnar i `build/Rostsvar-Android.apk`. Byggskriptet skapar en lokal t
 
 ## Verifieringsstatus
 
-Håll isär de tre stegen. Raden ändras bara när steget faktiskt är gjort.
+Håll isär de tre stegen. En rad ändras först när steget faktiskt är gjort.
 
 | Del | Kompilerat | Uppladdat till TestFlight | Provat på iPhone |
 | --- | --- | --- | --- |
-| iOS-app och iMessage-tillägg | se körningen i Actions | nej | nej |
-| Android | ja, APK-signaturen verifierad | — | nej |
+| iOS-app och iMessage-tillägg | ja | nej | nej |
+| Android | ja | — | nej |
 
-Androidkoden har kompilerats och den paketerade APK-filens signatur har
-verifierats. Ingen av plattformarna har provats på fysisk telefon. Stöd i en viss
-version av Messenger, Signal eller Meddelanden behöver bekräftas på enheten.
+**iOS, uppmätt.** Osignerat Release-bygge för iPhone på macOS-byggare med
+Xcode 16.4 och iOS 18.5 SDK. Noll varningar. Tillägget bäddas in i appen som
+`PlugIns/RostsvarMessages.appex` med rätt bundle-ID och
+`com.apple.message-payload-provider`. App- och iMessage-ikoner kompilerar utan
+ozonerade platser. 16 tester gröna på iPhone-simulator.
 
-Första funktionstestet bör göras i en konversation med dig själv. Diktera en kort
-mening med å, ä och ö. Kontrollera att Avbryt lämnar chatten orörd, att
-mikrofonpricken slocknar när du trycker på Klar, att ett appbyte inte lägger text
-i ett annat fält automatiskt och att ett enda tryck på Skicka ger ett enda
-meddelande. Hela provlistan står i [TESTFLIGHT.md](TESTFLIGHT.md).
+**Android.** Koden har kompilerats och den paketerade APK-filens signatur har
+verifierats.
+
+**Ingenting är provat på en fysisk telefon.** Taligenkänning, mikrofonens
+beteende i Meddelanden och att ett tryck på Skicka ger exakt ett meddelande går
+bara att avgöra på enheten. Stöd i en viss version av Messenger, Signal eller
+Meddelanden behöver också bekräftas där.
+
+### Vad testerna mäter
+
+`ios/Tests` provar reglerna i `DraftState`, samma typ som vykontrollern använder:
+
+- mikrofonen är öppen bara under inspelning, aldrig medan behörighet frågas,
+  efter Klar, efter Avbryt, när Röstsvar lämnas eller vid konversationsbyte
+- Avbryt rensar utkastet både under och efter diktering, och Skicka går då inte
+  att trycka på
+- ett byte av konversation rensar utkastet, även mitt i en inspelning
+- ett andra tryck på Skicka kan inte ge ett andra meddelande
+- ett misslyckat skick behåller utkastet; ett lyckat rensar det
+
+Testerna rör inte mikrofonen, taligenkänningen eller Meddelanden. De mäter
+reglerna, inte enheten.
+
+### Första provet på telefonen
+
+Gör det i en konversation med dig själv. Diktera en kort mening med å, ä och ö.
+Kontrollera att Avbryt lämnar chatten orörd, att mikrofonpricken slocknar när du
+trycker på Klar, att ett appbyte inte lägger text i ett annat fält automatiskt
+och att ett enda tryck på Skicka ger ett enda meddelande. Hela provlistan står i
+[TESTFLIGHT.md](TESTFLIGHT.md).
 
 ## Plattformskällor
 
