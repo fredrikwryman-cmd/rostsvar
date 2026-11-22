@@ -4,6 +4,12 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+    # Ett bygge för iPhone behöver inte starta av en Android-ändring eller
+    # en textändring. Flödena för Android ligger i android-apk.yml.
+    paths-ignore:
+      - 'android/**'
+      - '.github/workflows/android-apk.yml'
+      - '**/*.md'
   pull_request:
 
 permissions:

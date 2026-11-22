@@ -1,0 +1,112 @@
+name: Bygg Tap & Talk för Android (test-APK)
+
+# Startas för hand. Kräver inga hemligheter: APK:n signeras med Androids
+# vanliga debug-nyckel, som Gradle skapar själv på byggaren. Det räcker för
+# sidoladdning till en testare, men en debug-signerad APK kan aldrig
+# publiceras på Google Play.
+#
+# Resultatet laddas upp som artefakten Tap-and-Talk-android-test-APK och
+# innehåller filen Tap-and-Talk-android-test.apk.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # AGP 8.9.2 i app/build.gradle kräver Gradle 8.11.1 eller senare.
+  GRADLE_VERSION: "8.13"
+  # compileSdk 35 i app/build.gradle. Ändras den där ska den ändras här.
+  ANDROID_PLATFORM: "35"
+  ANDROID_BUILD_TOOLS: "35.0.0"
+  APK_NAME: "Tap-and-Talk-android-test.apk"
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installera JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Installera Android-SDK:ns delar
+        run: |
+          set -o pipefail
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-${ANDROID_PLATFORM}" \
+            "build-tools;${ANDROID_BUILD_TOOLS}"
+          "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/aapt2" version
+
+      - name: Förbered Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+
+      - name: Visa versionerna
+        run: |
+          java -version
+          gradle --version
+
+      # Gradle skapar ~/.android/debug.keystore själv om den saknas, så
+      # debug-varianten blir signerad utan att vi lägger in någon nyckel.
+      - name: Bygg debug-APK:n
+        run: |
+          set -o pipefail
+          gradle --no-daemon --stacktrace :app:assembleDebug
+
+      # Kravet: saknas APK-filen ska steget bli rött. Inget "|| true" här.
+      - name: Kontrollera att en APK blev byggd
+        run: |
+          set -o pipefail
+          mapfile -t found < <(find app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' -print | sort)
+          if [ "${#found[@]}" -eq 0 ]; then
+            echo "FEL: bygget producerade ingen .apk."
+            echo "Innehållet i app/build/outputs:"
+            find app/build/outputs -type f 2>/dev/null || echo "(mappen finns inte)"
+            exit 1
+          fi
+          apk="${found[0]}"
+          echo "Hittade $apk"
+          bytes=$(stat -c %s "$apk")
+          echo "Storlek: $bytes byte"
+          if [ "$bytes" -lt 10000 ]; then
+            echo "FEL: $apk är bara $bytes byte och kan inte vara en riktig APK."
+            exit 1
+          fi
+          # En osignerad APK går inte att installera, så signaturen kontrolleras också.
+          "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/apksigner" verify --verbose "$apk"
+          "$ANDROID_HOME/build-tools/${ANDROID_BUILD_TOOLS}/aapt2" dump badging "$apk" \
+            | grep -E "^package:|^application-label:|^uses-permission:" || true
+          mkdir -p dist
+          cp "$apk" "dist/${APK_NAME}"
+          ls -lh "dist/${APK_NAME}"
+
+      - name: Ladda upp APK:n som artefakt
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tap-and-Talk-android-test-APK
+          path: android/dist/${{ env.APK_NAME }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Ladda upp bygglogg vid fel
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tap-and-Talk-android-bygglogg
+          path: |
+            android/app/build/outputs/**
+            android/build/reports/**
+          if-no-files-found: ignore
