@@ -65,7 +65,7 @@ final class MessagesController: MSMessagesAppViewController {
         aside.adjustsFontForContentSizeCategory = true
         aside.numberOfLines = 0
         aside.textColor = .tertiaryLabel
-        aside.text = "Tap & Talk-tangentbordet dikterar i alla appar. Det här är genvägen i Meddelanden."
+        aside.text = "Tap&Talk-tangentbordet dikterar i alla appar. Det här är genvägen i Meddelanden."
 
         let row = UIStackView(arrangedSubviews: [mic, stop])
         row.distribution = .fillEqually

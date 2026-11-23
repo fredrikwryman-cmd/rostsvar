@@ -93,7 +93,7 @@ struct HomeScreen: View {
         HStack(spacing: 12) {
             mark
             VStack(alignment: .leading, spacing: 0) {
-                Text("Tap & Talk")
+                Text("Tap&Talk")
                     .trFont(28, .black, relativeTo: .title, tracking: -0.5, lineHeight: 32)
                     .foregroundStyle(TR.text)
                     .lineLimit(1)
@@ -487,7 +487,7 @@ struct HomeScreen: View {
             micBlocked = Dictation.permissionRefused
             state.rest()
             note = micBlocked
-                ? "Mikrofonen är avstängd för Tap & Talk. Tryck på Tillåt mikrofon för att öppna inställningarna."
+                ? "Mikrofonen är avstängd för Tap&Talk. Tryck på Tillåt mikrofon för att öppna inställningarna."
                 : refused
         }
     }

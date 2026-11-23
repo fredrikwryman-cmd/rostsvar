@@ -1,4 +1,4 @@
-package se.rostsvar.mobile;
+package com.techrabbit.tapntalk;
 
 import android.content.Context;
 import android.graphics.drawable.GradientDrawable;

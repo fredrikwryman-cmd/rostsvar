@@ -8,9 +8,9 @@ Bundle-ID som används:
 
 | Del | Bundle-ID |
 | --- | --- |
-| Appen | `com.rostsvar.mobile` |
-| iMessage-tillägget | `com.rostsvar.mobile.Messages` |
-| Tangentbordet | `com.rostsvar.mobile.Keyboard` |
+| Appen | `com.techrabbit.tapntalk` |
+| iMessage-tillägget | `com.techrabbit.tapntalk.Messages` |
+| Tangentbordet | `com.techrabbit.tapntalk.Keyboard` |
 
 Prefixet är `com.` och ska inte ändras till `se.`. Ett paket-id som börjar på
 `se.` gör att iOS inte visar tangentbordet under Lägg till nytt tangentbord,
@@ -34,12 +34,12 @@ och anteckna **Team ID** (tio tecken).
 
 1. Gå till [App Store Connect → Appar](https://appstoreconnect.apple.com/apps) och tryck på plus → **Ny app**.
 2. Plattform: **iOS**. Namn: `Tap & Talk`. Primärt språk: **Svenska**.
-3. Bundle-ID: välj `com.rostsvar.mobile` i listan.
+3. Bundle-ID: välj `com.techrabbit.tapntalk` i listan.
    *Står det inte i listan:* gå till
    [Certificates, Identifiers & Profiles → Identifiers](https://developer.apple.com/account/resources/identifiers/list),
    tryck på plus, välj **App IDs → App**, beskrivning `Tap and Talk`, Bundle ID
-   **Explicit** `com.rostsvar.mobile`. Upprepa för `com.rostsvar.mobile.Messages` och
-   `com.rostsvar.mobile.Keyboard`.
+   **Explicit** `com.techrabbit.tapntalk`. Upprepa för `com.techrabbit.tapntalk.Messages` och
+   `com.techrabbit.tapntalk.Keyboard`.
    Ingen extra capability behöver kryssas i. Gå sedan tillbaka till punkt 1.
 4. SKU: `rostsvar`. Användaråtkomst: **Full åtkomst**.
 

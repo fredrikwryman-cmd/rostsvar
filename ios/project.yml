@@ -6,7 +6,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "1.1"
+    MARKETING_VERSION: "1.2"
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGN_STYLE: Automatic
 targets:
@@ -38,13 +38,13 @@ targets:
         # språkkoden för nordsamiska, och samiska tangentbord kom i iOS 17.2,
         # där felet först dök upp. Ett tilläggs paket-id måste ligga under
         # appens, så alla tre flyttade samtidigt.
-        PRODUCT_BUNDLE_IDENTIFIER: com.rostsvar.mobile
+        PRODUCT_BUNDLE_IDENTIFIER: com.techrabbit.tapntalk
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
     info:
       path: App/Info.plist
       properties:
-        CFBundleDisplayName: Tap & Talk
+        CFBundleDisplayName: "Tap&Talk"
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         ITSAppUsesNonExemptEncryption: false
@@ -83,7 +83,7 @@ targets:
       - path: Shared/Dictation.swift
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.rostsvar.mobile.Messages
+        PRODUCT_BUNDLE_IDENTIFIER: com.techrabbit.tapntalk.Messages
         TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_FILE: Messages/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: iMessage App Icon
@@ -102,7 +102,7 @@ targets:
       base:
         # Under appens paket-id, och med com. av samma skäl som i appmålet
         # ovan: med se. blir tangentbordet osynligt i iOS egen lista.
-        PRODUCT_BUNDLE_IDENTIFIER: com.rostsvar.mobile.Keyboard
+        PRODUCT_BUNDLE_IDENTIFIER: com.techrabbit.tapntalk.Keyboard
         TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_FILE: Keyboard/Info.plist
         SKIP_INSTALL: YES
@@ -123,4 +123,4 @@ targets:
       base:
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
-        PRODUCT_BUNDLE_IDENTIFIER: com.rostsvar.mobile.Tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.techrabbit.tapntalk.Tests

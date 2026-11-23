@@ -1,4 +1,4 @@
-package se.rostsvar.mobile;
+package com.techrabbit.tapntalk;
 
 import android.Manifest;
 import android.content.Intent;
@@ -361,7 +361,7 @@ public class VoiceKeys extends InputMethodService {
             return;
         }
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            say("Tillåt mikrofonen i Tap & Talk först.");
+            say("Tillåt mikrofonen i Tap&Talk först.");
             Intent open = new Intent(this, Home.class);
             open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(open);
@@ -382,7 +382,7 @@ public class VoiceKeys extends InputMethodService {
         // Bubblan eller hemskärmen kan hålla mikrofonen. Hellre ett besked
         // om det än ett fel från taltjänsten.
         if (!Mic.take(this)) {
-            say("Mikrofonen används av Tap & Talk någon annanstans. Avsluta dikteringen där först.");
+            say("Mikrofonen används av Tap&Talk någon annanstans. Avsluta dikteringen där först.");
             return;
         }
         if (speech == null) {
@@ -551,7 +551,7 @@ public class VoiceKeys extends InputMethodService {
             case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
                 return null;
             case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
-                return "Tillåt mikrofonen i Tap & Talk först.";
+                return "Tillåt mikrofonen i Tap&Talk först.";
             case SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED:
             case SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE:
                 return "Taltjänsten har inte svenska installerad.";

@@ -16,7 +16,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application
-        android:label="Tap &amp; Talk"
+        android:label="Tap&amp;Talk"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/TapAndTalk"
@@ -71,7 +71,7 @@
              dikteras loggas aldrig. -->
         <service
             android:name=".VoiceKeys"
-            android:label="Tap &amp; Talk · rösttangentbord"
+            android:label="Tap&amp;Talk · rösttangentbord"
             android:exported="true"
             android:permission="android.permission.BIND_INPUT_METHOD">
             <intent-filter>

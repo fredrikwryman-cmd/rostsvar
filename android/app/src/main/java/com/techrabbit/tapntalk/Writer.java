@@ -1,4 +1,4 @@
-package se.rostsvar.mobile;
+package com.techrabbit.tapntalk;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;

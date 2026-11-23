@@ -1,8 +1,10 @@
 """Bygger en lokalt signerad test-APK med Android SDK och JDK pa Windows.
 
 Resultatet heter Tap-and-Talk-android-test.apk och ligger i mappen build.
-Paket-ID och den lokala testnyckeln ar oforandrade, sa en ny APK
-uppgraderar en tidigare installation i stallet for att krocka med den.
+Den lokala testnyckeln ar oforandrad, sa en ny APK uppgraderar en tidigare
+installation i stallet for att krocka med den. Paket-ID bytte dock till
+com.techrabbit.tapntalk: en APK som installerades fore det bytet ar en annan
+app for Android och maste avinstalleras for hand.
 """
 import os
 from pathlib import Path
@@ -17,7 +19,7 @@ sdk = Path(os.environ["ANDROID_HOME"])
 tools = sdk / "build-tools" / "36.0.0"
 android = sdk / "platforms/android-35/android.jar"
 source = root / "app/src/main"
-namespace = "se.rostsvar.mobile"
+namespace = "com.techrabbit.tapntalk"
 
 def run(*args):
     subprocess.run([str(arg) for arg in args], check=True)
@@ -30,8 +32,8 @@ with tempfile.TemporaryDirectory() as tmp:
     manifest.getroot().set("package", namespace)
     ns = "{http://schemas.android.com/apk/res/android}"
     ET.register_namespace("android", ns[1:-1])
-    manifest.getroot().set(ns + "versionCode", "7")
-    manifest.getroot().set(ns + "versionName", "0.7")
+    manifest.getroot().set(ns + "versionCode", "8")
+    manifest.getroot().set(ns + "versionName", "0.8")
     manifest.write(out / "AndroidManifest.xml", encoding="utf-8")
     run(tools / "aapt2.exe", "compile", "--dir", source / "res", "-o", out / "res.zip")
     run(tools / "aapt2.exe", "link", "-I", android, "--manifest", out / "AndroidManifest.xml",

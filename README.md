@@ -178,9 +178,10 @@ aldrig.
 
 ### Paket-id börjar på com., inte se.
 
-Appen heter `com.rostsvar.mobile`, tangentbordet `com.rostsvar.mobile.Keyboard`
-och iMessage-tillägget `com.rostsvar.mobile.Messages`. Prefixet är inte en smak-
-fråga. Ett paket-id som börjar på `se.` gör att iOS inte visar tangentbordet
+Appen heter `com.techrabbit.tapntalk`, tangentbordet
+`com.techrabbit.tapntalk.Keyboard` och iMessage-tillägget
+`com.techrabbit.tapntalk.Messages`. Prefixet är inte en smakfråga. Ett
+paket-id som börjar på `se.` gör att iOS inte visar tangentbordet
 under *Lägg till nytt tangentbord*: tillägget installeras och signeras, men
 listan hoppar tyst över det, och appen får inget besked. Kankoda (KeyboardKit)
 mätte det i testappar där bara prefixet skilde — `com.`, `eu.`, `de.`, `da.` och
@@ -189,8 +190,10 @@ mätte det i testappar där bara prefixet skilde — `com.`, `eu.`, `de.`, `da.`
 tangentbord kom i iOS 17.2, där felet först dök upp.
 
 Det här var orsaken till att tangentbordet inte gick att lägga till i version
-1.0 (1). Android-sidan rör det inte: där heter paketet fortfarande
-`se.rostsvar.mobile`, och ett paketnamn som byts där kostar installationerna.
+1.0 (1). Android har inte felet, men paketnamnet flyttade med ändå, till
+`com.techrabbit.tapntalk`: ett paketnamn går inte att byta efter publicering på
+Google Play, och ingenting är publicerat än. Båda plattformarna heter därmed
+samma sak. Priset togs nu, medan det är gratis.
 
 ### Kom igång-guiden på iPhone
 
@@ -311,7 +314,7 @@ Xcode 16.4 och iOS 18.5 SDK. Noll varningar. Tillägget bäddas in i appen som
 `com.apple.message-payload-provider`. App- och iMessage-ikoner kompilerar utan
 ozonerade platser. 16 tester gröna på iPhone-simulator.
 
-**iOS, ännu inte mätt.** Tangentbordstillägget `com.rostsvar.mobile.Keyboard`,
+**iOS, ännu inte mätt.** Tangentbordstillägget `com.techrabbit.tapntalk.Keyboard`,
 den delade dikteringen i `ios/Shared/Dictation.swift`, de sex testerna i
 `DictationEndingTests`, kom igång-guiden i `ios/App/Onboarding.swift`,
 dikteringsskärmen i `ios/App/HomeScreen.swift` med `HomeState` och dess sexton
@@ -346,13 +349,18 @@ bygge, så siffrorna nedan gäller paketet med versionCode 6.
 `classes.dex` på 54 544 byte. Paketet begär `RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`,
 `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MICROPHONE` och `POST_NOTIFICATIONS` —
 inget nät, ingen lagring, ingen plats. Det har en startbar aktivitet,
-`se.rostsvar.mobile.Home`, kom igång-guiden `se.rostsvar.mobile.Guide`, bubblans
-förgrundstjänst `se.rostsvar.mobile.Bubble` med `foregroundServiceType`
-mikrofon, skrivtjänsten `se.rostsvar.mobile.Writer` bunden med
+`Home`, kom igång-guiden `Guide`, bubblans förgrundstjänst `Bubble` med
+`foregroundServiceType` mikrofon, skrivtjänsten `Writer` bunden med
 `BIND_ACCESSIBILITY_SERVICE` och beskriven av `res/xml/writer.xml`,
-rösttangentbordet `se.rostsvar.mobile.VoiceKeys` bundet med `BIND_INPUT_METHOD`
-och beskrivet av `res/xml/method.xml`, och en lagerikon i fem tätheter.
-Signaturen verifierad med apksigner (v3).
+rösttangentbordet `VoiceKeys` bundet med `BIND_INPUT_METHOD` och beskrivet av
+`res/xml/method.xml`, och en lagerikon i fem tätheter. Signaturen verifierad med
+apksigner (v3).
+
+Den mätningen är äldre än paketbytet. Den gjordes på versionCode 6, när paketet
+hade `se.`-prefix; klasserna låg då under det paketnamnet och heter i paketet nu
+`com.techrabbit.tapntalk.Home` och så vidare. versionCode står på 8 och
+visningsnamnet är `Tap&Talk`. Ingen ny APK är byggd, så siffrorna ovan gäller
+inte det nuvarande bygget.
 
 **Ingenting är provat på en fysisk telefon.** Taligenkänning, mikrofonens
 beteende i Meddelanden och att ett tryck på Skicka ger exakt ett meddelande går

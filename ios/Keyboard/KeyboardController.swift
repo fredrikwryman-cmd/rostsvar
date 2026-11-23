@@ -277,7 +277,7 @@ final class KeyboardController: UIInputViewController {
         // och får heller inte fråga om den själv. Då säger vi det i stället.
         guard hasFullAccess else {
             tell("Dikteringen behöver Tillåt fullständig åtkomst: Inställningar → Allmänt → "
-                 + "Tangentbord → Tangentbord → Tap & Talk. Appen visar vägen.")
+                 + "Tangentbord → Tangentbord → Tap&Talk. Appen visar vägen.")
             return
         }
         guard ears.isAvailable else {
@@ -292,7 +292,7 @@ final class KeyboardController: UIInputViewController {
             // Hann användaren trycka på en tangent medan frågan ställdes är
             // omgången över. Då får mikrofonen inte starta efteråt.
             guard let self, self.run == id else { return }
-            if let refused { self.tell(refused + " Öppna Tap & Talk-appen."); return }
+            if let refused { self.tell(refused + " Öppna Tap&Talk-appen."); return }
             self.begin(id)
         }
     }

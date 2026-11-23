@@ -1,13 +1,13 @@
 plugins { id 'com.android.application' version '8.9.2' }
 
 android {
-    namespace 'se.rostsvar.mobile'
+    namespace 'com.techrabbit.tapntalk'
     compileSdk 35
     defaultConfig {
-        applicationId 'se.rostsvar.mobile'
+        applicationId 'com.techrabbit.tapntalk'
         minSdk 30
         targetSdk 35
-        versionCode 7
-        versionName '0.7'
+        versionCode 8
+        versionName '0.8'
     }
 }

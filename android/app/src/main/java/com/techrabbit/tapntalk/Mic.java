@@ -1,4 +1,4 @@
-package se.rostsvar.mobile;
+package com.techrabbit.tapntalk;
 
 /**
  * Vem av appens tre ytor som har mikrofonen just nu.

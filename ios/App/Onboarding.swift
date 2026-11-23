@@ -42,13 +42,13 @@ struct Onboarding: View {
                 .trBody()
 
             step(1, "Tillåt mikrofonen", checked: micDone, selfCheck: false) {
-                Text("Dikteringen behöver mikrofonen och taligenkänningen. Frågan ställs här i appen, eftersom ett tangentbord inte får fråga själv. Tap & Talk spelar inte in något; ljudet går till telefonens taltjänst, som gör om det till text.")
+                Text("Dikteringen behöver mikrofonen och taligenkänningen. Frågan ställs här i appen, eftersom ett tangentbord inte får fråga själv. Tap&Talk spelar inte in något; ljudet går till telefonens taltjänst, som gör om det till text.")
                     .trBody()
                 if micDone {
                     done("Mikrofonen och taligenkänningen är tillåtna.")
                 } else if micRefused {
                     TRButton(title: "Öppna inställningarna", filled: true) { openSettings() }
-                    Text("iOS frågar inte igen när man svarat nej. Slå på Mikrofon och Taligenkänning under Inställningar → Tap & Talk.")
+                    Text("iOS frågar inte igen när man svarat nej. Slå på Mikrofon och Taligenkänning under Inställningar → Tap&Talk.")
                         .trFootnote()
                 } else {
                     TRButton(title: "Tillåt mikrofonen", filled: true) { askForMicrophone() }
@@ -58,30 +58,30 @@ struct Onboarding: View {
             step(2, "Lägg till tangentbordet", checked: false, selfCheck: true) {
                 Text("Tangentbordet är huvudvägen: med det dikterar du i varje app där du skriver. iOS kräver att du själv lägger till det.")
                     .trBody()
-                SettingsPath("Inställningar → Allmänt → Tangentbord → Tangentbord → Lägg till nytt tangentbord → Tap & Talk")
+                SettingsPath("Inställningar → Allmänt → Tangentbord → Tangentbord → Lägg till nytt tangentbord → Tap&Talk")
                 TRButton(title: "Öppna inställningarna") { openSettings() }
-                Text("Knappen öppnar Tap & Talks egen sida i Inställningar. Därifrån finns Tangentbord ett tryck bort, och hela vägen ovan fungerar också.")
+                Text("Knappen öppnar Tap&Talks egen sida i Inställningar. Därifrån finns Tangentbord ett tryck bort, och hela vägen ovan fungerar också.")
                     .trFootnote()
             }
 
             step(3, "Slå på Tillåt fullständig åtkomst", checked: false, selfCheck: true) {
                 Text("Utan fullständig åtkomst får tangentbordet inte använda mikrofonen, och kan inte be om den själv — då går dikteringen inte att skicka vidare till fältet du skriver i.")
                     .trBody()
-                SettingsPath("Inställningar → Allmänt → Tangentbord → Tangentbord → Tap & Talk → Tillåt fullständig åtkomst")
+                SettingsPath("Inställningar → Allmänt → Tangentbord → Tangentbord → Tap&Talk → Tillåt fullständig åtkomst")
                 TRButton(title: "Öppna inställningarna") { openSettings() }
-                Text("iOS varnar att tangentbordet då kan se allt du skriver. Det är samma varning för alla tangentbord. Tap & Talk loggar ingenting, sparar ingenting och skickar ingenting vidare; det enda som lämnar telefonen är talet, till Apples taltjänst, och bara medan du håller mikrofonen igång.")
+                Text("iOS varnar att tangentbordet då kan se allt du skriver. Det är samma varning för alla tangentbord. Tap&Talk loggar ingenting, sparar ingenting och skickar ingenting vidare; det enda som lämnar telefonen är talet, till Apples taltjänst, och bara medan du håller mikrofonen igång.")
                     .trFootnote()
             }
 
-            step(4, "Byt till Tap & Talk", checked: false, selfCheck: true) {
-                Text("Nu finns tangentbordet, men telefonen använder fortfarande ditt vanliga. Tryck i ett textfält och håll in jordgloben 🌐 nere till vänster — står det en smiley 🙂 där i stället är det samma knapp — och välj Tap & Talk i listan.")
+            step(4, "Byt till Tap&Talk", checked: false, selfCheck: true) {
+                Text("Nu finns tangentbordet, men telefonen använder fortfarande ditt vanliga. Tryck i ett textfält och håll in jordgloben 🌐 nere till vänster — står det en smiley 🙂 där i stället är det samma knapp — och välj Tap&Talk i listan.")
                     .trBody()
-                Text("Du byter tillbaka med samma knapp, eller med ⌨-knappen i Tap & Talks egen rad.")
+                Text("Du byter tillbaka med samma knapp, eller med ⌨-knappen i Tap&Talks egen rad.")
                     .trFootnote()
             }
 
             step(5, "Prova att diktera", checked: false, selfCheck: true) {
-                Text("Tryck i fältet nedan, byt till Tap & Talk och tryck på Tala. Säg en mening. Texten ska hamna i fältet medan du talar.")
+                Text("Tryck i fältet nedan, byt till Tap&Talk och tryck på Tala. Säg en mening. Texten ska hamna i fältet medan du talar.")
                     .trBody()
                 ProofField(text: $typed, language: $inputLanguage)
                     .frame(minHeight: 96)
@@ -112,7 +112,7 @@ struct Onboarding: View {
                 Text("Tangentbordet som skrev rapporterar språket \(inputLanguage).")
                     .trFootnote()
             }
-            Text("iOS berättar inte för appen vilket tangentbord som skrev. Ser du den svarta raden med den gröna Tala-knappen under fältet kom texten från Tap & Talk. Ser du Apples vanliga tangentbord kom den från ett annat — håll in 🌐 och välj Tap & Talk.")
+            Text("iOS berättar inte för appen vilket tangentbord som skrev. Ser du den svarta raden med den gröna Tala-knappen under fältet kom texten från Tap&Talk. Ser du Apples vanliga tangentbord kom den från ett annat — håll in 🌐 och välj Tap&Talk.")
                 .trFootnote()
         }
     }
@@ -237,7 +237,7 @@ private struct ProofField: UIViewRepresentable {
         field.textContainerInset = UIEdgeInsets(top: 14, left: 12, bottom: 14, right: 12)
         field.delegate = context.coordinator
         field.accessibilityLabel = "Provfält"
-        field.accessibilityHint = "Diktera en mening med Tap & Talk-tangentbordet."
+        field.accessibilityHint = "Diktera en mening med Tap&Talk-tangentbordet."
         return field
     }
 

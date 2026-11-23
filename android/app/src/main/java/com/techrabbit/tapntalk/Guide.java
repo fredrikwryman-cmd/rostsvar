@@ -1,4 +1,4 @@
-package se.rostsvar.mobile;
+package com.techrabbit.tapntalk;
 
 import android.Manifest;
 import android.app.Activity;
@@ -159,7 +159,7 @@ public class Guide extends Activity {
                 "Visa över andra appar",
                 "Låt appen skriva i fältet",
                 "Slå på tangentbordet",
-                "Byt till Tap & Talk"
+                "Byt till Tap&Talk"
         };
         for (int i = 0; i < STEPS; i++) {
             LinearLayout rad = new LinearLayout(this);
@@ -314,7 +314,7 @@ public class Guide extends Activity {
             case STEP_MIC:
                 heading.setText("Tillåt mikrofonen");
                 body.setText("Dikteringen behöver mikrofonen. Frågan ställs här i appen, "
-                        + "eftersom ett tangentbord inte får fråga själv. Tap & Talk spelar "
+                        + "eftersom ett tangentbord inte får fråga själv. Tap&Talk spelar "
                         + "inte in något; ljudet går till telefonens taltjänst, som gör om "
                         + "det till text.");
                 action.setText(micBlocked ? "Öppna inställningarna" : "Tillåt mikrofonen");
@@ -337,30 +337,30 @@ public class Guide extends Activity {
                 heading.setText("Låt appen skriva i fältet");
                 body.setText("Android låter bara en tillgänglighetstjänst skriva i andra "
                         + "appars textfält. Utan den kan bubblan lyssna, men bara lägga "
-                        + "texten i urklipp. Slå på Tap & Talk · skriv i fältet i listan "
+                        + "texten i urklipp. Slå på Tap&Talk · skriv i fältet i listan "
                         + "som öppnas.");
                 action.setText("Öppna tillgänglighet");
-                aside.setText("Android varnar att tjänsten kan läsa vad som visas. Tap & Talk "
+                aside.setText("Android varnar att tjänsten kan läsa vad som visas. Tap&Talk "
                         + "läser bara det fält du står i, för att kunna skriva din text "
                         + "där. Ingenting loggas, sparas eller skickas vidare. Samma text "
                         + "står i Androids egen ruta.");
                 break;
             case STEP_ENABLE:
                 heading.setText("Slå på tangentbordet");
-                body.setText("Tap & Talk är också ett tangentbord, reserven för de fält där "
+                body.setText("Tap&Talk är också ett tangentbord, reserven för de fält där "
                         + "bubblan inte kommer åt. Android kräver att du själv slår på det i "
                         + "listan över tangentbord. Knappen nedan öppnar den listan: leta upp "
-                        + "Tap & Talk · rösttangentbord och slå på det.");
+                        + "Tap&Talk · rösttangentbord och slå på det.");
                 action.setText("Öppna listan över tangentbord");
                 aside.setText("Android varnar att ett tangentbord kan se allt du skriver. Det "
-                        + "är samma varning för alla tangentbord. Tap & Talk loggar ingenting "
+                        + "är samma varning för alla tangentbord. Tap&Talk loggar ingenting "
                         + "och skickar ingenting vidare.");
                 break;
             case STEP_CHOOSE:
-                heading.setText("Byt till Tap & Talk");
+                heading.setText("Byt till Tap&Talk");
                 body.setText("Nu finns tangentbordet, men telefonen använder fortfarande ditt "
                         + "vanliga. Knappen nedan öppnar väljaren, där du trycker på "
-                        + "Tap & Talk · rösttangentbord.");
+                        + "Tap&Talk · rösttangentbord.");
                 action.setText("Öppna tangentbordsväljaren");
                 aside.setText("Du byter tillbaka när du vill, med ⌨-knappen i tangentbordet "
                         + "eller samma väljare.");
@@ -391,7 +391,7 @@ public class Guide extends Activity {
             receipt.setText("✓ Det fungerar. Texten kom in i fältet.");
         } else {
             receipt.setTextColor(Look.WARN);
-            receipt.setText("Texten kom in, men varken bubblan eller Tap & Talk-tangentbordet "
+            receipt.setText("Texten kom in, men varken bubblan eller Tap&Talk-tangentbordet "
                     + "är igång, så den kom från något annat. Starta bubblan på hemskärmen "
                     + "eller byt tangentbord för att prova dikteringen.");
         }
@@ -453,7 +453,7 @@ public class Guide extends Activity {
             }
         }
         aside.setText("Telefonen öppnade inte den rutan. Leta upp inställningen för hand "
-                + "under Appar eller Tillgänglighet och slå på Tap & Talk.");
+                + "under Appar eller Tillgänglighet och slå på Tap&Talk.");
     }
 
     @Override public void onRequestPermissionsResult(int code, String[] perms, int[] result) {

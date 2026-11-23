@@ -1,4 +1,4 @@
-package se.rostsvar.mobile;
+package com.techrabbit.tapntalk;
 
 import android.Manifest;
 import android.app.Activity;
@@ -108,7 +108,7 @@ public class Home extends Activity {
         head.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView title = new TextView(this);
-        title.setText("Tap & Talk");
+        title.setText("Tap&Talk");
         title.setTextColor(INK);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 30);
         head.addView(title, new LinearLayout.LayoutParams(0,
@@ -417,7 +417,7 @@ public class Home extends Activity {
         // systeminställningarna enda vägen vidare.
         micBlocked = !shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO);
         note = micBlocked
-                ? "Mikrofonen är avstängd för Tap & Talk. Tryck på Tillåt mikrofon för att öppna inställningarna."
+                ? "Mikrofonen är avstängd för Tap&Talk. Tryck på Tillåt mikrofon för att öppna inställningarna."
                 : "Utan mikrofon kan appen inte diktera. Tryck på Tala igen och välj Tillåt.";
         render();
     }
@@ -427,7 +427,7 @@ public class Home extends Activity {
         // Bubblan eller rösttangentbordet kan hålla mikrofonen. Hellre ett
         // besked om var den är än ett upptaget-fel från taltjänsten.
         if (!Mic.take(this)) {
-            note = "Mikrofonen används av Tap & Talk någon annanstans. Avsluta dikteringen där först.";
+            note = "Mikrofonen används av Tap&Talk någon annanstans. Avsluta dikteringen där först.";
             render();
             return;
         }

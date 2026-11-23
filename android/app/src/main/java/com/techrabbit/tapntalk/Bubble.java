@@ -1,4 +1,4 @@
-package se.rostsvar.mobile;
+package com.techrabbit.tapntalk;
 
 import android.Manifest;
 import android.app.Notification;
@@ -48,8 +48,8 @@ import java.util.ArrayList;
  */
 public class Bubble extends Service {
 
-    static final String START = "se.rostsvar.mobile.START_BUBBLA";
-    static final String STOP = "se.rostsvar.mobile.STOPPA_BUBBLA";
+    static final String START = "com.techrabbit.tapntalk.START_BUBBLA";
+    static final String STOP = "com.techrabbit.tapntalk.STOPPA_BUBBLA";
 
     private static final String CHANNEL = "bubbla";
     private static final int NOTE_ID = 11;
@@ -137,7 +137,7 @@ public class Bubble extends Service {
         // en förgrundstjänst av typen mikrofon får inte startas utan
         // mikrofontillstånd. Hellre ett tydligt nej än en krasch.
         if (!mayShow(this)) {
-            say("Tap & Talk får inte visas över andra appar. Slå på det i guiden.");
+            say("Tap&Talk får inte visas över andra appar. Slå på det i guiden.");
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -198,7 +198,7 @@ public class Bubble extends Service {
 
         Notification note = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-                .setContentTitle("Tap & Talk")
+                .setContentTitle("Tap&Talk")
                 .setContentText("Tryck på bubblan och tala.")
                 .setContentIntent(open)
                 .setOngoing(true)
@@ -237,7 +237,7 @@ public class Bubble extends Service {
         knob.setAllCaps(false);
         knob.setGravity(Gravity.CENTER);
         knob.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        knob.setContentDescription("Tap & Talk, tryck för att diktera");
+        knob.setContentDescription("Tap&Talk, tryck för att diktera");
         paint();
 
         where = new WindowManager.LayoutParams(
@@ -375,13 +375,13 @@ public class Bubble extends Service {
         // startade. Då är ett besked bättre än ett fel från taltjänsten.
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
-            say("Mikrofonen är inte tillåten längre. Slå på den i Tap & Talk.");
+            say("Mikrofonen är inte tillåten längre. Slå på den i Tap&Talk.");
             return;
         }
         // En diktering i rösttangentbordet eller i appen har mikrofonen.
         // Hellre ett besked om det än ett fel från taltjänsten.
         if (!Mic.take(this)) {
-            say("Mikrofonen används av Tap & Talk någon annanstans. Avsluta dikteringen där först.");
+            say("Mikrofonen används av Tap&Talk någon annanstans. Avsluta dikteringen där först.");
             return;
         }
         if (speech == null) {
@@ -448,7 +448,7 @@ public class Bubble extends Service {
     private void toClipboard(String clean, String message) {
         ClipboardManager clip = getSystemService(ClipboardManager.class);
         if (clip != null) {
-            clip.setPrimaryClip(ClipData.newPlainText("Tap & Talk", clean));
+            clip.setPrimaryClip(ClipData.newPlainText("Tap&Talk", clean));
             say(message);
         } else {
             // Inget urklipp att lägga den i. Då sägs texten rakt ut, så att
