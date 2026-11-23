@@ -217,21 +217,44 @@ public class VoiceKeys extends InputMethodService {
         key.setBackground(skin(TOOL, TOOL_DOWN));
         key.setLayoutParams(weight(weight, 46));
         final Runnable[] again = new Runnable[1];
+        // Sant så snart repetitionen har hunnit radera minst ett tecken.
+        final boolean[] repeating = new boolean[1];
         again[0] = new Runnable() {
-            @Override public void run() { erase(); hand.postDelayed(again[0], 55); }
+            @Override public void run() {
+                repeating[0] = true;
+                erase();
+                hand.postDelayed(again[0], 55);
+            }
         };
+        // Ett tecken ligger i klicklyssnaren, repetitionen i touch-lyssnaren.
+        // TalkBack skickar ACTION_CLICK och rör aldrig touch-lyssnaren, så utan
+        // den här gick raderingen inte att nå med skärmläsare — knappen
+        // annonserades men gjorde ingenting.
+        key.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { erase(); }
+        });
         key.setOnTouchListener(new View.OnTouchListener() {
             @Override public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
                         v.setPressed(true);
-                        erase();
+                        repeating[0] = false;
+                        // Första tecknet går genom klicklyssnaren, som ACTION_UP
+                        // utlöser. Här startas bara repetitionen.
                         hand.postDelayed(again[0], 400);
                         return true;
                     case MotionEvent.ACTION_UP:
+                        v.setPressed(false);
+                        hand.removeCallbacks(again[0]);
+                        // Hann repetitionen igång har den redan raderat. Då ska
+                        // släppet inte radera ett tecken till.
+                        if (!repeating[0]) v.performClick();
+                        repeating[0] = false;
+                        return true;
                     case MotionEvent.ACTION_CANCEL:
                         v.setPressed(false);
                         hand.removeCallbacks(again[0]);
+                        repeating[0] = false;
                         return true;
                     default:
                         return true;

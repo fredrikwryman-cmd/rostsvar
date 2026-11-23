@@ -256,6 +256,14 @@ public class Bubble extends Service {
         where.x = saved.getInt(AT_X, wide - size);
         where.y = saved.getInt(AT_Y, high / 2);
 
+        // Dragningen ligger i touch-lyssnaren, men trycket går genom en
+        // riktig klicklyssnare. TalkBack trycker aldrig med fingrar: det
+        // skickar ACTION_CLICK, som blir performClick(), och det når bara en
+        // OnClickListener. Utan den här raden är bubblan — appens huvudväg på
+        // Android — helt stängd för skärmläsare.
+        knob.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { tapped(); }
+        });
         knob.setOnTouchListener(new Drag(size));
         try {
             windows.addView(knob, where);
@@ -322,7 +330,9 @@ public class Bubble extends Service {
                 case MotionEvent.ACTION_CANCEL:
                     boolean quick = System.currentTimeMillis() - down < 500;
                     if (!moved && quick && touch.getAction() == MotionEvent.ACTION_UP) {
-                        tapped();
+                        // performClick i stället för tapped(): fingret och
+                        // TalkBack ska gå exakt samma väg in.
+                        view.performClick();
                         return true;
                     }
                     snap();
