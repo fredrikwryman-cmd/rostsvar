@@ -3,7 +3,7 @@ import Foundation
 /// Tillståndet i Tap&Talk, skilt från vyn så att det går att mäta med tester.
 ///
 /// Tre regler bär hela funktionen och testas i RostsvarTests:
-/// mikrofonen är öppen bara under inspelning, Avbryt rensar utkastet utan att
+/// mikrofonen är öppen bara under inspelning, Rensa tömmer utkastet utan att
 /// något skickas, och ett byte av konversation rensar utkastet.
 struct DraftState: Equatable {
     enum Phase: Equatable {
@@ -46,7 +46,7 @@ struct DraftState: Equatable {
         draft = text
     }
 
-    /// Avbryt går att trycka på så snart det finns något att avbryta. Aldrig
+    /// Rensa går att trycka på så snart det finns något att rensa. Aldrig
     /// medan ett meddelande skickas: då är det för sent att ångra sig.
     var canCancel: Bool { phase != .sending && (phase != .idle || hasDraft) }
 
@@ -120,7 +120,7 @@ struct DraftState: Equatable {
         leaveUnlessSending()
     }
 
-    /// Avbryt. Utkastet rensas och ingenting skickas. Går inte att använda
+    /// Rensa. Utkastet töms och ingenting skickas. Går inte att använda
     /// medan ett meddelande skickas.
     mutating func cancel() {
         guard phase != .sending else { return }

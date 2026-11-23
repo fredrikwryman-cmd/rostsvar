@@ -31,12 +31,15 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        // Tech Rabbit-designen är ritad bara för mörkt läge, §1. Panelen
+        // följde förut systemets läge och blev vit i ljust.
+        overrideUserInterfaceStyle = .dark
+        view.backgroundColor = Palette.ui(Palette.bg)
 
         status.font = .preferredFont(forTextStyle: .subheadline)
         status.adjustsFontForContentSizeCategory = true
         status.numberOfLines = 0
-        status.textColor = .secondaryLabel
+        status.textColor = Palette.ui(Palette.muted)
         status.accessibilityTraits.insert(.updatesFrequently)
 
         draft.font = .preferredFont(forTextStyle: .body)
@@ -45,10 +48,15 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
         draft.isSelectable = true
         draft.delegate = self
         draft.inputAccessoryView = dismissBar()
-        draft.backgroundColor = .secondarySystemBackground
-        draft.textColor = .label
-        draft.layer.cornerRadius = 12
-        draft.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
+        draft.backgroundColor = Palette.ui(Palette.card)
+        draft.textColor = Palette.ui(Palette.text)
+        draft.tintColor = Palette.ui(Palette.green)
+        draft.keyboardAppearance = .dark
+        // Samma form som fältet på startskärmen: radie 22, kant 1,5.
+        draft.layer.cornerRadius = 22
+        draft.layer.borderWidth = 1.5
+        draft.layer.borderColor = Palette.ui(Palette.border).cgColor
+        draft.textContainerInset = UIEdgeInsets(top: 14, left: 12, bottom: 14, right: 12)
         draft.accessibilityLabel = "Ditt utkast"
         draft.accessibilityHint = "Går att rätta för hand när dikteringen är över."
         draft.heightAnchor.constraint(greaterThanOrEqualToConstant: 120).isActive = true
@@ -57,8 +65,8 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
         paint(stop, prominent: false)
         paint(send, prominent: true)
         mic.addTarget(self, action: #selector(talk), for: .touchUpInside)
-        stop.setTitle("Avbryt", for: .normal)
-        stop.accessibilityLabel = "Avbryt och rensa utkastet"
+        stop.setTitle("Rensa", for: .normal)
+        stop.accessibilityLabel = "Rensa utkastet"
         stop.addTarget(self, action: #selector(abandon), for: .touchUpInside)
         send.setTitle("Skicka", for: .normal)
         send.accessibilityLabel = "Skicka utkastet i konversationen"
@@ -67,7 +75,7 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
         aside.font = .preferredFont(forTextStyle: .caption1)
         aside.adjustsFontForContentSizeCategory = true
         aside.numberOfLines = 0
-        aside.textColor = .tertiaryLabel
+        aside.textColor = Palette.ui(Palette.faint)
         aside.text = "Tap&Talk-tangentbordet dikterar i alla appar. Det här är genvägen i Meddelanden."
 
         let row = UIStackView(arrangedSubviews: [mic, stop])
@@ -114,16 +122,24 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
         render()
     }
 
+    /// Samma knappform som Rensa och Skicka på startskärmen: piller, grön
+    /// när den är vägen vidare, annars kortets yta med kant.
     private func paint(_ button: UIButton, prominent: Bool) {
         button.titleLabel?.font = .preferredFont(forTextStyle: .title3)
         button.titleLabel?.adjustsFontForContentSizeCategory = true
         button.titleLabel?.adjustsFontSizeToFitWidth = true
         button.titleLabel?.minimumScaleFactor = 0.8
-        button.layer.cornerRadius = 12
-        button.backgroundColor = prominent ? .systemBlue : .secondarySystemBackground
-        button.setTitleColor(prominent ? .white : .label, for: .normal)
-        button.setTitleColor(prominent ? UIColor(white: 1, alpha: 0.55) : .tertiaryLabel, for: .disabled)
-        button.heightAnchor.constraint(greaterThanOrEqualToConstant: 50).isActive = true
+        button.backgroundColor = Palette.ui(prominent ? Palette.green : Palette.card)
+        button.setTitleColor(Palette.ui(prominent ? Palette.onGreen : Palette.text),
+                             for: .normal)
+        button.setTitleColor(Palette.ui(Palette.disabled), for: .disabled)
+        button.layer.borderWidth = 1
+        button.layer.borderColor =
+            Palette.ui(prominent ? Palette.green : Palette.dimDot).cgColor
+        let high: CGFloat = 52
+        button.heightAnchor.constraint(greaterThanOrEqualToConstant: high).isActive = true
+        // Pillerform: radien är halva höjden, som Capsule i appen.
+        button.layer.cornerRadius = high / 2
     }
 
     private func render() {
@@ -277,7 +293,7 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
 
     @objc private func abandon() {
         state.cancel()
-        reset("Avbrutet. Inget skickades.")
+        reset("Fältet är tomt. Inget skickades.")
     }
 
     /// Avslutar allt pågående arbete, stänger mikrofonen och går till vila.

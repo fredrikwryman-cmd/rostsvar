@@ -13,22 +13,26 @@ enum TR {
 
     // MARK: - Färger, §2
 
-    static let bg = hex(0x0B0B0B)
-    static let card = hex(0x1A1A1A)
-    static let border = hex(0x2E2E2E)
-    static let text = hex(0xF2F2F2)
-    static let muted = hex(0xA8A8A8)
-    static let faint = hex(0x8A8A8A)
-    static let disabled = hex(0x5A5A5A)
-    static let green = hex(0x1CF038)
-    static let red = hex(0xE0583E)
-    static let onGreen = hex(0x0B0B0B)
-    static let plane = hex(0x1C1C1C)
+    // Värdena står i `Shared/Palette.swift`, som alla tre iOS-målen bygger.
+    // Här görs de bara om till SwiftUI-färger. Förr stod de bara här, och
+    // därför hade tangentbordet ett eget grönt och iMessage-tillägget
+    // systemets färger.
+    static let bg = hex(Palette.bg)
+    static let card = hex(Palette.card)
+    static let border = hex(Palette.border)
+    static let text = hex(Palette.text)
+    static let muted = hex(Palette.muted)
+    static let faint = hex(Palette.faint)
+    static let disabled = hex(Palette.disabled)
+    static let green = hex(Palette.green)
+    static let red = hex(Palette.red)
+    static let onGreen = hex(Palette.onGreen)
+    static let plane = hex(Palette.plane)
 
     /// Prickens grå i vila, och Rensas kant när knappen är aktiv. §6.
-    static let dimDot = hex(0x4A4A4A)
+    static let dimDot = hex(Palette.dimDot)
     /// Linjen längs det gröna bandets kant. §5.
-    static let bandEdge = hex(0x2A2A2A)
+    static let bandEdge = hex(Palette.bandEdge)
 
     /// Fältets yta är card på 92 % opacitet. §2.
     static var fieldFill: Color { card.opacity(0.92) }

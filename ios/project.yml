@@ -27,6 +27,9 @@ targets:
       # som tilläggen använder, så att appen och tangentbordet säger samma
       # sak om samma tillstånd.
       - path: Shared/Dictation.swift
+      # Tech Rabbit-paletten. Ligger i Shared eftersom alla tre paketen ritar
+      # med samma färger: appen genom TR, tilläggen som UIColor.
+      - path: Shared/Palette.swift
     settings:
       base:
         # Prefixet är com. och får aldrig bli se. igen. Ett paket-id som börjar
@@ -81,6 +84,7 @@ targets:
       # Dikteringen är delad med tangentbordet, så rättningen av den gäller
       # båda tilläggen.
       - path: Shared/Dictation.swift
+      - path: Shared/Palette.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.techrabbit.tapntalk.Messages
@@ -95,6 +99,7 @@ targets:
     sources:
       - Keyboard
       - path: Shared/Dictation.swift
+      - path: Shared/Palette.swift
       # Reglerna för hur tangentbordet skriver i andras fält, skilda från
       # tangentbordet för att kunna mätas av testerna.
       - path: Shared/Proxy.swift
