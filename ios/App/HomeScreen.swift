@@ -385,13 +385,19 @@ struct HomeScreen: View {
         return state.canTalk ? base : base.opacity(0.45)
     }
 
-    /// Underlaget har två ord på knappen. Det tredje hör till ett läge
-    /// underlaget inte ritar: mikrofonen är avslagen i Inställningar, och
-    /// knappen leder dit i stället för att fråga om igen.
+    /// Underlagets §6 har två ord på knappen och säger "Tala" också när det
+    /// redan står text i fältet. Här står det "Tala om" i stället, samma ord
+    /// som Android använder: det säger att nästa diktering läggs efter
+    /// texten som redan finns, inte i stället för den. En medveten avvikelse
+    /// från underlaget, till förmån för samma ordval på båda plattformarna.
+    ///
+    /// Det fjärde ordet hör till ett läge underlaget inte ritar: mikrofonen
+    /// är avslagen i Inställningar, och knappen leder dit i stället för att
+    /// fråga om igen.
     private var micWord: String {
         if state.isRecording { return "Stoppa" }
         if micBlocked { return "Tillåt mikrofon" }
-        return "Tala"
+        return state.hasText ? "Tala om" : "Tala"
     }
 
     // MARK: - Rensa och Skicka, §4.5

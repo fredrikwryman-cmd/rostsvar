@@ -44,17 +44,36 @@ enum TR {
 
 // MARK: - Typografi, §3
 
-/// En textstorlek ur underlaget som ändå växer med Dynamic Type.
+/// Archivo, typsnittet underlaget är ritat i. Namnen är typsnittens egna
+/// PostScript-namn, avlästa ur name-tabellen i filerna under `App/Fonts/`,
+/// inte gissade ur filnamnen — de råkar stämma överens här, men det är
+/// PostScript-namnet `Font.custom` frågar efter.
 ///
-/// Underlaget förutsätter Archivo. Typsnittsfilerna finns inte i det här
-/// repot, så här används systemtypsnittet i samma vikter och storlekar.
-/// Läggs Archivo in är det den här enda raden som byts: `.system(size:…)`
-/// blir `.custom("Archivo", size:…)`.
+/// De fyra vikterna är de fyra underlaget använder: 400 brödtext, 700
+/// rubriker och knappar, 800 etiketten under Tala-knappen, 900 appnamnet.
+/// Hittas inte filen faller SwiftUI tillbaka på systemtypsnittet av sig
+/// själv, så en saknad fil ger en tråkigare skärm men ingen krasch.
+enum Archivo {
+    static func name(for weight: Font.Weight) -> String {
+        switch weight {
+        case .black: return "Archivo-Black"        // 900
+        case .heavy: return "Archivo-ExtraBold"    // 800
+        case .bold, .semibold: return "Archivo-Bold" // 700
+        default: return "Archivo-Regular"          // 400
+        }
+    }
+}
+
+/// En textstorlek ur underlaget som ändå växer med Dynamic Type.
 ///
 /// `@ScaledMetric` räknar om punkterna mot en textstil, så att 17 pt blir
 /// större när användaren har ställt upp textstorleken i Inställningar.
 /// Radavståndet räknas om i samma takt, därför ett förhållande och inte ett
 /// fast tal.
+///
+/// Typsnittet sätts med `fixedSize:` och inte `size:`. `Font.custom(_:size:)`
+/// skalar nämligen själv mot Dynamic Type, och punkterna är redan skalade
+/// här — annars hade texten vuxit två gånger.
 struct TRFont: ViewModifier {
     @ScaledMetric private var size: CGFloat
     private let weight: Font.Weight
@@ -74,7 +93,7 @@ struct TRFont: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .font(.system(size: size, weight: weight))
+            .font(.custom(Archivo.name(for: weight), fixedSize: size))
             .tracking(tracking)
             .lineSpacing(leading.map { max(0, size * ($0 - 1)) } ?? 0)
     }
@@ -88,6 +107,149 @@ extension View {
                 lineHeight: CGFloat? = nil) -> some View {
         modifier(TRFont(size, weight, relativeTo: style,
                         tracking: tracking, lineHeight: lineHeight))
+    }
+
+    /// Brödtext, samma som ingressen på startskärmen. §3: 400, 15/21, muted.
+    func trBody() -> some View {
+        trFont(15, .regular, relativeTo: .subheadline, lineHeight: 21)
+            .foregroundStyle(TR.muted)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Den mindre raden: förtydliganden och varningar under brödtexten.
+    func trFootnote() -> some View {
+        trFont(12, .regular, relativeTo: .caption)
+            .foregroundStyle(TR.faint)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Rubrik inuti ett kort. Samma vikt och storlek som etiketten under
+    /// Tala-knappen, så att de två skärmarna låter lika i tonen.
+    func trHeading() -> some View {
+        trFont(17, .heavy)
+            .foregroundStyle(TR.text)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+// MARK: - Återanvända former
+
+/// Ett kort i Tech Rabbit-formen: fältets yta, radie 22 och 1,5 punkters
+/// kant — samma form som textfältet på startskärmen. Guiden och Om byggs
+/// av de här korten i stället för systemets listrader, så att de två
+/// skärmarna ser ut att höra till samma app.
+struct TRCard<Content: View>: View {
+    private let spacing: CGFloat
+    private let content: Content
+
+    init(spacing: CGFloat = 10, @ViewBuilder content: () -> Content) {
+        self.spacing = spacing
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: spacing) {
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(TR.fieldFill, in: RoundedRectangle(cornerRadius: 22))
+        .overlay(RoundedRectangle(cornerRadius: 22)
+            .strokeBorder(TR.border, lineWidth: 1.5))
+    }
+}
+
+/// En knapp i samma form som Rensa och Skicka: piller, 52 högt, ikon- och
+/// textvikt ur §3. Grön när den är vägen vidare, annars kortets yta med
+/// kant.
+struct TRButton: View {
+    let title: String
+    var filled = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .trFont(16, .bold)
+                .foregroundStyle(filled ? TR.onGreen : TR.text)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(filled ? TR.green : TR.card, in: Capsule())
+                .overlay(Capsule().strokeBorder(
+                    filled ? TR.green : TR.dimDot, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// En liten etikett, som "kontrollera själv" i guiden.
+struct TRBadge: View {
+    let text: String
+
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        Text(text)
+            .trFont(11, .bold, relativeTo: .caption2)
+            .foregroundStyle(TR.faint)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(TR.card, in: Capsule())
+            .overlay(Capsule().strokeBorder(TR.border, lineWidth: 1))
+            .fixedSize()
+    }
+}
+
+/// Ramen kring guiden och Om: samma bakgrund som startskärmen, rubriken i
+/// Archivo i navigationsraden och en grön Klar-knapp. Innehållet rullar.
+struct TRSheet<Content: View>: View {
+    private let title: String
+    private let close: () -> Void
+    private let content: Content
+
+    init(_ title: String,
+         close: @escaping () -> Void,
+         @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.close = close
+        self.content = content()
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    content
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 28)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .background(TRBackdrop())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text(title)
+                        .trFont(17, .heavy)
+                        .foregroundStyle(TR.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Klar", action: close)
+                        .trFont(16, .bold)
+                        .foregroundStyle(TR.green)
+                }
+            }
+            .toolbarBackground(TR.bg, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+        }
+        .preferredColorScheme(.dark)
+        .tint(TR.green)
     }
 }
 

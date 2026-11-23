@@ -6,7 +6,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.9"
+    MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGN_STYLE: Automatic
 targets:
@@ -14,7 +14,15 @@ targets:
     type: application
     platform: iOS
     sources:
-      - App
+      # Typsnittet står på egen rad nedan, därför undantaget här: samma fil
+      # två gånger i samma mål ger dubbla resurser i paketet.
+      - path: App
+        excludes:
+          - Fonts
+      # Archivo, typsnittet Tech Rabbit-designen är ritad i. Fyra vikter:
+      # 400 brödtext, 700 rubriker och knappar, 800 etiketten under
+      # Tala-knappen, 900 appnamnet.
+      - path: App/Fonts
       # Guiden frågar om mikrofon och taligenkänning genom samma Dictation
       # som tilläggen använder, så att appen och tangentbordet säger samma
       # sak om samma tillstånd.
@@ -34,6 +42,14 @@ targets:
         NSMicrophoneUsageDescription: Mikrofonen används när du väljer Tala.
         NSSpeechRecognitionUsageDescription: Ditt tal görs om till ett textutkast.
         UILaunchScreen: {}
+        # Filnamnen i paketets resursrot. PostScript-namnen, som
+        # Font.custom frågar efter, står i Archivo-uppräkningen i
+        # TechRabbit.swift och är avlästa ur filernas egna name-tabeller.
+        UIAppFonts:
+          - Archivo-Regular.ttf
+          - Archivo-Bold.ttf
+          - Archivo-ExtraBold.ttf
+          - Archivo-Black.ttf
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UISupportedInterfaceOrientations:

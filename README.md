@@ -116,9 +116,30 @@ Tolkar…, Klar — och hur många tecken texten är. Med **Reducera rörelse**
 påslaget står ringarna stilla, glöden slutar andas, markören slutar blinka och
 lägesbytena tonar inte.
 
-Knapparnas ordval följer underlaget: **Tala** och **Stoppa**. Android säger
-fortfarande Tala om och Klar; den skillnaden är avsiktlig så länge bara iOS har
-den nya designen.
+Knappen heter **Tala** när fältet är tomt, **Tala om** när det redan finns
+text, **Stoppa** medan mikrofonen är på och **Tillåt mikrofon** när den är
+nekad i Inställningar. Tala om är en medveten avvikelse från underlagets §6,
+som säger Tala i båda lägena: ordet säger att nästa diktering läggs efter
+texten som redan står där, och det är samma ord som Android använder.
+
+Texten är satt i **Archivo**, typsnittet underlaget är ritat i. De fyra
+vikterna ligger i `ios/App/Fonts/` och räknas upp i `UIAppFonts`:
+`Archivo-Regular` (400) för brödtext, `Archivo-Bold` (700) för rubriker och
+knappar, `Archivo-ExtraBold` (800) för etiketten under Tala-knappen och
+`Archivo-Black` (900) för appnamnet. Namnen i koden är typsnittens egna
+PostScript-namn, avlästa ur filernas name-tabeller. Storlekarna står i
+underlagets punkter men skalas med Dynamic Type, en gång och inte två:
+`TRFont` räknar om punkterna med `@ScaledMetric` och sätter sedan typsnittet
+med `fixedSize:`, eftersom `Font.custom(_:size:)` annars hade skalat en
+andra gång.
+
+Guiden och Om är ritade i samma form: samma bakgrund, samma kort med radie
+22 och 1,5 punkters kant, samma pillerknappar och samma typsnitt. De delar
+`TRCard`, `TRButton`, `TRBadge` och `TRSheet` med startskärmen. Innehållet,
+de fem stegen och allt som läses av är oförändrat; bara utseendet är bytt.
+Två ställen använder fortfarande systemets typsnitt med flit: vägarna genom
+Inställningar är satta i monospace så att leden går att följa med ögat, och
+provfältet faller tillbaka på systemtypsnittet om Archivo inte skulle laddas.
 
 Taligenkänningen är den delade `ios/Shared/Dictation.swift`, samma som
 tangentbordet och iMessage-tillägget. Ingen egen kopia, så avslutsregeln i
@@ -285,9 +306,14 @@ ingen körning har startats. Siffrorna ovan gäller bygget före de ändringarna
 Designen är dessutom av sin natur svår att mäta utan telefon. Pulsens takt,
 glöden, den blinkande markören, haptiken, hur bakgrundens kurvor skärs av på en
 smalare skärm och om tangentbordet lämnar Tala-knappen i fred — allt det syns
-först på en riktig iPhone. `ios/App/Look.swift` är kvar men används inte längre
-av någon fil: dikteringsskärmen var dess enda användare, och guiden och Om
-ritas med systemets färger.
+först på en riktig iPhone. Till det hör nu också om Archivo verkligen laddas:
+att `UIAppFonts` stämmer och att de fyra PostScript-namnen träffar rätt syns
+bara när appen kör. Gör de inte det byter SwiftUI tyst till systemtypsnittet,
+så skärmen ser rätt ut i formen men fel i bokstäverna.
+
+`ios/App/Look.swift` är kvar men används inte av någon fil: dikteringsskärmen
+var dess enda användare, och guiden och Om ritas nu med Tech Rabbit-tokenen
+i `TechRabbit.swift`.
 
 **Android, uppmätt vid versionCode 6.** Lokalt bygge med Build Tools 36.0.0 mot
 Platform 35, utan fel. Sedan dess är versionen höjd till **7 / 0.7** utan nytt
