@@ -20,7 +20,19 @@ final class Look {
     static final int DARK_INK = 0xFF05140C;
     static final int FIELD = 0xFF111315;
     static final int BORDER = 0xFF2A2F31;
-    static final int OFF = 0xFF3A3F42;
+    /**
+     * Tonen för innehåll som är avstängt eller inte nått än: guidens
+     * förklaringsrad, platshållartexten i fälten, stegen som ligger framåt i
+     * guiden, och Skicka och Tala när de inte går att trycka på.
+     *
+     * Var 0xFF3A3F42 fram till granskningen, och det gav uppmätt 1,75:1 mot
+     * FIELD och 1,97:1 mot BG — kravet är 4,5:1. Det var inte dekor utan
+     * riktig text, bland annat integritetsförklaringarna i guiden, som ingen
+     * med nedsatt syn kunde läsa. 0xFF7D8481 ger 4,87:1 mot FIELD och 5,49:1
+     * mot BG, och ligger fortfarande tydligt under DIM (7,20 och 8,12), så
+     * ordningen mellan tonerna är kvar.
+     */
+    static final int OFF = 0xFF7D8481;
     /** Varningens gula, används bara när något fattas. */
     static final int WARN = 0xFFFFC46B;
 
