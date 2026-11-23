@@ -67,6 +67,7 @@ public class Bubble extends Service {
     private boolean listening;
     /** Hur många punkter som visas just nu medan taltjänsten slutför. */
     private int dots;
+    private static final String[] BEATS = {".", "..", "..."};
     /**
      * Punkterna i bubblan medan tolkningen pågår. Bubblan har ingen
      * statusrad, så rörelsen är det enda som kan säga att något händer under
@@ -208,22 +209,7 @@ public class Bubble extends Service {
             shade.createNotificationChannel(channel);
         }
 
-        PendingIntent open = PendingIntent.getActivity(this, 0,
-                new Intent(this, Home.class), PendingIntent.FLAG_IMMUTABLE);
-        PendingIntent off = PendingIntent.getService(this, 1,
-                new Intent(this, Bubble.class).setAction(STOP), PendingIntent.FLAG_IMMUTABLE);
-
-        Notification note = new Notification.Builder(this, CHANNEL)
-                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-                .setContentTitle("Tap&Talk")
-                .setContentText("Tryck på bubblan och tala.")
-                .setContentIntent(open)
-                .setOngoing(true)
-                .setShowWhen(false)
-                .addAction(new Notification.Action.Builder(
-                        Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                        "Stäng", off).build())
-                .build();
+        Notification note = sheet(RESTING);
 
         // Android kan neka en förgrundstjänst som startas om från bakgrunden
         // efter att systemet dödat den. Ett nej får inte bli en kraschslinga:
@@ -238,6 +224,38 @@ public class Bubble extends Service {
         }
         alive = true;
         return true;
+    }
+
+    /** Notisens text i vila. */
+    private static final String RESTING = "Tryck på bubblan och tala.";
+
+    /**
+     * Notisen, med en given text.
+     *
+     * Bubblan har ingen statusrad, och en toast är borta efter tre och en
+     * halv sekund utan väg tillbaka. Beskeden är längre än det — "Du bytte
+     * app medan texten tolkades. Den ligger i urklipp — håll in i fältet och
+     * välj Klistra in." — så de skrivs också hit, där de ligger kvar och går
+     * att läsa om. BigTextStyle, eftersom en rad inte räcker.
+     */
+    private Notification sheet(String text) {
+        PendingIntent open = PendingIntent.getActivity(this, 0,
+                new Intent(this, Home.class), PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent off = PendingIntent.getService(this, 1,
+                new Intent(this, Bubble.class).setAction(STOP), PendingIntent.FLAG_IMMUTABLE);
+
+        return new Notification.Builder(this, CHANNEL)
+                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+                .setContentTitle("Tap&Talk")
+                .setContentText(text)
+                .setStyle(new Notification.BigTextStyle().bigText(text))
+                .setContentIntent(open)
+                .setOngoing(true)
+                .setShowWhen(false)
+                .addAction(new Notification.Action.Builder(
+                        Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                        "Stäng", off).build())
+                .build();
     }
 
     // --------------------------------------------------------------- bubblan
@@ -307,7 +325,8 @@ public class Bubble extends Service {
         if (listening) {
             knob.setText("Klar");
         } else if (working) {
-            knob.setText(Motion.wanted(Bubble.this) ? ".".repeat(Math.max(1, dots)) : "…");
+            // Inte String.repeat: bygget kompileras mot Java 8.
+            knob.setText(Motion.wanted(Bubble.this) ? BEATS[Math.max(1, dots) - 1] : "…");
         } else {
             knob.setText("Tala");
         }
@@ -499,8 +518,17 @@ public class Bubble extends Service {
         }
     }
 
+    /**
+     * Beskedet syns två gånger: som toast nu, och i notisen efteråt.
+     *
+     * Toasten ger beskedet med en gång, notisen ger en väg tillbaka till det.
+     * Den som inte hann läsa drar ned notisfältet, och texten står kvar.
+     */
     private void say(String text) {
         Toast.makeText(this, text, Toast.LENGTH_LONG).show();
+        if (!alive) return;
+        NotificationManager shade = getSystemService(NotificationManager.class);
+        if (shade != null) shade.notify(NOTE_ID, sheet(text));
     }
 
     private String first(Bundle box) {
