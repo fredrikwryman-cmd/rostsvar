@@ -2,3 +2,7 @@
 *.png binary
 *.apk binary
 *.p12 binary
+
+# Batfiler maste ha CRLF. cmd.exe snubblar pa LF-radslut i goto-etiketter,
+# och repots eol=lf hade annars checkat ut dem med fel radslut.
+*.bat text eol=crlf
