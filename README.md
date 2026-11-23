@@ -98,10 +98,27 @@ Appens startskärm är en dikteringsskärm med samma uppbyggnad som Androids
 `Home.java`: stor **Tala**-knapp som ett tryck startar och ett nytt tryck
 avslutar, ett fält som fylls löpande medan man talar, texten redigerbar för hand
 efteråt, **Skicka** som lämnar texten till iOS egna delningsruta
-(`UIActivityViewController`), och **Rensa** som tömmer fältet. Samma palett som
-Android — svart `#000000`, accent `#3FE08A` — och samma ordval på knapparna:
-Tala, Tala om, Klar, Tillåt mikrofon. Guiden och Om ligger som knappar högst
-upp.
+(`UIActivityViewController`), och **Rensa** som tömmer fältet. Guiden och Om
+ligger som knappar högst upp.
+
+Utseendet är Tech Rabbit-designen v1. Hela underlaget ligger i repot under
+`design/techrabbit-taptalk-v1/`: direktivet med färgtokens, layout i punkter,
+de tre lägena, animation, haptik och tillgänglighet, de två skärmbilderna och
+källfilerna. Ritningarna — färger, typsnittsskala, bakgrund, ikoner och
+ringarnas puls — ligger samlade i `ios/App/TechRabbit.swift`, så att
+`HomeScreen.swift` bara handlar om layout och förlopp.
+
+Skärmen är mörk och bara mörk, som underlaget. Svart `#0B0B0B`, grönt
+`#1CF038` på Tala-knappen och det som är aktivt, rött `#E0583E` medan
+mikrofonen är på. Knappen är en cirkel med två ringar som pulsar: långsamt i
+vila, snabbare under inspelning. Fältets fot visar läget — Redo, Lyssnar…,
+Tolkar…, Klar — och hur många tecken texten är. Med **Reducera rörelse**
+påslaget står ringarna stilla, glöden slutar andas, markören slutar blinka och
+lägesbytena tonar inte.
+
+Knapparnas ordval följer underlaget: **Tala** och **Stoppa**. Android säger
+fortfarande Tala om och Klar; den skillnaden är avsiktlig så länge bara iOS har
+den nya designen.
 
 Taligenkänningen är den delade `ios/Shared/Dictation.swift`, samma som
 tangentbordet och iMessage-tillägget. Ingen egen kopia, så avslutsregeln i
@@ -248,6 +265,7 @@ Håll isär de tre stegen. En rad ändras först när steget faktiskt är gjort.
 | iOS-tangentbord | nej | nej | nej |
 | iOS kom igång-guide | nej | nej | nej |
 | iOS dikteringsskärm | nej | nej | nej |
+| iOS Tech Rabbit-design | nej | nej | nej |
 | Android | ja | — | nej |
 
 **iOS, uppmätt.** Osignerat Release-bygge för iPhone på macOS-byggare med
@@ -260,9 +278,16 @@ ozonerade platser. 16 tester gröna på iPhone-simulator.
 den delade dikteringen i `ios/Shared/Dictation.swift`, de sex testerna i
 `DictationEndingTests`, kom igång-guiden i `ios/App/Onboarding.swift`,
 dikteringsskärmen i `ios/App/HomeScreen.swift` med `HomeState` och dess sexton
-tester, och den omskrivna startskärmen är skrivna men **inte kompilerade** — det kräver en Mac
-eller en körning av iOS-flödet, och ingen körning har startats. Siffrorna ovan
-gäller bygget före de ändringarna.
+tester, och Tech Rabbit-designen i `ios/App/TechRabbit.swift` är skrivna men
+**inte kompilerade** — det kräver en Mac eller en körning av iOS-flödet, och
+ingen körning har startats. Siffrorna ovan gäller bygget före de ändringarna.
+
+Designen är dessutom av sin natur svår att mäta utan telefon. Pulsens takt,
+glöden, den blinkande markören, haptiken, hur bakgrundens kurvor skärs av på en
+smalare skärm och om tangentbordet lämnar Tala-knappen i fred — allt det syns
+först på en riktig iPhone. `ios/App/Look.swift` är kvar men används inte längre
+av någon fil: dikteringsskärmen var dess enda användare, och guiden och Om
+ritas med systemets färger.
 
 **Android, uppmätt vid versionCode 6.** Lokalt bygge med Build Tools 36.0.0 mot
 Platform 35, utan fel. Sedan dess är versionen höjd till **7 / 0.7** utan nytt

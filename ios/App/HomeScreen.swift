@@ -6,6 +6,10 @@ import UIKit
 /// `Home.java`. Tryck på Tala, tala svenska, läs igenom texten, rätta den för
 /// hand om du vill, och välj själv var den skickas.
 ///
+/// Utseendet är Tech Rabbit-designen v1. Underlaget ligger i
+/// `design/techrabbit-taptalk-v1/`, ritningarna i `TechRabbit.swift`, och
+/// paragraftecknen nedan pekar på avsnitt i underlagets direktiv.
+///
 /// Taligenkänningen är den delade `Dictation`, samma som tangentbordet och
 /// iMessage-tillägget använder. Det betyder att avslutsregeln i
 /// `Dictation.ending` gäller också här: har något hörts levereras det, och
@@ -37,31 +41,39 @@ struct HomeScreen: View {
     /// Samma nyckelnamn som Android använder.
     @AppStorage("guiden_visad") private var guideSeen = false
 
+    /// Reducera rörelse i Inställningar. §7: inga pulserande ringar, ingen
+    /// andande glöd, ingen blinkande markör, inga tonade lägesbyten.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Lägesbytet tonas 200 ms, utom när rörelse ska vara reducerad. §7.
+    private var fade: Animation? {
+        reduceMotion ? nil : .easeOut(duration: 0.2)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            header
-            Text(note)
-                .font(.subheadline)
-                .foregroundStyle(Look.dim)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityAddTraits(.updatesFrequently)
-            field
-            micButton
-            HStack(spacing: 10) {
-                clearButton
-                sendButton
+        ZStack {
+            TRBackdrop()
+            VStack(alignment: .leading, spacing: 0) {
+                header.padding(.top, 6)
+                ingress.padding(.top, 14)
+                field.padding(.top, 16)
+                micBlock.padding(.top, 20)
+                actions.padding(.top, 16).padding(.bottom, 10)
             }
+            .padding(.horizontal, 20)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Look.bg.ignoresSafeArea())
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(TR.bg.ignoresSafeArea())
+        // §1: skärmen är ritad bara för mörkt läge.
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showGuide) { Onboarding() }
         .sheet(isPresented: $showAbout) { About() }
         .sheet(isPresented: $showShare) { ShareSheet(text: state.trimmed) }
         .onAppear { arrive() }
+        // §9: läget annonseras när det byts, inte vid varje tecken.
+        .onChange(of: chip) { now in
+            UIAccessibility.post(notification: .announcement, argument: now.word)
+        }
         // Mikrofonen stängs när appen lämnas, som på Android. Skillnaden är
         // att vi avslutar i stället för att avbryta: det som hörts levereras
         // och står kvar i fältet.
@@ -75,77 +87,320 @@ struct HomeScreen: View {
             }
     }
 
-    // MARK: - Delarna
+    // MARK: - Huvudet, §4.1
 
     private var header: some View {
-        HStack(spacing: 10) {
-            Text("Tap & Talk")
-                .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(Look.ink)
-            Spacer(minLength: 8)
-            quietButton("Guide", hint: "Öppna kom igång-guiden") { showGuide = true }
-            quietButton("Om", hint: "Om appen och tangentbordet") { showAbout = true }
+        HStack(spacing: 12) {
+            mark
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Tap & Talk")
+                    .trFont(28, .black, relativeTo: .title, tracking: -0.5, lineHeight: 32)
+                    .foregroundStyle(TR.text)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Text("TECH RABBIT")
+                    .trFont(12, .bold, relativeTo: .caption, tracking: 0.6)
+                    .foregroundStyle(TR.green)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+            pill("Guide", hint: "Öppna kom igång-guiden") { showGuide = true }
+            pill("Om", hint: "Om appen och tangentbordet") { showAbout = true }
+        }
+        .frame(height: 56)
+    }
+
+    /// Ikonringen med Tech Rabbits kaninsymbol.
+    private var mark: some View {
+        ZStack {
+            Circle().fill(TR.card)
+            Circle().strokeBorder(TR.green, lineWidth: 1.5)
+            TRIcon.rabbit(22, color: TR.text)
+        }
+        .frame(width: 40, height: 40)
+        .accessibilityHidden(true)
+    }
+
+    /// Pillerknapp i huvudet. Den syns som 38 hög, men träffytan är 44, som
+    /// den minsta en knapp får vara.
+    private func pill(_ title: String, hint: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .trFont(14, .bold, relativeTo: .subheadline)
+                .foregroundStyle(TR.text)
+                .padding(.horizontal, 14)
+                .frame(height: 38)
+                .background(TR.card, in: Capsule())
+                .overlay(Capsule().strokeBorder(TR.border, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+        // Etiketten börjar med den text som syns, och säger sedan vad
+        // knappen gör.
+        .accessibilityLabel("\(title). \(hint)")
+    }
+
+    // MARK: - Ingressen, §4.2
+
+    /// Underlaget har en fast ingress. Appen använder samma rad till att
+    /// svara användaren — om mikrofonen nekades, om taltjänsten tystnade,
+    /// om texten är klar — och den upplysningen får inte försvinna. Raden
+    /// börjar därför med underlagets text och byts när något händer.
+    private var ingress: some View {
+        Text(note)
+            .trFont(15, .regular, relativeTo: .subheadline, lineHeight: 21)
+            .foregroundStyle(TR.muted)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(.updatesFrequently)
+    }
+
+    // MARK: - Textfältet, §4.3
+
+    private var field: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            page
+            footer
+        }
+        .padding(EdgeInsets(top: 18, leading: 18, bottom: 14, trailing: 18))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(TR.fieldFill, in: RoundedRectangle(cornerRadius: 22))
+        .overlay(RoundedRectangle(cornerRadius: 22)
+            .strokeBorder(state.isRecording ? TR.green : TR.border, lineWidth: 1.5))
+        .frame(minHeight: 96)
+        .animation(fade, value: state.isRecording)
+    }
+
+    /// Fältets innehåll. Går det att skriva i är det en riktig redigerare;
+    /// medan mikrofonen är på är det en läsyta med grön markör, precis som
+    /// underlaget visar. Texten är densamma, bara ytan byts.
+    ///
+    /// Båda ytorna tar den höjd som blir över, så att foten står kvar
+    /// längst ner i fältet och inte flyttar sig när texten växer.
+    @ViewBuilder private var page: some View {
+        if state.canEdit {
+            editor.frame(maxHeight: .infinity, alignment: .topLeading)
+        } else {
+            reading.frame(maxHeight: .infinity, alignment: .topLeading)
         }
     }
 
-    private var field: some View {
+    private var editor: some View {
         ZStack(alignment: .topLeading) {
             TextEditor(text: $state.draft)
                 .scrollContentBackground(.hidden)
-                .font(.system(size: 19))
-                .foregroundStyle(Look.ink)
-                .tint(Look.green)
-                .padding(10)
-                // Fältet låses medan mikrofonen är på, men släcks inte:
-                // disabled hade gjort den dikterade texten grå medan den
-                // skrevs, och det är just då den ska vara läsbar.
-                .allowsHitTesting(state.canEdit)
+                .trFont(17, .regular, lineHeight: 25)
+                .foregroundStyle(TR.text)
+                .tint(TR.green)
+                // TextEditor lägger på eget inre utrymme. Det dras bort här
+                // så att texten står i linje med fältets egen padding om 18
+                // och inte hoppar när ytan byts mot läsytan.
+                .padding(.horizontal, -5)
+                .padding(.vertical, -8)
                 .accessibilityLabel("Din text")
             if state.draft.isEmpty {
-                Text("Texten du dikterar hamnar här. Du kan rätta den för hand.")
-                    .font(.system(size: 19))
-                    .foregroundStyle(Look.off)
-                    .padding(.horizontal, 15)
-                    .padding(.vertical, 18)
-                    .allowsHitTesting(false)
+                placeholder
             }
         }
-        .background(Look.field, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Look.border, lineWidth: 1))
-        .frame(maxHeight: .infinity)
     }
 
-    private var micButton: some View {
-        Button {
-            micTapped()
-        } label: {
-            Text(micTitle)
-                .font(.system(size: 22, weight: .semibold))
-                .frame(maxWidth: .infinity)
-                .frame(height: 84)
-                .background(micFill, in: RoundedRectangle(cornerRadius: 16))
-                .foregroundStyle(state.canTalk ? Look.darkInk : Look.off)
+    /// Läsytan under diktering. Den rullar med till sista raden, så att den
+    /// text som just hörts syns även när utkastet blivit långt.
+    private var reading: some View {
+        ScrollViewReader { scroll in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    if state.draft.isEmpty && !state.isRecording {
+                        placeholder
+                    } else {
+                        written
+                    }
+                    Color.clear.frame(height: 1).id(Self.lastLine)
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+            .scrollIndicators(.hidden)
+            .onChange(of: state.draft) { _ in
+                withAnimation(fade) { scroll.scrollTo(Self.lastLine, anchor: .bottom) }
+            }
         }
-        .buttonStyle(.plain)
-        .disabled(!state.canTalk)
-        .accessibilityLabel(micLabel)
     }
 
-    private var sendButton: some View {
-        Button {
-            showShare = true
-        } label: {
-            Text("Skicka")
-                .font(.system(size: 19, weight: .medium))
-                .frame(maxWidth: .infinity)
-                .frame(height: 58)
-                .overlay(RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(state.canSend ? Look.green : Look.border, lineWidth: 1))
-                .foregroundStyle(state.canSend ? Look.green : Look.off)
+    private static let lastLine = "sista-raden"
+
+    /// Texten med den gröna markören sist. Markören blinkar var 450:e
+    /// millisekund medan mikrofonen är på, och står still när rörelse ska
+    /// vara reducerad.
+    @ViewBuilder private var written: some View {
+        if state.isRecording && !reduceMotion {
+            TimelineView(.periodic(from: Date(), by: 0.45)) { timeline in
+                let tick = Int(timeline.date.timeIntervalSinceReferenceDate / 0.45)
+                line(caret: tick % 2 == 0)
+            }
+        } else {
+            line(caret: state.isRecording)
         }
-        .buttonStyle(.plain)
-        .disabled(!state.canSend)
-        .accessibilityLabel("Skicka texten vidare")
+    }
+
+    private func line(caret: Bool) -> some View {
+        (Text(state.draft).foregroundColor(TR.text)
+            + Text(verbatim: caret ? "▏" : "\u{200B}").foregroundColor(TR.green))
+            .trFont(17, .regular, lineHeight: 25)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .accessibilityLabel("Din text")
+            .accessibilityValue(state.draft)
+    }
+
+    private var placeholder: some View {
+        Text("Texten du dikterar hamnar här. Du kan rätta den för hand.")
+            .trFont(17, .regular, lineHeight: 25)
+            .foregroundStyle(TR.faint)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    /// Fältets fot: läget till vänster, antalet tecken till höger. §4.3.
+    private var footer: some View {
+        HStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(chip.dot)
+                    .frame(width: 6, height: 6)
+                    .accessibilityHidden(true)
+                Text(chip.word)
+                    .trFont(12, .bold, relativeTo: .caption2)
+                    .foregroundStyle(chip.ink)
+            }
+            Spacer(minLength: 8)
+            Text("\(state.draft.count) tecken")
+                .trFont(12, .regular, relativeTo: .caption2)
+                .foregroundStyle(TR.faint)
+        }
+        .animation(fade, value: chip)
+    }
+
+    /// De lägen underlaget ritar, §6, plus ett som appen har och underlaget
+    /// inte modellerar: taltjänsten har fått frågan men inte svarat ännu.
+    /// Att då säga "Klar" vore att svara åt den.
+    private enum Chip: Equatable {
+        case ready, listening, interpreting, done
+
+        var word: String {
+            switch self {
+            case .ready: return "Redo"
+            case .listening: return "Lyssnar…"
+            case .interpreting: return "Tolkar…"
+            case .done: return "Klar"
+            }
+        }
+
+        var dot: Color {
+            switch self {
+            case .ready: return TR.dimDot
+            case .listening: return TR.green
+            case .interpreting, .done: return TR.muted
+            }
+        }
+
+        var ink: Color {
+            switch self {
+            case .listening: return TR.green
+            case .interpreting: return TR.muted
+            case .ready, .done: return TR.faint
+            }
+        }
+    }
+
+    private var chip: Chip {
+        if state.isRecording { return .listening }
+        if state.phase == .finishing { return .interpreting }
+        return state.hasText ? .done : .ready
+    }
+
+    // MARK: - Tala-knappen, §4.4
+
+    private var micBlock: some View {
+        VStack(spacing: 10) {
+            ZStack {
+                TRRings(listening: state.isRecording, still: reduceMotion)
+                Button { micTapped() } label: { face }
+                    .buttonStyle(.plain)
+                    .disabled(!state.canTalk)
+                    .accessibilityLabel(micWord)
+                    .accessibilityHint(state.isRecording
+                                       ? "Avslutar diktering"
+                                       : "Startar diktering")
+            }
+            .frame(width: 132, height: 132)
+            Text(micWord)
+                .trFont(17, .heavy)
+                .foregroundStyle(TR.text)
+                .accessibilityHidden(true)
+        }
+        .frame(maxWidth: .infinity)
+        .animation(fade, value: state.isRecording)
+    }
+
+    /// Knappens yta med glöden. I vila andas glöden, under inspelning står
+    /// den still på rött. §7.
+    @ViewBuilder private var face: some View {
+        if reduceMotion {
+            disc(glow: TRGlow.opacity(listening: state.isRecording, still: true, at: 0))
+        } else {
+            TimelineView(.animation) { timeline in
+                disc(glow: TRGlow.opacity(
+                    listening: state.isRecording,
+                    still: false,
+                    at: timeline.date.timeIntervalSinceReferenceDate))
+            }
+        }
+    }
+
+    private func disc(glow: Double) -> some View {
+        Circle()
+            .fill(micFill)
+            .frame(width: 88, height: 88)
+            .shadow(color: micFill.opacity(glow), radius: TRGlow.radius)
+            .overlay(glyph)
+    }
+
+    @ViewBuilder private var glyph: some View {
+        if state.isRecording {
+            RoundedRectangle(cornerRadius: 7)
+                .fill(Color.white)
+                .frame(width: 28, height: 28)
+        } else {
+            TRIcon.mic(34, color: TR.onGreen)
+        }
+    }
+
+    private var micFill: Color {
+        let base = state.isRecording ? TR.red : TR.green
+        // Medan frågan ställs eller taltjänsten slutför går knappen inte att
+        // trycka på. Den dämpas i stället för att bytas ut, så att det syns
+        // att det är samma knapp som strax är tillbaka.
+        return state.canTalk ? base : base.opacity(0.45)
+    }
+
+    /// Underlaget har två ord på knappen. Det tredje hör till ett läge
+    /// underlaget inte ritar: mikrofonen är avslagen i Inställningar, och
+    /// knappen leder dit i stället för att fråga om igen.
+    private var micWord: String {
+        if state.isRecording { return "Stoppa" }
+        if micBlocked { return "Tillåt mikrofon" }
+        return "Tala"
+    }
+
+    // MARK: - Rensa och Skicka, §4.5
+
+    private var actions: some View {
+        HStack(spacing: 10) {
+            clearButton
+            sendButton
+        }
     }
 
     private var clearButton: some View {
@@ -153,51 +408,43 @@ struct HomeScreen: View {
             state.clear()
             note = "Fältet är tomt. Tryck på Tala och diktera igen."
         } label: {
-            Text("Rensa")
-                .font(.system(size: 19, weight: .medium))
-                .frame(maxWidth: .infinity)
-                .frame(height: 58)
-                .overlay(RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(Look.border, lineWidth: 1))
-                .foregroundStyle(state.canClear ? Look.dim : Look.off)
+            let ink = state.canClear ? TR.text : TR.disabled
+            HStack(spacing: 8) {
+                TRIcon.trash(17, color: ink)
+                Text("Rensa").trFont(16, .bold).foregroundStyle(ink)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .background(TR.card, in: Capsule())
+            .overlay(Capsule().strokeBorder(
+                state.canClear ? TR.dimDot : TR.border, lineWidth: 1))
         }
         .buttonStyle(.plain)
         .disabled(!state.canClear)
+        .animation(fade, value: state.canClear)
         .accessibilityLabel("Rensa fältet")
     }
 
-    private func quietButton(_ title: String, hint: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 15))
-                .padding(.horizontal, 14)
-                .frame(height: 46)
-                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Look.border, lineWidth: 1))
-                .foregroundStyle(Look.dim)
+    private var sendButton: some View {
+        Button {
+            Buzz.done()
+            showShare = true
+        } label: {
+            let ink = state.canSend ? TR.onGreen : TR.disabled
+            HStack(spacing: 8) {
+                TRIcon.plane(17, color: ink)
+                Text("Skicka").trFont(16, .bold).foregroundStyle(ink)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .background(state.canSend ? TR.green : TR.card, in: Capsule())
+            .overlay(Capsule().strokeBorder(
+                state.canSend ? TR.green : TR.border, lineWidth: 1))
         }
         .buttonStyle(.plain)
-        // Etiketten börjar med den text som syns, och säger sedan vad
-        // knappen gör.
-        .accessibilityLabel("\(title). \(hint)")
-    }
-
-    // MARK: - Knapparnas ord, hämtade ur läget
-
-    private var micTitle: String {
-        if state.isRecording { return "Klar" }
-        if micBlocked { return "Tillåt mikrofon" }
-        return state.hasText ? "Tala om" : "Tala"
-    }
-
-    private var micLabel: String {
-        if state.isRecording { return "Klar, stäng mikrofonen" }
-        if micBlocked { return "Öppna inställningarna och tillåt mikrofonen" }
-        return "Tala, starta mikrofonen"
-    }
-
-    private var micFill: Color {
-        guard state.canTalk else { return Look.field }
-        return state.isRecording ? Look.greenDeep : Look.green
+        .disabled(!state.canSend)
+        .animation(fade, value: state.canSend)
+        .accessibilityLabel("Skicka texten vidare")
     }
 
     // MARK: - Dikteringen
@@ -205,12 +452,18 @@ struct HomeScreen: View {
     private func micTapped() {
         if state.isRecording { finish(); return }
         guard state.phase == .idle else { return }
-        if micBlocked && !Dictation.permitted { openSettings(); return }
+        if micBlocked && !Dictation.permitted {
+            Buzz.warn()
+            openSettings()
+            return
+        }
         guard ears.isAvailable else {
+            Buzz.warn()
             note = "Svensk taligenkänning är inte tillgänglig just nu."
             return
         }
 
+        Buzz.start()
         let id = UUID()
         generation = id
         state.ask()
@@ -224,6 +477,7 @@ struct HomeScreen: View {
             }
             // Svarade användaren nej frågar iOS inte igen. Då är det
             // Inställningar som gäller, och knappen säger det.
+            Buzz.warn()
             micBlocked = Dictation.permissionRefused
             state.rest()
             note = micBlocked
@@ -253,18 +507,22 @@ struct HomeScreen: View {
                 // Hördes något den här omgången lyckades den, hur den än
                 // slutade. Stod det bara text kvar sedan förra gången är
                 // skälet det användaren behöver höra.
-                settle(state.heardSomething
-                       ? "Läs igenom texten, rätta den om du vill, och tryck på Skicka."
-                       : why)
+                if state.heardSomething {
+                    settle("Läs igenom texten, rätta den om du vill, och tryck på Skicka.")
+                } else {
+                    Buzz.warn()
+                    settle(why)
+                }
             }
         })
         if let refused {
+            Buzz.warn()
             state.rest()
             note = refused
             return
         }
         state.beginRecording()
-        note = "Mikrofonen är på. Tala svenska och tryck på Klar när du är färdig."
+        note = "Mikrofonen är på. Tala svenska och tryck på Stoppa när du är färdig."
     }
 
     /// Svarets besked, med raden om att appen lämnades först när det hände.
@@ -279,6 +537,7 @@ struct HomeScreen: View {
     /// sin ending-stängning; här väntar vi bara på svaret.
     private func finish() {
         guard state.isRecording else { return }
+        Buzz.stop()
         state.finishRecording()
         note = "Tolkar det du sa …"
         ears.finish()
@@ -306,6 +565,16 @@ struct HomeScreen: View {
         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
         UIApplication.shared.open(url)
     }
+}
+
+/// Haptiken, §8. Lätt stöt när mikrofonen öppnas, medelstark när den
+/// stängs, en bekräftelse när texten lämnas vidare och en varning när något
+/// går fel. Ingenting under pulsen och ingenting medan texten strömmar in.
+private enum Buzz {
+    static func start() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+    static func stop() { UIImpactFeedbackGenerator(style: .medium).impactOccurred() }
+    static func done() { UINotificationFeedbackGenerator().notificationOccurred(.success) }
+    static func warn() { UINotificationFeedbackGenerator().notificationOccurred(.warning) }
 }
 
 /// iOS egen delningsruta. Appen skickar inget själv: texten lämnas här, och
