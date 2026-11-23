@@ -50,6 +50,7 @@ public class VoiceKeys extends InputMethodService {
     private static final int GREEN = Look.GREEN;
     private static final int GREEN_DEEP = Look.GREEN_DEEP;
     private static final int DARK_INK = Look.DARK_INK;
+    private static final int KEY_EDGE = Look.KEY_EDGE;
 
     /** Svensk layout. Tre rader bokstäver, med å ä ö på sina vanliga platser. */
     private static final String[] LETTERS = {"qwertyuiopå", "asdfghjklöä", "zxcvbnm"};
@@ -319,17 +320,30 @@ public class VoiceKeys extends InputMethodService {
     }
 
     private StateListDrawable skin(int rest, int down) {
+        return skin(rest, down, KEY_EDGE);
+    }
+
+    /**
+     * Tangentens yta i två lägen, med en linje runt.
+     *
+     * Linjen är inte dekor. Tangentens yta har 1,27:1 mot tangentbordets
+     * botten, och utan en kant går tangenterna inte att skilja från den eller
+     * från varandra. 0xFF707070 ger 3,13:1 mot ytan. Grön tangent får ingen
+     * linje: där bär ytan gränsen själv med 12,72:1.
+     */
+    private StateListDrawable skin(int rest, int down, int stroke) {
         StateListDrawable states = new StateListDrawable();
-        states.addState(new int[]{android.R.attr.state_pressed}, box(down));
-        states.addState(new int[]{}, box(rest));
+        states.addState(new int[]{android.R.attr.state_pressed}, box(down, stroke));
+        states.addState(new int[]{}, box(rest, stroke));
         return states;
     }
 
-    private GradientDrawable box(int fill) {
+    private GradientDrawable box(int fill, int stroke) {
         GradientDrawable shape = new GradientDrawable();
         shape.setShape(GradientDrawable.RECTANGLE);
         shape.setColor(fill);
         shape.setCornerRadius(dp(7));
+        if (stroke != 0) shape.setStroke(Math.max(1, dp(1)), stroke);
         return shape;
     }
 
@@ -552,7 +566,8 @@ public class VoiceKeys extends InputMethodService {
                     "Diktering av. Det går inte att diktera i det här fältet.");
         }
         micKey.setBackground(skin(dictation ? (on ? GREEN_DEEP : GREEN) : TOOL,
-                dictation ? GREEN_DEEP : TOOL_DOWN));
+                dictation ? GREEN_DEEP : TOOL_DOWN,
+                dictation ? 0 : KEY_EDGE));
         micKey.setTextColor(dictation ? DARK_INK : DIM);
     }
 

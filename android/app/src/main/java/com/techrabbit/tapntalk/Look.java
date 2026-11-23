@@ -23,9 +23,11 @@ final class Look {
     /** Mörk text på grön knapp. */
     static final int DARK_INK = 0xFF0B0B0B;
     static final int FIELD = 0xFF1A1A1A;
-    static final int BORDER = 0xFF2E2E2E;
+    static final int BORDER = 0xFF707070;
     /** Kanten runt en sekundär knapp som går att trycka på. §6. */
-    static final int DIM_DOT = 0xFF4A4A4A;
+    static final int DIM_DOT = 0xFF8A8A8A;
+    /** Linjen runt en tangent. Tangentens yta når inte 3:1 mot botten. */
+    static final int KEY_EDGE = 0xFF707070;
     /**
      * Tonen för innehåll som är avstängt eller inte nått än: guidens
      * förklaringsrad, platshållartexten i fälten, stegen som ligger framåt i
