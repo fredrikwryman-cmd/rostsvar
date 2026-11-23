@@ -556,6 +556,18 @@ public class Bubble extends Service {
         @Override public void onRmsChanged(float rms) {
             if (knob == null || !listening) return;
             // Bubblan andas med rösten, så det syns att mikrofonen är på.
+            //
+            // Har telefonen stängt av animationer står den stilla. iOS har
+            // stillat ringarna, glöden och markören mot
+            // accessibilityReduceMotion sedan början; Android gjorde
+            // ingenting, och bubblan andades vad användaren än hade ställt
+            // in. Att mikrofonen är på syns ändå: knappen säger Klar och är
+            // djupare grön.
+            if (!Motion.wanted(Bubble.this)) {
+                knob.setScaleX(1f);
+                knob.setScaleY(1f);
+                return;
+            }
             float grow = 1f + Math.max(0f, Math.min(rms, 10f)) / 45f;
             knob.setScaleX(grow);
             knob.setScaleY(grow);

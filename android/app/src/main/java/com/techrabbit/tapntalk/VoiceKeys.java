@@ -191,7 +191,7 @@ public class VoiceKeys extends InputMethodService {
         micKey.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { micTapped(); }
         });
-        LinearLayout.LayoutParams wide = new LinearLayout.LayoutParams(0, dp(52), 1f);
+        LinearLayout.LayoutParams wide = new LinearLayout.LayoutParams(0, tall(52), 1f);
         wide.setMargins(dp(3), dp(5), dp(3), dp(2));
         talkRow.addView(micKey, wide);
         board.addView(talkRow);
@@ -314,9 +314,23 @@ public class VoiceKeys extends InputMethodService {
     }
 
     private LinearLayout.LayoutParams weight(float weight, int height) {
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(height), weight);
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(0, tall(height), weight);
         params.setMargins(dp(2), dp(2), dp(2), dp(2));
         return params;
+    }
+
+    /**
+     * Tangenthöjd som följer systemets textstorlek.
+     *
+     * Höjden var fast i dp medan etiketten står i sp, så vid stor
+     * systemtext växte bokstaven ur tangenten. Taket på 1,5 finns för att
+     * tangentbordet inte ska ta halva skärmen; iOS-sidan har samma tak.
+     */
+    private int tall(int height) {
+        float scale = getResources().getConfiguration().fontScale;
+        float k = Math.min(Math.max(scale, 1f), 1.5f);
+        return Math.round(dp(height) * k);
     }
 
     private StateListDrawable skin(int rest, int down) {
