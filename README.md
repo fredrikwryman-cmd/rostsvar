@@ -326,6 +326,13 @@ tester, och Tech Rabbit-designen i `ios/App/TechRabbit.swift` är skrivna men
 **inte kompilerade** — det kräver en Mac eller en körning av iOS-flödet, och
 ingen körning har startats. Siffrorna ovan gäller bygget före de ändringarna.
 
+Till det hör nu också hela premiumgranskningens punkt 1 till 14: den delade
+paletten i `ios/Shared/Palette.swift`, beskeden i `ios/Shared/Notice.swift` och
+`Notices.java`, statusraden i Androids rösttangentbord, rullningen på
+startskärmen, Rensa på Android, den tryckbara steglistan i guiden, det
+redigerbara iMessage-utkastet och `NoticeTests`. Ingenting av det är
+kompilerat, och ingen rad av det är provad på telefon.
+
 Designen är dessutom av sin natur svår att mäta utan telefon. Pulsens takt,
 glöden, den blinkande markören, haptiken, hur bakgrundens kurvor skärs av på en
 smalare skärm och om tangentbordet lämnar Tala-knappen i fred — allt det syns
@@ -362,7 +369,7 @@ apksigner (v3).
 
 Den mätningen är äldre än paketbytet. Den gjordes på versionCode 6, när paketet
 hade `se.`-prefix; klasserna låg då under det paketnamnet och heter i paketet nu
-`com.techrabbit.tapntalk.Home` och så vidare. versionCode står på 8 och
+`com.techrabbit.tapntalk.Home` och så vidare. versionCode står på 9 och
 visningsnamnet är `Tap&Talk`. Ingen ny APK är byggd, så siffrorna ovan gäller
 inte det nuvarande bygget.
 
