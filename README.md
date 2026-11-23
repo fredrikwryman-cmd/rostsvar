@@ -1,4 +1,4 @@
-# Tap & Talk · prototyp
+# Tap&Talk · prototyp
 
 Från Tech Rabbit. Tidigare arbetsnamn: Röstsvar.
 
@@ -7,26 +7,26 @@ Diktera ett svenskt textmeddelande och skicka det i konversationen du redan har 
 ## Prova den flytande knappen på din iPhone redan nu
 
 Det här är ett upplägg av iOS egna delar, att jämföra med medan appen ännu inte
-är installerad. Är appen installerad behövs det inte: Tap & Talk-tangentbordet
+är installerad. Är appen installerad behövs det inte: Tap&Talk-tangentbordet
 dikterar direkt i skrivfältet, utan urklipp och utan genvägar.
 
-1. Öppna **Genvägar**, skapa en genväg och döp den till **Tap & Talk**.
+1. Öppna **Genvägar**, skapa en genväg och döp den till **Tap&Talk**.
 2. Lägg till **Diktera text**, välj svenska och låt dikteringen avslutas efter en paus. Lägg därefter till **Kopiera till urklipp**, med den dikterade texten som indata. Välj enbart lokalt urklipp om alternativet visas. Kör genvägen en gång och godkänn efterfrågad åtkomst.
-3. Öppna **Inställningar → Hjälpmedel → Tryck → AssistiveTouch**. Aktivera knappen. Under **Dubbeltryck**, bläddra till genvägarna och välj **Tap & Talk**. Om genvägen saknas i listan kan du koppla den till **Tryck på baksidan** under hjälpmedlens tryckinställningar.
+3. Öppna **Inställningar → Hjälpmedel → Tryck → AssistiveTouch**. Aktivera knappen. Under **Dubbeltryck**, bläddra till genvägarna och välj **Tap&Talk**. Om genvägen saknas i listan kan du koppla den till **Tryck på baksidan** under hjälpmedlens tryckinställningar.
 4. Öppna en konversation i Messenger, Signal eller Meddelanden. Dubbeltryck på den flytande knappen och tala. Håll sedan fingret i skrivfältet, välj **Klistra in**, läs igenom och tryck på chattens **Skicka**.
 
 Den här varianten kan ställas in direkt på telefonen. Knappen tillhör iOS. Urklippet ersätts när genvägen körs. Vill du diktera direkt i skrivfältet kan du även använda mikrofonen på Apples skärmtangentbord.
 
 ## Android · installera testappen
 
-Testbygget heter `Tap-and-Talk-android-test.apk` och byggs med `build_debug.py`
+Testbygget heter `TapnTalk-android-test.apk` och byggs med `build_debug.py`
 (se **Bygg Android på Windows** nedan). Det är lokalt signerat för test och
 kräver Android 11 eller senare samt en installerad taltjänst med stöd för
 svenska. Hela testinstruktionen att skicka med filen står i
 [TESTA-ANDROID.md](TESTA-ANDROID.md).
 
 1. Öppna APK-filen på telefonen och installera. Android kan be dig godkänna installation från den app som öppnar filen.
-2. Öppna **Tap & Talk**. Appens egen skärm är en stor **Tala**-knapp, ett textfält och **Skicka**.
+2. Öppna **Tap&Talk**. Appens egen skärm är en stor **Tala**-knapp, ett textfält och **Skicka**.
 3. Tryck på **Tala**. Första gången frågar Android om mikrofonen — välj **Tillåt**. Säger du nej står det på skärmen vad som fattas, och knappen leder till inställningarna.
 4. Diktera på svenska. Texten fylls i fältet medan du talar. Tryck på **Klar** när du är färdig, eller låt taltjänsten själv sluta lyssna.
 5. Läs igenom texten och rätta den för hand om du vill. Ett nytt tryck på **Tala om** lägger till mer tal efter den text som redan står där.
@@ -160,7 +160,7 @@ mikrofonen stängdes när appen lämnades.
 
 ## iPhone · tangentbordet
 
-Tap & Talk är också ett tangentbord på iPhone, så dikteringen går att använda i
+Tap&Talk är också ett tangentbord på iPhone, så dikteringen går att använda i
 varje app där man skriver och inte bara i Meddelanden. Svensk layout med å, ä
 och ö, siffror och skiljetecken i två uppsättningar, skift med lås, backsteg,
 mellanslag, retur och en **⌨**-knapp tillbaka till föregående tangentbord.
@@ -198,7 +198,7 @@ samma sak. Priset togs nu, medan det är gratis.
 ### Kom igång-guiden på iPhone
 
 Appen har samma femstegsguide som Android, i samma ordning: mikrofonen, lägg
-till tangentbordet, **Tillåt fullständig åtkomst**, byt till Tap & Talk, och ett
+till tangentbordet, **Tillåt fullständig åtkomst**, byt till Tap&Talk, och ett
 provfält. Varje steg som görs i Inställningar visar hela vägen dit i klartext
 (`Inställningar → Allmänt → Tangentbord → Tangentbord → …`) och har en knapp som
 öppnar Inställningar. Guiden visas vid första start och öppnas sedan från
@@ -234,13 +234,13 @@ Funktionen väljer igenkänning på enheten när den svenska igenkännaren stöd
 det. Annars kan Apples taltjänst använda nätet.
 
 Mikrofonen är igång bara mellan Tala och Klar. Den stängs också när du avbryter,
-när tillägget fälls ihop till den smala listen, när du lämnar Tap & Talk och efter
-55 sekunder. Utkastet rensas när du lämnar Tap & Talk och när konversationen byts.
+när tillägget fälls ihop till den smala listen, när du lämnar Tap&Talk och efter
+55 sekunder. Utkastet rensas när du lämnar Tap&Talk och när konversationen byts.
 Inget spelas in och ingen meddelandehistorik sparas.
 
 **Texten kastas inte när panelen fälls ihop.** Utkastet rensas fortfarande — ingen
 text ska ligga kvar i någons meddelandepanel — men det som hörts läggs först i
-urklipp, och nästa gång du öppnar Tap & Talk står det att texten finns där:
+urklipp, och nästa gång du öppnar Tap&Talk står det att texten finns där:
 *"Texten ligger i urklipp — håll in i fältet och välj Klistra in."* Samma mönster
 som bubblan på Android använder när texten inte kan skrivas i ett fält. Urklippet
 är lokalt, så texten hoppar inte vidare till dina andra Apple-enheter.
@@ -254,17 +254,17 @@ varit en kopia av det som är på väg.
 
 Bygget körs på en macOS-byggare hos GitHub Actions. Ingen Mac behövs lokalt.
 
-- **Actions → Bygg Tap & Talk för iPhone (osignerat) → Run workflow.** Bygger app
+- **Actions → Bygg Tap&Talk för iPhone (osignerat) → Run workflow.** Bygger app
   och tillägg osignerat för iPhone och lägger en osignerad IPA samt bygglogg som
   artefakter på körningen. Startas för hand och körs även vid push till `main`.
-- **Actions → Skicka Tap & Talk till TestFlight → Run workflow.** Arkiverar
+- **Actions → Skicka Tap&Talk till TestFlight → Run workflow.** Arkiverar
   signerat och laddar upp. Kräver tre hemligheter och en variabel i repot.
   Stegen står i [TESTFLIGHT.md](TESTFLIGHT.md).
-- **Actions → Bygg Tap & Talk som Ad Hoc (utan granskning) → Run workflow.**
+- **Actions → Bygg Tap&Talk som Ad Hoc (utan granskning) → Run workflow.**
   Vägen förbi väntan på Apples Beta App Review. Tar byggnummer, UDID och namn
   som indata, registrerar telefonen hos Apple om den saknas, arkiverar och
   exporterar ad hoc-signerat, och lägger paketet som artefakten
-  `Tap-and-Talk-adhoc-IPA`. Laddar aldrig upp något till App Store Connect.
+  `TapnTalk-adhoc-IPA`. Laddar aldrig upp något till App Store Connect.
   Enheten registreras av `ios/Tools/registrera_enhet.py` mot App Store
   Connect-API:t, med samma hemligheter som TestFlight-flödet. Nyckeln behöver
   rollen App Manager eller Admin för att få registrera enheter.
@@ -289,11 +289,11 @@ Xcode-projektet genereras ur `ios/project.yml` och ligger inte i repot.
 python build_debug.py
 ```
 
-Resultatet hamnar i `build/Tap-and-Talk-android-test.apk`. Byggskriptet skapar en lokal testnyckel vid första körningen. En lokalt ombyggd APK kan därför ha en annan signatur än den medföljande.
+Resultatet hamnar i `build/TapnTalk-android-test.apk`. Byggskriptet skapar en lokal testnyckel vid första körningen. En lokalt ombyggd APK kan därför ha en annan signatur än den medföljande.
 
 Appikonen skapas av `android/tools/make_icons.py` (Python med Pillow) och ligger färdig i repot. Den ritar samma kaninmikrofon som iOS-ikonen, men i kvadratisk variant och i Androids lager: en bakgrund, en symbol och en helbild per täthet. Kör skriptet igen bara om grafiken ska bytas.
 
-**Actions → Bygg Tap & Talk för Android (test-APK) → Run workflow** gör samma bygge på en Linux-byggare och lägger APK:n som artefakt. Det bygget använder Gradle och Androids vanliga felsökningsnyckel.
+**Actions → Bygg Tap&Talk för Android (test-APK) → Run workflow** gör samma bygge på en Linux-byggare och lägger APK:n som artefakt. Det bygget använder Gradle och Androids vanliga felsökningsnyckel.
 
 ## Verifieringsstatus
 
@@ -345,7 +345,7 @@ i `TechRabbit.swift`.
 **Android, uppmätt vid versionCode 6.** Lokalt bygge med Build Tools 36.0.0 mot
 Platform 35, utan fel. Sedan dess är versionen höjd till **7 / 0.7** utan nytt
 bygge, så siffrorna nedan gäller paketet med versionCode 6.
-`Tap-and-Talk-android-test.apk` är 158 109 byte, versionCode 6, med en
+`TapnTalk-android-test.apk` är 158 109 byte, versionCode 6, med en
 `classes.dex` på 54 544 byte. Paketet begär `RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`,
 `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MICROPHONE` och `POST_NOTIFICATIONS` —
 inget nät, ingen lagring, ingen plats. Det har en startbar aktivitet,
@@ -373,7 +373,7 @@ Meddelanden behöver också bekräftas där.
 vykontrollern och tangentbordet använder:
 
 - mikrofonen är öppen bara under inspelning, aldrig medan behörighet frågas,
-  efter Klar, efter Avbryt, när Tap & Talk lämnas eller vid konversationsbyte
+  efter Klar, efter Avbryt, när Tap&Talk lämnas eller vid konversationsbyte
 - Avbryt rensar utkastet både under och efter diktering, och Skicka går då inte
   att trycka på
 - ett byte av konversation rensar utkastet, även mitt i en inspelning
@@ -432,7 +432,7 @@ reglerna, inte enheten.
 Bubblan, rösttangentbordet och hemskärmen ligger i samma process på Android och
 vet inget om varandra. Startar två av dem taligenkänningen samtidigt svarar
 Android med upptaget på den andra. `Mic` är en spärr som gör att den som är sist
-ute får veta det i förväg i stället: *"Mikrofonen används av Tap & Talk någon
+ute får veta det i förväg i stället: *"Mikrofonen används av Tap&Talk någon
 annanstans."* Spärren går att ta över när den är över 70 sekunder gammal, så att
 en yta som dödas av systemet inte kan låsa mikrofonen för resten av processens
 liv — gränsen ligger över dikteringens egen längsta omgång.

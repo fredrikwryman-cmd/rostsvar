@@ -1,10 +1,10 @@
-# Tap & Talk · testinstruktion för Android
+# Tap&Talk · testinstruktion för Android
 
-Tack för att du provar. Appen heter **Tap & Talk** och kommer från Tech Rabbit.
+Tack för att du provar. Appen heter **Tap&Talk** och kommer från Tech Rabbit.
 Du dikterar svenska, läser texten och väljer själv vart den ska. **Appen skickar
 aldrig något själv.**
 
-Filen du fått heter `Tap-and-Talk-android-test.apk`. Den är signerad med en
+Filen du fått heter `TapnTalk-android-test.apk`. Den är signerad med en
 lokal testnyckel, inte via Google Play. Kräver **Android 11 eller senare** och en
 taltjänst med svenska installerad.
 
@@ -23,7 +23,7 @@ avinstallera först.
 
 ## 2 · Appens egen skärm
 
-Öppna **Tap & Talk**. Du ser fyra saker:
+Öppna **Tap&Talk**. Du ser fyra saker:
 
 - en strömbrytare för den **flytande knappen**, högst upp,
 - en stor grön **Tala**-knapp,
@@ -76,13 +76,13 @@ steg och bockar av dem när de är gjorda:
 2. **Visa över andra appar.** Det här är vad den flytande knappen behöver för
    att alls få synas ovanpå andra appar.
 3. **Låt appen skriva i fältet.** Knappen öppnar tillgänglighetsinställningarna.
-   Slå på **Tap & Talk · skriv i fältet**. Android varnar att tjänsten kan läsa
-   vad som visas — det är standardvarningen. Tap & Talk läser bara det fält du
+   Slå på **Tap&Talk · skriv i fältet**. Android varnar att tjänsten kan läsa
+   vad som visas — det är standardvarningen. Tap&Talk läser bara det fält du
    står i, för att kunna skriva din text där. Samma mening står i Androids egen
    ruta; **läs den gärna och säg om den duger.**
 4. **Slå på tangentbordet.** Knappen öppnar Androids lista över tangentbord.
-   Slå på **Tap & Talk · rösttangentbord**.
-5. **Byt till Tap & Talk.** Knappen öppnar tangentbordsväljaren.
+   Slå på **Tap&Talk · rösttangentbord**.
+5. **Byt till Tap&Talk.** Knappen öppnar tangentbordsväljaren.
 
 Lämna aldrig guiden för att leta själv: varje steg har en knapp som öppnar rätt
 ruta. Kommer du tillbaka till appen ska steget vara bockat av **utan** att du

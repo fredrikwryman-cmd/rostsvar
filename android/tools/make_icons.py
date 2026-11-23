@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ritar Tap & Talks Android-ikon ur samma grafik som iOS-appen.
+"""Ritar Tap&Talks Android-ikon ur samma grafik som iOS-appen.
 
 Kör från mappen android:
 

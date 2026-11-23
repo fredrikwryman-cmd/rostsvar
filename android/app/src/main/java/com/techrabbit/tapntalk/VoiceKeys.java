@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Tap &amp; Talks rösttangentbord: diktera svenska rakt ned i fältet man står
+ * Tap&amp;Talks rösttangentbord: diktera svenska rakt ned i fältet man står
  * i, och vanliga tangenter för att rätta det som blev fel.
  *
  * Det som skrivs eller dikteras loggas aldrig och lämnar aldrig tangentbordet

@@ -1,6 +1,6 @@
 import UIKit
 
-/// Tap & Talk som tangentbord: samma diktering, men i varje app där man
+/// Tap&Talk som tangentbord: samma diktering, men i varje app där man
 /// skriver, inte bara i Meddelanden.
 ///
 /// Svart bakgrund och grön accent, som appen. Ingenting av det som skrivs

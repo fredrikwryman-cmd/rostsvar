@@ -1,12 +1,12 @@
-name: Bygg Tap & Talk för Android (test-APK)
+name: Bygg Tap&Talk för Android (test-APK)
 
 # Startas för hand. Kräver inga hemligheter: APK:n signeras med Androids
 # vanliga debug-nyckel, som Gradle skapar själv på byggaren. Det räcker för
 # sidoladdning till en testare, men en debug-signerad APK kan aldrig
 # publiceras på Google Play.
 #
-# Resultatet laddas upp som artefakten Tap-and-Talk-android-test-APK och
-# innehåller filen Tap-and-Talk-android-test.apk.
+# Resultatet laddas upp som artefakten TapnTalk-android-test-APK och
+# innehåller filen TapnTalk-android-test.apk.
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ env:
   # compileSdk 35 i app/build.gradle. Ändras den där ska den ändras här.
   ANDROID_PLATFORM: "35"
   ANDROID_BUILD_TOOLS: "35.0.0"
-  APK_NAME: "Tap-and-Talk-android-test.apk"
+  APK_NAME: "TapnTalk-android-test.apk"
 
 jobs:
   apk:
@@ -109,7 +109,7 @@ jobs:
       - name: Ladda upp APK:n som artefakt
         uses: actions/upload-artifact@v4
         with:
-          name: Tap-and-Talk-android-test-APK
+          name: TapnTalk-android-test-APK
           path: android/dist/${{ env.APK_NAME }}
           if-no-files-found: error
           retention-days: 30
@@ -118,7 +118,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: Tap-and-Talk-android-bygglogg
+          name: TapnTalk-android-bygglogg
           path: |
             android/app/build/outputs/**
             android/build/reports/**

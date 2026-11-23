@@ -1,4 +1,4 @@
-name: Bygg Tap & Talk för iPhone (osignerat)
+name: Bygg Tap&Talk för iPhone (osignerat)
 
 on:
   workflow_dispatch:
@@ -166,12 +166,12 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$ext/Info.plist"
           /usr/libexec/PlistBuddy -c 'Print :NSExtension:NSExtensionPointIdentifier' "$ext/Info.plist"
-          echo "Visningsnamn (ska vara Tap & Talk):"
+          echo "Visningsnamn (ska vara Tap&Talk):"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$app/Info.plist"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$ext/Info.plist"
           namn=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$app/Info.plist")
-          if [ "$namn" != "Tap & Talk" ]; then
-            echo "FEL: appens visningsnamn är \"$namn\", inte \"Tap & Talk\"."
+          if [ "$namn" != "Tap&Talk" ]; then
+            echo "FEL: appens visningsnamn är \"$namn\", inte \"Tap&Talk\"."
             exit 1
           fi
 
@@ -220,21 +220,21 @@ jobs:
           mkdir -p build/Package/Payload
           ditto build/DerivedData/Build/Products/Release-iphoneos/Rostsvar.app \
                 build/Package/Payload/Rostsvar.app
-          cd build/Package && zip -qr ../Tap-and-Talk-unsigned.ipa Payload
-          ls -lh ../Tap-and-Talk-unsigned.ipa
+          cd build/Package && zip -qr ../TapnTalk-unsigned.ipa Payload
+          ls -lh ../TapnTalk-unsigned.ipa
 
       - name: Ladda upp osignerad IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Tap-and-Talk-osignerad-IPA
-          path: ios/build/Tap-and-Talk-unsigned.ipa
+          name: TapnTalk-osignerad-IPA
+          path: ios/build/TapnTalk-unsigned.ipa
           if-no-files-found: error
 
       - name: Ladda upp loggar
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Tap-and-Talk-bygglogg
+          name: TapnTalk-bygglogg
           path: |
             ios/build/xcodebuild-unsigned.log
             ios/build/xcodebuild-test.log

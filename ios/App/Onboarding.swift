@@ -60,7 +60,7 @@ struct Onboarding: View {
                     .trBody()
                 SettingsPath("Inställningar → Allmänt → Tangentbord → Tangentbord → Lägg till nytt tangentbord → Tap&Talk")
                 TRButton(title: "Öppna inställningarna") { openSettings() }
-                Text("Knappen öppnar Tap&Talks egen sida i Inställningar. Därifrån finns Tangentbord ett tryck bort, och hela vägen ovan fungerar också.")
+                Text("Knappen öppnar Tap&Talks egen sida i Inställningar. Där står bara Mikrofon och Taligenkänning så länge tangentbordet inte är tillagt — raden Tangentbord dyker upp först när det är gjort. Vägen ovan är den som gäller nu, och den börjar på Inställningars första sida.")
                     .trFootnote()
             }
 

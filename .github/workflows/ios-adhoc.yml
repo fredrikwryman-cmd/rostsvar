@@ -1,4 +1,4 @@
-name: Bygg Tap & Talk som Ad Hoc (utan granskning)
+name: Bygg Tap&Talk som Ad Hoc (utan granskning)
 
 # Ett bygge som går att installera direkt på egna, registrerade iPhones utan
 # att vänta på Apples Beta App Review. Samma upplägg som i Tech Rabbit
@@ -247,7 +247,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Tap-and-Talk-adhoc-IPA
+          name: TapnTalk-adhoc-IPA
           path: ios/build/Export/*.ipa
           if-no-files-found: ignore
 
@@ -255,7 +255,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Tap-and-Talk-adhoc-loggar
+          name: TapnTalk-adhoc-loggar
           path: |
             ios/build/*.log
             ios/build/ExportOptions.plist

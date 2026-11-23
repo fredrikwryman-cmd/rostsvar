@@ -1,6 +1,6 @@
 import Foundation
 
-/// Tillståndet i Tap & Talk, skilt från vyn så att det går att mäta med tester.
+/// Tillståndet i Tap&Talk, skilt från vyn så att det går att mäta med tester.
 ///
 /// Tre regler bär hela funktionen och testas i RostsvarTests:
 /// mikrofonen är öppen bara under inspelning, Avbryt rensar utkastet utan att
@@ -38,7 +38,7 @@ struct DraftState: Equatable {
 
     // MARK: - Konversationen
 
-    /// Tap & Talk blir aktivt i en konversation. Byts konversationen rensas
+    /// Tap&Talk blir aktivt i en konversation. Byts konversationen rensas
     /// utkastet, så att text aldrig följer med till fel mottagare.
     mutating func becomeActive(conversation identifier: String) {
         if conversation != identifier {
@@ -52,7 +52,7 @@ struct DraftState: Equatable {
     /// Bara blanktecken är ingen text.
     var textToRescue: String? { hasDraft ? trimmedDraft : nil }
 
-    /// Tap & Talk lämnas, eller panelen fälls ihop.
+    /// Tap&Talk lämnas, eller panelen fälls ihop.
     ///
     /// Utkastet rensas alltid: ingen text ska ligga kvar i någons
     /// meddelandepanel. Men det som hörts kastas inte — det lämnas tillbaka,
@@ -72,7 +72,7 @@ struct DraftState: Equatable {
     }
 
     /// En pågående skickning får bara avslutas av finishSending. Att fälla
-    /// ihop panelen, lämna Tap & Talk eller komma tillbaka ska aldrig göra ett
+    /// ihop panelen, lämna Tap&Talk eller komma tillbaka ska aldrig göra ett
     /// utkast som redan lämnats till Meddelanden skickbart en gång till.
     private mutating func leaveUnlessSending() {
         guard phase != .sending else { return }

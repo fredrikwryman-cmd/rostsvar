@@ -1,4 +1,4 @@
-name: Skicka Tap & Talk till TestFlight
+name: Skicka Tap&Talk till TestFlight
 
 # Startas för hand. Kräver tre hemligheter i repots inställningar
 # (Settings → Secrets and variables → Actions):
@@ -208,7 +208,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Tap-and-Talk-signerad-IPA
+          name: TapnTalk-signerad-IPA
           path: ios/build/Export/*.ipa
           if-no-files-found: ignore
 
@@ -216,7 +216,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Tap-and-Talk-testflight-loggar
+          name: TapnTalk-testflight-loggar
           path: |
             ios/build/*.log
             ios/build/Rostsvar.xcarchive/Info.plist

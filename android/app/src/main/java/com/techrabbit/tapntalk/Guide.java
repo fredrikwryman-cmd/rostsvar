@@ -80,7 +80,7 @@ public class Guide extends Activity {
                 == PackageManager.PERMISSION_GRANTED;
     }
 
-    /** Sant när Tap & Talk står i Androids lista över påslagna tangentbord. */
+    /** Sant när Tap&Talk står i Androids lista över påslagna tangentbord. */
     static boolean enabledOk(Context context) {
         InputMethodManager boards = context.getSystemService(InputMethodManager.class);
         if (boards == null) return false;
@@ -92,7 +92,7 @@ public class Guide extends Activity {
         return false;
     }
 
-    /** Sant när Tap & Talk är det tangentbord som faktiskt används. */
+    /** Sant när Tap&Talk är det tangentbord som faktiskt används. */
     static boolean chosenOk(Context context) {
         String current = Settings.Secure.getString(
                 context.getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD);

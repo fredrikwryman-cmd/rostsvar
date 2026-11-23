@@ -1,4 +1,4 @@
-# Tap & Talk till TestFlight utan Mac
+# Tap&Talk till TestFlight utan Mac
 
 Allt bygge sker på en macOS-byggare hos GitHub Actions. Du behöver ingen Mac.
 Det här dokumentet listar exakt de steg som måste göras i Apples webbgränssnitt,
@@ -21,7 +21,7 @@ FB13611131 och ännu inte rättat.
 
 1. Gå till [App Store Connect → Användare och åtkomst → Integrationer → App Store Connect API](https://appstoreconnect.apple.com/access/integrations/api).
 2. Välj fliken **Team Keys** och tryck på plus.
-3. Namn: `Tap and Talk CI`. Åtkomst: **App Manager**.
+3. Namn: `Tap&Talk CI`. Åtkomst: **App Manager**.
 4. Tryck på **Generate**. Ladda ner `.p8`-filen direkt — den går bara att hämta en gång.
 5. Anteckna **Key ID** (tio tecken) och **Issuer ID** (ett UUID högst upp på sidan).
 
@@ -33,11 +33,11 @@ och anteckna **Team ID** (tio tecken).
 ## Steg 3 · Appposten i App Store Connect
 
 1. Gå till [App Store Connect → Appar](https://appstoreconnect.apple.com/apps) och tryck på plus → **Ny app**.
-2. Plattform: **iOS**. Namn: `Tap & Talk`. Primärt språk: **Svenska**.
+2. Plattform: **iOS**. Namn: `Tap&Talk`. Primärt språk: **Svenska**.
 3. Bundle-ID: välj `com.techrabbit.tapntalk` i listan.
    *Står det inte i listan:* gå till
    [Certificates, Identifiers & Profiles → Identifiers](https://developer.apple.com/account/resources/identifiers/list),
-   tryck på plus, välj **App IDs → App**, beskrivning `Tap and Talk`, Bundle ID
+   tryck på plus, välj **App IDs → App**, beskrivning `Tap&Talk`, Bundle ID
    **Explicit** `com.techrabbit.tapntalk`. Upprepa för `com.techrabbit.tapntalk.Messages` och
    `com.techrabbit.tapntalk.Keyboard`.
    Ingen extra capability behöver kryssas i. Gå sedan tillbaka till punkt 1.
@@ -67,7 +67,7 @@ i repot — `.gitignore` stoppar den.
 
 ## Steg 5 · Kör uppladdningen
 
-GitHub → **Actions** → *Skicka Tap & Talk till TestFlight* → **Run workflow**.
+GitHub → **Actions** → *Skicka Tap&Talk till TestFlight* → **Run workflow**.
 Ange ett byggnummer som är högre än förra uppladdningen (första gången `1`).
 
 Arbetsflödet arkiverar, låter Xcode skapa certifikat och provisioneringsprofiler
@@ -76,7 +76,7 @@ tar oftast 5–20 minuter efter att körningen blivit grön.
 
 ## Steg 6 · Intern testning
 
-1. [App Store Connect → Tap & Talk → TestFlight](https://appstoreconnect.apple.com/apps).
+1. [App Store Connect → Tap&Talk → TestFlight](https://appstoreconnect.apple.com/apps).
 2. Under **Interna tester**, skapa gruppen `Fredrik` och lägg till dig själv.
 3. När bygget är färdigbearbetat, lägg till det i gruppen.
 4. Installera **TestFlight** från App Store på iPhone och öppna inbjudan.
@@ -91,7 +91,7 @@ Det här är huvudvägen, och därför det första som provas.
 
 Först appens egen dikteringsskärm:
 
-1. Öppna **Tap & Talk** och stäng guiden. Tryck på **Tala** och säg en mening
+1. Öppna **Tap&Talk** och stäng guiden. Tryck på **Tala** och säg en mening
    med å, ä och ö. Kontrollera att texten fylls på medan du talar.
 2. Tryck på **Klar**. Kontrollera att slutresultatet ersätter delresultaten och
    att den orangea mikrofonpricken i statusraden slocknar.
@@ -109,20 +109,20 @@ Först appens egen dikteringsskärm:
 
 Sedan guiden och tangentbordet:
 
-1. Öppna **Tap & Talk**. Guiden ska visa sig av sig själv vid första start.
+1. Öppna **Tap&Talk**. Guiden ska visa sig av sig själv vid första start.
 2. Steg 1, tryck på **Tillåt mikrofonen** och svara ja på båda frågorna
    (mikrofon och taligenkänning). Kontrollera att steget blir grönt.
 3. Steg 2 och 3, tryck på **Öppna inställningarna**, lägg till tangentbordet
    och slå på **Tillåt fullständig åtkomst**. Gå tillbaka till appen och
    kontrollera att guiden ser likadan ut — de stegen är märkta *kontrollera
    själv*, och appen ska inte påstå att de är klara.
-4. Steg 5, tryck i provfältet, håll in **🌐** och välj **Tap & Talk**. Tryck på
+4. Steg 5, tryck i provfältet, håll in **🌐** och välj **Tap&Talk**. Tryck på
    **Tala**, säg en mening med å, ä och ö, och tryck på **Klar**.
 5. Kontrollera att texten kom in i fältet medan du talade, att kvittot visar
    att texten kom in, och att å, ä och ö blev rätt.
 6. Prova tangenterna: skift, backsteg, siffror och skiljetecken, **⌫**,
    mellanslag, retur och **⌨** tillbaka till föregående tangentbord.
-7. Öppna **Messenger**, **Signal** och **Mejl**, byt till Tap & Talk och
+7. Öppna **Messenger**, **Signal** och **Mejl**, byt till Tap&Talk och
    diktera i varje. Kontrollera att texten hamnar i rätt fält och att din
    egen redan skrivna text inte rörs.
 8. Stäng av **Tillåt fullständig åtkomst** igen och kontrollera att
@@ -135,7 +135,7 @@ Gör provet i en konversation med dig själv. Det här är tillägget, inte
 huvudvägen: samma diktering, men bara i Meddelanden.
 
 1. Öppna **Meddelanden**, välj konversationen, tryck på plustecknet vid
-   skrivfältet och välj **Tap & Talk**.
+   skrivfältet och välj **Tap&Talk**.
 2. Tryck på **Tala**, säg en mening med å, ä och ö.
 3. Tryck på **Klar**. Kontrollera att den orangea mikrofonpricken i statusraden
    slocknar.
@@ -143,7 +143,7 @@ huvudvägen: samma diktering, men bara i Meddelanden.
    att inget hamnade i chatten.
 5. Diktera igen och tryck på **Skicka**. Kontrollera att det blev **ett** enda
    meddelande.
-6. Lämna Tap & Talk, öppna en annan konversation och öppna Tap & Talk där.
+6. Lämna Tap&Talk, öppna en annan konversation och öppna Tap&Talk där.
    Kontrollera att utkastfältet är tomt.
 
 ## Steg 9 · AssistiveTouch, att jämföra med
@@ -152,12 +152,12 @@ Tillägget i steg 8 fungerar **bara i Meddelanden**. iOS släpper inte in ett
 iMessage-tillägg i andra chattappar. Det är tangentbordet i steg 7 som löser
 Messenger och Signal, och det provas där. Upplägget nedan bygger i stället på
 iOS egna delar: en genväg som dikterar och kopierar, kopplad till den flytande
-AssistiveTouch-knappen. Ingenting av Tap & Talks egen kod är inblandad — det är
+AssistiveTouch-knappen. Ingenting av Tap&Talks egen kod är inblandad — det är
 ett alternativ att jämföra tangentbordet med, inte appen vi bygger.
 
 Ställ in en gång:
 
-1. Öppna **Genvägar**, tryck på plus och döp genvägen till **Tap & Talk**.
+1. Öppna **Genvägar**, tryck på plus och döp genvägen till **Tap&Talk**.
 2. Lägg till åtgärden **Diktera text**. Välj språk **Svenska** och låt
    dikteringen avslutas **efter en paus**.
 3. Lägg till **Kopiera till urklipp** med den dikterade texten som indata.
@@ -166,7 +166,7 @@ Ställ in en gång:
 4. Kör genvägen en gång från Genvägar och godkänn åtkomsten den ber om.
 5. Öppna **Inställningar → Hjälpmedel → Tryck → AssistiveTouch** och slå på
    knappen. Under **Dubbeltryck**, bläddra till genvägarna och välj
-   **Tap & Talk**. Saknas den i listan, koppla den i stället till
+   **Tap&Talk**. Saknas den i listan, koppla den i stället till
    **Tryck på baksidan** under samma tryckinställningar.
 
 Så här provar du, i **Messenger** och sedan i **Signal**:
@@ -192,5 +192,5 @@ Två skillnader mot Meddelanden som är värda att notera i rapporten:
 ## Om något fryser
 
 Går uppladdningen fel laddas loggarna upp som artefakter på körningen
-(*Tap-and-Talk-testflight-loggar*). Vanligaste orsakerna: byggnumret är inte högre
+(*TapnTalk-testflight-loggar*). Vanligaste orsakerna: byggnumret är inte högre
 än förra, appposten i steg 3 saknas, eller nyckeln har fel roll.

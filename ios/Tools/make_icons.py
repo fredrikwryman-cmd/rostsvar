@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genererar iMessage-tilläggets ikoner för Tap & Talk.
+"""Genererar iMessage-tilläggets ikoner för Tap&Talk.
 
 Kör från mappen ios:
 

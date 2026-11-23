@@ -25,7 +25,7 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 /**
- * Tap &amp; Talk, hela appen på en skärm: diktera svenska, rätta texten för
+ * Tap&amp;Talk, hela appen på en skärm: diktera svenska, rätta texten för
  * hand och skicka den vidare med Androids delningsruta.
  *
  * Appen skickar aldrig något själv och når inget nät på egen hand. Det enda

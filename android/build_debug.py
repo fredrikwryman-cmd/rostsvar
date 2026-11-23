@@ -1,6 +1,6 @@
 """Bygger en lokalt signerad test-APK med Android SDK och JDK pa Windows.
 
-Resultatet heter Tap-and-Talk-android-test.apk och ligger i mappen build.
+Resultatet heter TapnTalk-android-test.apk och ligger i mappen build.
 Den lokala testnyckeln ar oforandrad, sa en ny APK uppgraderar en tidigare
 installation i stallet for att krocka med den. Paket-ID bytte dock till
 com.techrabbit.tapntalk: en APK som installerades fore det bytet ar en annan
@@ -54,7 +54,7 @@ with tempfile.TemporaryDirectory() as tmp:
         run("keytool", "-genkeypair", "-alias", "debug", "-keystore", key, "-storepass", "android",
             "-keypass", "android", "-keyalg", "RSA", "-keysize", "2048", "-validity", "3650",
             "-dname", "CN=Rostsvar Local Debug")
-    dest = build / "Tap-and-Talk-android-test.apk"
+    dest = build / "TapnTalk-android-test.apk"
     run(tools / "apksigner.bat", "sign", "--ks", key, "--ks-key-alias", "debug", "--ks-pass",
         "pass:android", "--out", dest, out / "aligned.apk")
     run(tools / "apksigner.bat", "verify", "--verbose", dest)
