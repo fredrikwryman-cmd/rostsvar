@@ -41,6 +41,11 @@ struct HomeScreen: View {
     /// Samma nyckelnamn som Android använder.
     @AppStorage("guiden_visad") private var guideSeen = false
 
+    /// Sant medan användaren rättar texten för hand. Behövs för att kunna
+    /// fälla ned systemtangentbordet igen: utan en väg ut låg det kvar över
+    /// Tala, Rensa och Skicka, och skärmen var en återvändsgränd.
+    @FocusState private var editing: Bool
+
     /// Reducera rörelse i Inställningar. §7: inga pulserande ringar, ingen
     /// andande glöd, ingen blinkande markör, inga tonade lägesbyten.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -53,14 +58,25 @@ struct HomeScreen: View {
     var body: some View {
         ZStack {
             TRBackdrop()
-            VStack(alignment: .leading, spacing: 0) {
-                header.padding(.top, 6)
-                ingress.padding(.top, 14)
-                field.padding(.top, 16)
-                micBlock.padding(.top, 20)
-                actions.padding(.top, 16).padding(.bottom, 10)
+            GeometryReader { geo in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        header.padding(.top, 6)
+                        ingress.padding(.top, 14)
+                        field.padding(.top, 16)
+                        micBlock.padding(.top, 20)
+                        actions.padding(.top, 16).padding(.bottom, 10)
+                    }
+                    .padding(.horizontal, 20)
+                    // Vid vanliga textstorlekar är minimihöjden hela skärmen.
+                    // Då står sidan still och ser ut precis som förut: fältet
+                    // tar det som blir över, foten står kvar längst ner. Ställer
+                    // användaren upp textstorleken växer stapeln förbi skärmen,
+                    // och först då börjar sidan rulla i stället för att klippa.
+                    .frame(minHeight: geo.size.height)
+                }
+                .scrollDismissesKeyboard(.interactively)
             }
-            .padding(.horizontal, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(TR.bg.ignoresSafeArea())
@@ -69,6 +85,18 @@ struct HomeScreen: View {
         .sheet(isPresented: $showGuide) { Onboarding() }
         .sheet(isPresented: $showAbout) { About() }
         .sheet(isPresented: $showShare) { ShareSheet(text: state.trimmed) }
+        // Systemtangentbordet täcker Tala, Rensa och Skicka medan man rättar
+        // texten. Raden ovanför det är den enda plats iOS ger en väg ut som
+        // alltid finns, också för den som inte vet att man kan svepa.
+        // Ordet är inte "Klar": det betyder stäng mikrofonen i den här appen.
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Dölj tangentbordet") { editing = false }
+                    .trFont(16, .bold)
+                    .foregroundStyle(TR.green)
+            }
+        }
         .onAppear { arrive() }
         // §9: läget annonseras när det byts, inte vid varje tecken.
         .onChange(of: chip) { now in
@@ -199,6 +227,7 @@ struct HomeScreen: View {
                 // och inte hoppar när ytan byts mot läsytan.
                 .padding(.horizontal, -5)
                 .padding(.vertical, -8)
+                .focused($editing)
                 .accessibilityLabel("Din text")
             if state.draft.isEmpty {
                 placeholder
@@ -560,6 +589,7 @@ struct HomeScreen: View {
     }
 
     private func leave() {
+        editing = false
         guard state.isRecording else { return }
         state.finishRecording()
         leftWhileListening = true
