@@ -57,6 +57,12 @@ public class Home extends Activity {
     private TextView bubbleNote;
     private EditText draft;
     private Button mic;
+    /**
+     * Rensa. Fanns bara på iOS: här måste man markera allt och radera för
+     * hand. Samma ord, samma plats och samma ordning som där — Rensa till
+     * vänster, Skicka till höger.
+     */
+    private Button clear;
     private Button send;
 
     private SpeechRecognizer speech;
@@ -232,6 +238,22 @@ public class Home extends Activity {
         micRow.height = dp(84);
         page.addView(mic, micRow);
 
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+
+        clear = new Button(this);
+        clear.setAllCaps(false);
+        clear.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
+        clear.setText("Rensa");
+        clear.setContentDescription("Rensa fältet");
+        clear.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { wipe(); }
+        });
+        LinearLayout.LayoutParams clearSlot =
+                new LinearLayout.LayoutParams(0, dp(58), 1f);
+        clearSlot.rightMargin = dp(10);
+        actions.addView(clear, clearSlot);
+
         send = new Button(this);
         send.setAllCaps(false);
         send.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
@@ -240,9 +262,9 @@ public class Home extends Activity {
         send.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { share(); }
         });
-        LinearLayout.LayoutParams sendRow = row(0, 0);
-        sendRow.height = dp(58);
-        page.addView(send, sendRow);
+        actions.addView(send, new LinearLayout.LayoutParams(0, dp(58), 1f));
+
+        page.addView(actions, row(0, 0));
 
         setContentView(page);
 
@@ -367,9 +389,18 @@ public class Home extends Activity {
         mic.setBackground(box(canTalk ? (listening ? GREEN_DEEP : GREEN) : FIELD, canTalk ? 0 : BORDER, dp(16)));
         mic.setTextColor(canTalk ? 0xFF05140C : OFF);
 
-        send.setEnabled(hasText);
-        send.setBackground(box(0x00000000, hasText ? GREEN : BORDER, dp(14)));
-        send.setTextColor(hasText ? GREEN : OFF);
+        // Samma regel som HomeState.canClear och canSend på iOS: båda väntar
+        // tills dikteringen är över. En delningsruta över en öppen mikrofon
+        // vore ingen tjänst mot användaren, och ett rensat fält mitt i en
+        // tolkning skulle fyllas igen av svaret.
+        boolean resting = !listening && !working;
+        clear.setEnabled(hasText && resting);
+        clear.setBackground(box(hasText && resting ? FIELD : 0x00000000, BORDER, dp(14)));
+        clear.setTextColor(hasText && resting ? INK : OFF);
+
+        send.setEnabled(hasText && resting);
+        send.setBackground(box(0x00000000, hasText && resting ? GREEN : BORDER, dp(14)));
+        send.setTextColor(hasText && resting ? GREEN : OFF);
 
         draft.setFocusable(!listening);
         draft.setFocusableInTouchMode(!listening);
@@ -572,6 +603,18 @@ public class Home extends Activity {
             default:
                 return "Taltjänsten svarade med ett fel (" + code + "). Tryck på Tala för att prova igen.";
         }
+    }
+
+    /**
+     * Rensar fältet. Grunden nollas med texten: annars hade nästa diktering
+     * lagts efter en text som inte finns kvar.
+     */
+    private void wipe() {
+        if (listening || working) return;
+        draft.setText("");
+        base = "";
+        note = "Fältet är tomt. Tryck på Tala och diktera igen.";
+        render();
     }
 
     // ------------------------------------------------------------- delningen
