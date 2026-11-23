@@ -420,11 +420,17 @@ struct HomeScreen: View {
     /// texten som redan finns, inte i stället för den. En medveten avvikelse
     /// från underlaget, till förmån för samma ordval på båda plattformarna.
     ///
+    /// Ordet för att stänga mikrofonen är "Klar" och inte "Stoppa". Det var
+    /// "Stoppa" här och "Klar" på de fem andra ytorna — tangentbordet,
+    /// iMessage-tillägget, Androids hemskärm, bubblan och rösttangentbordet
+    /// — och Om-skärmen instruerade "Tryck på Klar" om en knapp intill som
+    /// sa Stoppa.
+    ///
     /// Det fjärde ordet hör till ett läge underlaget inte ritar: mikrofonen
     /// är avslagen i Inställningar, och knappen leder dit i stället för att
     /// fråga om igen.
     private var micWord: String {
-        if state.isRecording { return "Stoppa" }
+        if state.isRecording { return "Klar" }
         if micBlocked { return "Tillåt mikrofon" }
         return state.hasText ? "Tala om" : "Tala"
     }
@@ -557,7 +563,7 @@ struct HomeScreen: View {
             return
         }
         state.beginRecording()
-        note = "Mikrofonen är på. Tala svenska och tryck på Stoppa när du är färdig."
+        note = "Mikrofonen är på. Tala svenska och tryck på Klar när du är färdig."
     }
 
     /// Svarets besked, med raden om att appen lämnades först när det hände.

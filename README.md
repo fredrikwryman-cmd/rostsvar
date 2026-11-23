@@ -117,8 +117,12 @@ påslaget står ringarna stilla, glöden slutar andas, markören slutar blinka o
 lägesbytena tonar inte.
 
 Knappen heter **Tala** när fältet är tomt, **Tala om** när det redan finns
-text, **Stoppa** medan mikrofonen är på och **Tillåt mikrofon** när den är
-nekad i Inställningar. Tala om är en medveten avvikelse från underlagets §6,
+text, **Klar** medan mikrofonen är på och **Tillåt mikrofon** när den är
+nekad i Inställningar. Klar är ordet för att stänga mikrofonen på alla sex ytorna:
+appen, tangentbordet, iMessage-tillägget, Androids hemskärm, bubblan och
+rösttangentbordet. Det var **Stoppa** här fram till granskningen, medan de
+fem andra sa Klar och Om-skärmen instruerade "Tryck på Klar".
+Tala om är en medveten avvikelse från underlagets §6,
 som säger Tala i båda lägena: ordet säger att nästa diktering läggs efter
 texten som redan står där, och det är samma ord som Android använder.
 
