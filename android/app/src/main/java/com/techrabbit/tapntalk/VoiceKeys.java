@@ -124,6 +124,8 @@ public class VoiceKeys extends InputMethodService {
         says.setMaxLines(2);
         says.setEllipsize(android.text.TextUtils.TruncateAt.END);
         says.setPadding(dp(10), dp(2), dp(10), dp(4));
+        // Punkt 13: beskedet ska läsas upp när det byts, inte bara stå där.
+        says.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         board.addView(says, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -618,7 +620,10 @@ public class VoiceKeys extends InputMethodService {
      * ligger dessutom ofta över den plats där den visas.
      */
     private void say(String text) {
-        if (says != null) says.setText(text);
+        if (says == null) return;
+        // Bara vid ändring: statusraden sätts om vid varje läge, och en live
+        // region läser upp varje skrivning.
+        if (!text.contentEquals(says.getText())) says.setText(text);
     }
 
     // ------------------------------------------------------------ tjänstens liv

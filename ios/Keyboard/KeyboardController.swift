@@ -209,8 +209,15 @@ final class KeyboardController: UIInputViewController {
         }
     }
 
+    /// Beskedet i statusraden, och samma besked till skärmläsaren.
+    ///
+    /// Raden fanns men annonserades aldrig, så den som lyssnar tryckte på
+    /// Tala och fick ingenting tillbaka — inte heller "Mikrofonen är låst".
     private func tell(_ text: String) {
+        guard status.text != text else { return }
         status.text = text
+        guard !text.isEmpty else { return }
+        UIAccessibility.post(notification: .announcement, argument: text)
     }
 
     // MARK: - Trycken

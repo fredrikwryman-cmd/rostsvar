@@ -99,8 +99,15 @@ struct HomeScreen: View {
         }
         .onAppear { arrive() }
         // §9: läget annonseras när det byts, inte vid varje tecken.
-        .onChange(of: chip) { now in
-            UIAccessibility.post(notification: .announcement, argument: now.word)
+        //
+        // Det är note som annonseras och inte chip-ordet. Chip säger "Klar";
+        // note säger varför — att mikrofonen är avstängd i Inställningar, att
+        // taltjänsten inte nådde nätet, att texten står kvar. En seende läser
+        // båda, och den som lyssnar fick förut bara det ena ordet. Två
+        // annonseringar för samma händelse vore värre än en, så det blev den
+        // som bär innehållet. Lägesordet står kvar som läsbar text i foten.
+        .onChange(of: note) { now in
+            UIAccessibility.post(notification: .announcement, argument: now)
         }
         // Mikrofonen stängs när appen lämnas, som på Android. Skillnaden är
         // att vi avslutar i stället för att avbryta: det som hörts levereras

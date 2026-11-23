@@ -272,6 +272,8 @@ public class Guide extends Activity {
         receipt = new TextView(this);
         receipt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         receipt.setLineSpacing(0, 1.3f);
+        // Kvittot är svaret på provet. Det ska höras, inte bara synas.
+        receipt.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         proof.addView(receipt, line(dp(12), 0));
 
         page.addView(proof, line(0, 0));

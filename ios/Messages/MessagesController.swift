@@ -10,6 +10,9 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
     /// ihopfälld panel avbryter dikteringen men aldrig en pågående skickning.
     private var sendToken = UUID()
     private var note = "Tryck på Tala för att svara."
+    /// Det senast upplästa beskedet. render() kallas vid varje tecken, och
+    /// samma mening får inte läsas upp om och om igen.
+    private var announced = ""
 
     /// Dikteringen är delad med tangentbordet. Rättningen av buggen där
     /// texten försvann när taltjänsten avslutade med fel ligger i Dictation,
@@ -144,6 +147,10 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
 
     private func render() {
         status.text = note
+        if note != announced {
+            announced = note
+            UIAccessibility.post(notification: .announcement, argument: note)
+        }
         // Texten sätts bara när den skiljer sig, annars flyttas markören
         // varje gång panelen ritas om medan användaren skriver.
         if draft.text != state.draft { draft.text = state.draft }

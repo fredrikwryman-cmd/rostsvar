@@ -139,6 +139,10 @@ public class Home extends Activity {
         status.setTextColor(DIM);
         status.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         status.setLineSpacing(0, 1.3f);
+        // Raden bär hela förklaringen — varför mikrofonen inte går igång, vad
+        // taltjänsten svarade, att texten står kvar. En seende läser den av
+        // sig själv; utan live region fick den som lyssnar aldrig veta något.
+        status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         page.addView(status, row(dp(8), 0));
 
         // Strömbrytaren för bubblan. Den ligger högst upp eftersom den är
@@ -162,6 +166,7 @@ public class Home extends Activity {
         bubbleNote.setTextColor(DIM);
         bubbleNote.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         bubbleNote.setLineSpacing(0, 1.25f);
+        bubbleNote.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         words.addView(bubbleNote, row(dp(3), 0));
 
         power.addView(words, new LinearLayout.LayoutParams(0,
@@ -190,6 +195,7 @@ public class Home extends Activity {
         warnText.setTextColor(WARN);
         warnText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         warnText.setLineSpacing(0, 1.3f);
+        warnText.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         warning.addView(warnText, row(0, 0));
 
         Button fix = new Button(this);
@@ -350,19 +356,30 @@ public class Home extends Activity {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
+    /**
+     * Skriver bara när texten verkligen ändrats.
+     *
+     * render() kallas vid varje tecken, varje tryck och varje återkomst, och
+     * setText säger till skärmläsaren att innehållet bytts även när det inte
+     * gjort det. Med live region hade det blivit en upplasning per omritning.
+     */
+    private void write(TextView view, String text) {
+        if (!text.contentEquals(view.getText())) view.setText(text);
+    }
+
     /** Allt som syns härleds ur läget, så att knapparna aldrig ljuger. */
     private void render() {
         boolean hasText = draft.getText().toString().trim().length() > 0;
         boolean canTalk = SpeechRecognizer.isRecognitionAvailable(this);
 
-        status.setText(note);
+        write(status, note);
 
         // Varningen namnger det som faktiskt fattas, i stället för att säga
         // samma sak vad det än är.
         String gap = Guide.missing(this);
         warning.setVisibility(gap == null ? View.GONE : View.VISIBLE);
         if (gap != null) {
-            warnText.setText(gap + " Du kan diktera här i appen, men ännu inte "
+            write(warnText, gap + " Du kan diktera här i appen, men ännu inte "
                     + "direkt där du skriver.");
         }
 
@@ -373,12 +390,12 @@ public class Home extends Activity {
         bubble.setChecked(wantBubble);
         bubble.setEnabled(mayStart || wantBubble);
         if (wantBubble) {
-            bubbleNote.setText(Writer.enabled(this)
+            write(bubbleNote, Writer.enabled(this)
                     ? "Bubblan ligger framme. Tryck på den, tala, och texten hamnar där du skriver."
                     : "Bubblan ligger framme, men får inte skriva i andra appar än. Texten "
                     + "hamnar i urklipp tills du slår på tillgängligheten i guiden.");
         } else {
-            bubbleNote.setText(mayStart
+            write(bubbleNote, mayStart
                     ? "Lägg en knapp över alla appar. Ett tryck, du talar, texten hamnar i fältet."
                     : "Behöver mikrofon och Visa över andra appar. Öppna guiden.");
         }
