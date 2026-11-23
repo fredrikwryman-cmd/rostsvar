@@ -20,6 +20,8 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
     private let ears = Dictation()
 
     private let status = UILabel()
+    /// Syns medan taltjänsten slutför och medan meddelandet skickas.
+    private let spin = UIActivityIndicatorView(style: .medium)
     /// En rad som säger var huvudvägen går. Tillägget är genvägen i
     /// Meddelanden; tangentbordet gör samma sak i varje app.
     private let aside = UILabel()
@@ -44,6 +46,9 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
         status.numberOfLines = 0
         status.textColor = Palette.ui(Palette.muted)
         status.accessibilityTraits.insert(.updatesFrequently)
+
+        spin.color = Palette.ui(Palette.muted)
+        spin.hidesWhenStopped = true
 
         draft.font = .preferredFont(forTextStyle: .body)
         draft.adjustsFontForContentSizeCategory = true
@@ -85,7 +90,12 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
         row.distribution = .fillEqually
         row.spacing = 10
 
-        let stack = UIStackView(arrangedSubviews: [status, draft, row, send, aside])
+        let head = UIStackView(arrangedSubviews: [spin, status])
+        head.axis = .horizontal
+        head.spacing = 6
+        head.alignment = .center
+
+        let stack = UIStackView(arrangedSubviews: [head, draft, row, send, aside])
         stack.axis = .vertical
         stack.spacing = 10
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -155,6 +165,10 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
         // varje gång panelen ritas om medan användaren skriver.
         if draft.text != state.draft { draft.text = state.draft }
         draft.isEditable = state.canEdit
+        // Väntan ska synas: taltjänstens sista tolkning och överlämningen
+        // till Meddelanden tar båda sekunder.
+        let waiting = state.phase == .finishing || state.phase == .sending
+        if waiting { spin.startAnimating() } else { spin.stopAnimating() }
         let talking = state.phase == .recording
         mic.setTitle(talking ? "Klar" : (state.hasDraft ? "Tala om" : "Tala"), for: .normal)
         mic.accessibilityLabel = talking ? "Klar, stäng mikrofonen" : "Tala, starta mikrofonen"

@@ -65,6 +65,22 @@ public class Bubble extends Service {
 
     private SpeechRecognizer speech;
     private boolean listening;
+    /** Hur många punkter som visas just nu medan taltjänsten slutför. */
+    private int dots;
+    /**
+     * Punkterna i bubblan medan tolkningen pågår. Bubblan har ingen
+     * statusrad, så rörelsen är det enda som kan säga att något händer under
+     * de åtta sekunder NO_ANSWER tillåter. Står stilla på "…" när telefonen
+     * har stängt av animationer.
+     */
+    private final Runnable tick = new Runnable() {
+        @Override public void run() {
+            if (!working || listening) return;
+            dots = dots % 3 + 1;
+            paint();
+            hand.postDelayed(tick, 400);
+        }
+    };
     /**
      * Sant från Tala till sista svaret, också efter att mikrofonen stängts.
      * Taltjänsten skriver sin sista tolkning efter att talet tagit slut, och
@@ -88,6 +104,7 @@ public class Bubble extends Service {
             if (!working) return;
             working = false;
             listening = false;
+            beat(false);
             paint();
             // Det som hunnit höras levereras. Hördes inget sägs det.
             if (heard.length() > 0) {
@@ -287,7 +304,13 @@ public class Bubble extends Service {
         knob.setTextColor(Look.DARK_INK);
         // Tre lägen, inte två: vila, lyssnar, och tolkar. Utan det sista ser
         // bubblan ledig ut medan taltjänsten fortfarande arbetar.
-        knob.setText(listening ? "Klar" : (working ? "…" : "Tala"));
+        if (listening) {
+            knob.setText("Klar");
+        } else if (working) {
+            knob.setText(Motion.wanted(Bubble.this) ? ".".repeat(Math.max(1, dots)) : "…");
+        } else {
+            knob.setText("Tala");
+        }
         if (!listening) {
             knob.setScaleX(1f);
             knob.setScaleY(1f);
@@ -371,6 +394,7 @@ public class Bubble extends Service {
             // öppen, och ge upp om taltjänsten tiger.
             hand.removeCallbacks(giveUp);
             hand.postDelayed(giveUp, NO_ANSWER);
+            beat(true);
             return;
         }
         if (working) {
@@ -417,10 +441,18 @@ public class Bubble extends Service {
         speech.startListening(ask);
     }
 
+    /** Startar eller stoppar punkterna. */
+    private void beat(boolean on) {
+        hand.removeCallbacks(tick);
+        dots = 3;
+        if (on && Motion.wanted(this)) hand.postDelayed(tick, 400);
+    }
+
     private void quiet() {
         listening = false;
         working = false;
         hand.removeCallbacks(giveUp);
+        beat(false);
         Mic.release(this);
         if (speech != null) {
             speech.cancel();
@@ -505,6 +537,7 @@ public class Bubble extends Service {
             // öppen tills svaret kommer, eller tills tiden går ut.
             hand.removeCallbacks(giveUp);
             hand.postDelayed(giveUp, NO_ANSWER);
+            beat(true);
         }
 
         @Override public void onPartialResults(Bundle partial) {
@@ -546,6 +579,7 @@ public class Bubble extends Service {
             working = false;
             listening = false;
             hand.removeCallbacks(giveUp);
+            beat(false);
             Mic.release(Bubble.this);
             paint();
         }

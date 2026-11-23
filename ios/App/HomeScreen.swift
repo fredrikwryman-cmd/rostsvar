@@ -303,10 +303,21 @@ struct HomeScreen: View {
     private var footer: some View {
         HStack(spacing: 0) {
             HStack(spacing: 6) {
-                Circle()
-                    .fill(chip.dot)
-                    .frame(width: 6, height: 6)
-                    .accessibilityHidden(true)
+                // Medan taltjänsten slutför byts pricken mot något som rör
+                // sig. Väntan är fem sekunder på iOS och åtta på Android, och
+                // en stillastående prick säger inte att något pågår.
+                if chip == .interpreting {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                        .frame(width: 10, height: 10)
+                        .tint(TR.muted)
+                        .accessibilityHidden(true)
+                } else {
+                    Circle()
+                        .fill(chip.dot)
+                        .frame(width: 6, height: 6)
+                        .accessibilityHidden(true)
+                }
                 Text(chip.word)
                     .trFont(12, .bold, relativeTo: .caption2)
                     .foregroundStyle(chip.ink)

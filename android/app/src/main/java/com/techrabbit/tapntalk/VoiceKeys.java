@@ -22,6 +22,7 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -67,6 +68,8 @@ public class VoiceKeys extends InputMethodService {
      * hände, och användaren fick aldrig veta varför.
      */
     private TextView says;
+    /** Syns bara medan taltjänsten slutför. */
+    private ProgressBar spin;
     private Button micKey;
     private Button shiftKey;
     private Button layerKey;
@@ -117,6 +120,18 @@ public class VoiceKeys extends InputMethodService {
         board.setBackgroundColor(BOARD);
         board.setPadding(dp(3), dp(6), dp(3), dp(8));
 
+        LinearLayout said = new LinearLayout(this);
+        said.setOrientation(LinearLayout.HORIZONTAL);
+        said.setGravity(Gravity.CENTER);
+
+        spin = new ProgressBar(this, null, android.R.attr.progressBarStyleSmall);
+        spin.setIndeterminate(true);
+        spin.setVisibility(View.GONE);
+        LinearLayout.LayoutParams spinSlot =
+                new LinearLayout.LayoutParams(dp(16), dp(16));
+        spinSlot.rightMargin = dp(6);
+        said.addView(spin, spinSlot);
+
         says = new TextView(this);
         says.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         says.setTextColor(DIM);
@@ -126,7 +141,9 @@ public class VoiceKeys extends InputMethodService {
         says.setPadding(dp(10), dp(2), dp(10), dp(4));
         // Punkt 13: beskedet ska läsas upp när det byts, inte bara stå där.
         says.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        board.addView(says, new LinearLayout.LayoutParams(
+        said.addView(says, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        board.addView(said, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         glyphs.clear();
@@ -518,6 +535,9 @@ public class VoiceKeys extends InputMethodService {
     }
 
     private void paintMic() {
+        if (spin != null) {
+            spin.setVisibility(accepting && !listening ? View.VISIBLE : View.GONE);
+        }
         if (micKey == null) return;
         boolean on = listening;
         micKey.setText(on ? "Klar" : (dictation ? "Tala" : "Diktering av"));

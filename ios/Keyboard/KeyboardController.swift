@@ -44,6 +44,9 @@ final class KeyboardController: UIInputViewController {
     private let ears = Dictation()
 
     private let status = UILabel()
+    /// Syns bara medan taltjänsten slutför. Utan den ser tangentbordet dött
+    /// ut under de sekunder sista tolkningen tar.
+    private let spin = UIActivityIndicatorView(style: .medium)
     private let rows = UIStackView()
     private let mic = UIButton(type: .system)
 
@@ -62,6 +65,9 @@ final class KeyboardController: UIInputViewController {
         status.adjustsFontSizeToFitWidth = true
         status.minimumScaleFactor = 0.8
 
+        spin.color = dim
+        spin.hidesWhenStopped = true
+
         rows.axis = .vertical
         rows.spacing = 6
         rows.distribution = .fillEqually
@@ -75,7 +81,12 @@ final class KeyboardController: UIInputViewController {
         mic.layer.cornerRadius = 12
         mic.addTarget(self, action: #selector(micTapped), for: .touchUpInside)
 
-        let page = UIStackView(arrangedSubviews: [status, rows, mic])
+        let head = UIStackView(arrangedSubviews: [spin, status])
+        head.axis = .horizontal
+        head.spacing = 6
+        head.alignment = .center
+
+        let page = UIStackView(arrangedSubviews: [head, rows, mic])
         page.axis = .vertical
         page.spacing = 6
         page.translatesAutoresizingMaskIntoConstraints = false
@@ -290,6 +301,7 @@ final class KeyboardController: UIInputViewController {
             // synas, annars ser tangentbordet dött ut medan taltjänsten
             // skriver sin sista tolkning.
             tell("Slutför texten …")
+            spin.startAnimating()
             ears.finish()
             return
         }
@@ -337,6 +349,7 @@ final class KeyboardController: UIInputViewController {
                 self.tell(why)
             }
             self.mine = ""
+            self.spin.stopAnimating()
             self.render()
         })
         if let refused { tell(refused); return }
@@ -350,6 +363,7 @@ final class KeyboardController: UIInputViewController {
         // fråga om tillstånd kan vara ute, och svaret får inte dra igång en
         // diktering efter att användaren tagit över med tangenterna.
         run = UUID()
+        spin.stopAnimating()
         guard listening else { return }
         listening = false
         ears.cancel()

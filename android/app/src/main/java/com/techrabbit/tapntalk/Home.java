@@ -21,6 +21,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -53,6 +54,8 @@ public class Home extends Activity {
     private static final int DRAFT_ID = 0x7EAD0001;
 
     private TextView status;
+    /** Syns bara medan taltjänsten slutför. NO_ANSWER är åtta sekunder. */
+    private ProgressBar spin;
     private LinearLayout warning;
     private TextView warnText;
     private Switch bubble;
@@ -138,6 +141,18 @@ public class Home extends Activity {
         head.addView(guide, new LinearLayout.LayoutParams(dp(92), dp(46)));
         page.addView(head, row(0, 0));
 
+        LinearLayout said = new LinearLayout(this);
+        said.setOrientation(LinearLayout.HORIZONTAL);
+
+        spin = new ProgressBar(this, null, android.R.attr.progressBarStyleSmall);
+        spin.setIndeterminate(true);
+        spin.setVisibility(View.GONE);
+        LinearLayout.LayoutParams spinSlot =
+                new LinearLayout.LayoutParams(dp(18), dp(18));
+        spinSlot.rightMargin = dp(8);
+        spinSlot.topMargin = dp(3);
+        said.addView(spin, spinSlot);
+
         status = new TextView(this);
         status.setTextColor(DIM);
         status.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
@@ -146,7 +161,9 @@ public class Home extends Activity {
         // taltjänsten svarade, att texten står kvar. En seende läser den av
         // sig själv; utan live region fick den som lyssnar aldrig veta något.
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        page.addView(status, row(dp(8), 0));
+        said.addView(status, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        page.addView(said, row(dp(8), 0));
 
         // Strömbrytaren för bubblan. Den ligger högst upp eftersom den är
         // appens egentliga funktion: knappen som följer med överallt.
@@ -376,6 +393,7 @@ public class Home extends Activity {
         boolean canTalk = SpeechRecognizer.isRecognitionAvailable(this);
 
         write(status, note);
+        spin.setVisibility(working && !listening ? View.VISIBLE : View.GONE);
 
         // Varningen namnger det som faktiskt fattas, i stället för att säga
         // samma sak vad det än är.
