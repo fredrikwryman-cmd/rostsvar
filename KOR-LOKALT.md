@@ -23,6 +23,11 @@ installerar den senast byggda APK:n och startar appen.
 Kör `bygg.bat` igen efter varje kodändring, sedan `starta.bat` för att lägga
 den nya APK:n på emulatorn. Emulatorn behöver inte startas om.
 
+Säger cmd *"bygg.bat is not recognized"* fast du står i rätt mapp, skriv
+`.\bygg.bat` och `.\starta.bat` i stället. Då är
+`NoDefaultCurrentDirectoryInExePath` satt på datorn, och cmd letar inte i
+mappen du står i.
+
 ## Vad som används
 
 | Del | Vad |

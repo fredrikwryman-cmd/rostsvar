@@ -19,6 +19,9 @@ Den här varianten kan ställas in direkt på telefonen. Knappen tillhör iOS. U
 
 ## Android · installera testappen
 
+Vill du bygga och köra Android på den här datorn: `bygg.bat` och `starta.bat`,
+beskrivna i [KOR-LOKALT.md](KOR-LOKALT.md).
+
 Testbygget heter `TapnTalk-android-test.apk` och byggs med `build_debug.py`
 (se **Bygg Android på Windows** nedan). Det är lokalt signerat för test och
 kräver Android 11 eller senare samt en installerad taltjänst med stöd för
