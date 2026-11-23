@@ -48,10 +48,27 @@ struct DraftState: Equatable {
         leaveUnlessSending()
     }
 
-    /// Tap & Talk lämnas. Utkastet rensas.
-    mutating func resignActive() {
+    /// Texten som är värd att rädda, eller nil när det inte finns någon.
+    /// Bara blanktecken är ingen text.
+    var textToRescue: String? { hasDraft ? trimmedDraft : nil }
+
+    /// Tap & Talk lämnas, eller panelen fälls ihop.
+    ///
+    /// Utkastet rensas alltid: ingen text ska ligga kvar i någons
+    /// meddelandepanel. Men det som hörts kastas inte — det lämnas tillbaka,
+    /// så att den som ringde kan rädda det i urklipp. Samma mönster som
+    /// bubblan på Android, där texten hamnar i urklipp när den inte kan
+    /// skrivas i ett fält.
+    ///
+    /// Under en pågående skickning räddas ingenting: texten är redan
+    /// överlämnad till Meddelanden, och ett urklipp hade bara varit en kopia
+    /// av det som är på väg.
+    @discardableResult
+    mutating func resignActive() -> String? {
+        let rescued = phase == .sending ? nil : textToRescue
         draft = ""
         leaveUnlessSending()
+        return rescued
     }
 
     /// En pågående skickning får bara avslutas av finishSending. Att fälla

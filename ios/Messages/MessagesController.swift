@@ -1,5 +1,6 @@
 import Messages
 import UIKit
+import UniformTypeIdentifiers
 
 final class MessagesController: MSMessagesAppViewController {
     private var state = DraftState()
@@ -119,6 +120,9 @@ final class MessagesController: MSMessagesAppViewController {
     override func willBecomeActive(with conversation: MSConversation) {
         super.willBecomeActive(with: conversation)
         state.becomeActive(conversation: fingerprint(conversation))
+        // Räddades text förra gången panelen fälldes ihop är det första
+        // användaren ska få veta: den finns kvar, och var.
+        if let saved = rescued() { settle(saved); return }
         settle(state.hasDraft ? "Läs igenom och tryck på Skicka." : "Tryck på Tala för att svara.")
     }
 
@@ -129,7 +133,10 @@ final class MessagesController: MSMessagesAppViewController {
 
     override func willResignActive(with conversation: MSConversation) {
         super.willResignActive(with: conversation)
-        state.resignActive()
+        // Utkastet nollas, men det som hörts kastas inte: det läggs i
+        // urklipp, som bubblan gör på Android när texten inte kan skrivas i
+        // ett fält. Appen ska aldrig tappa det som sagts.
+        if let heard = state.resignActive() { keep(heard) }
         settle("Tryck på Tala för att svara.")
     }
 
@@ -144,6 +151,33 @@ final class MessagesController: MSMessagesAppViewController {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         if state.phase != .idle { settle("Mikrofonen stängdes.") }
+    }
+
+    // MARK: - Urklippsräddningen
+
+    /// Att det ligger räddad text i urklipp måste överleva att tillägget
+    /// rivs mellan två öppningar, därför en flagga på disken och inte i
+    /// minnet. Bara flaggan sparas — texten ligger i urklipp, ingen annanstans.
+    private static let rescueFlag = "raddad_text_i_urklipp"
+
+    /// Samma formulering som bubblan på Android använder vid urklippsräddning.
+    private static let rescueNote = "Mikrofonen stängdes när panelen fälldes ihop. "
+        + "Texten ligger i urklipp — håll in i fältet och välj Klistra in."
+
+    /// Lägger den hörda texten i urklipp. Bara lokalt: texten ska inte hoppa
+    /// vidare till användarens andra Apple-enheter.
+    private func keep(_ text: String) {
+        UIPasteboard.general.setItems(
+            [[UTType.utf8PlainText.identifier: text]],
+            options: [.localOnly: true])
+        UserDefaults.standard.set(true, forKey: Self.rescueFlag)
+    }
+
+    /// Beskedet om räddad text, en gång. Nil när inget räddats.
+    private func rescued() -> String? {
+        guard UserDefaults.standard.bool(forKey: Self.rescueFlag) else { return nil }
+        UserDefaults.standard.removeObject(forKey: Self.rescueFlag)
+        return Self.rescueNote
     }
 
     /// Går till vila med ett nytt besked, utom medan ett meddelande skickas.

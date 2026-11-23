@@ -181,6 +181,18 @@ när tillägget fälls ihop till den smala listen, när du lämnar Tap & Talk oc
 55 sekunder. Utkastet rensas när du lämnar Tap & Talk och när konversationen byts.
 Inget spelas in och ingen meddelandehistorik sparas.
 
+**Texten kastas inte när panelen fälls ihop.** Utkastet rensas fortfarande — ingen
+text ska ligga kvar i någons meddelandepanel — men det som hörts läggs först i
+urklipp, och nästa gång du öppnar Tap & Talk står det att texten finns där:
+*"Texten ligger i urklipp — håll in i fältet och välj Klistra in."* Samma mönster
+som bubblan på Android använder när texten inte kan skrivas i ett fält. Urklippet
+är lokalt, så texten hoppar inte vidare till dina andra Apple-enheter.
+
+Två fall räddas med flit inte. **Avbryt** är ditt eget beslut att kasta texten,
+och då ska den inte ligga kvar i urklipp bakom din rygg. Och under en pågående
+skickning är texten redan överlämnad till Meddelanden, så urklippet hade bara
+varit en kopia av det som är på väg.
+
 ### Bygg iOS
 
 Bygget körs på en macOS-byggare hos GitHub Actions. Ingen Mac behövs lokalt.
@@ -284,6 +296,16 @@ vykontrollern och tangentbordet använder:
 - ett byte av konversation rensar utkastet, även mitt i en inspelning
 - ett andra tryck på Skicka kan inte ge ett andra meddelande
 - ett misslyckat skick behåller utkastet; ett lyckat rensar det
+
+`DraftRescueTests` mäter urklippsräddningen, elva stycken:
+
+- hörd text räddas när panelen fälls ihop, också mitt i en inspelning
+- räddningen nollar ändå utkastet, och texten som räddas är putsad
+- tomt utkast och bara blanktecken räddar ingenting
+- ingenting räddas under en pågående skickning, och skickningen avbryts inte
+- Avbryt kastar texten med flit: den hamnar aldrig i urklipp bakom ryggen på
+  den som ångrade sig
+- räddningen sker en gång, och att läsa texten ändrar inte utkastet
 
 `HomeStateTests` mäter dikteringsskärmens egna regler, sexton stycken:
 
