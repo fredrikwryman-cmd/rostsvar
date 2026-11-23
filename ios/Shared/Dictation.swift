@@ -116,7 +116,7 @@ final class Dictation {
         releaseEverything()
 
         guard let recognizer, recognizer.isAvailable else {
-            return "Svensk taligenkänning är inte tillgänglig just nu."
+            return Notice.unavailable
         }
 
         let id = UUID()
@@ -137,7 +137,7 @@ final class Dictation {
             let format = input.outputFormat(forBus: 0)
             guard format.sampleRate > 0, format.channelCount > 0 else {
                 releaseEverything()
-                return "Ingen mikrofon tillgänglig."
+                return Notice.noMicrophone
             }
 
             let buffer = SFSpeechAudioBufferRecognitionRequest()
@@ -184,7 +184,7 @@ final class Dictation {
             return nil
         } catch {
             releaseEverything()
-            return "Mikrofonen kunde inte starta. Försök igen."
+            return Notice.micWontStart
         }
     }
 
@@ -206,7 +206,7 @@ final class Dictation {
         DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
             guard let self, self.run == id, !self.settled else { return }
             self.settle(Dictation.ending(heard: self.heard, final: false,
-                                         failed: "Taltjänsten svarade inte. Försök igen."))
+                                         failed: Notice.noAnswer))
         }
     }
 
@@ -252,10 +252,9 @@ final class Dictation {
         let text = heard.trimmingCharacters(in: .whitespacesAndNewlines)
         guard text.isEmpty else {
             if final || failed == nil { return .done(text: heard) }
-            return .salvaged(text: heard,
-                             note: "Taltjänsten blev inte klar, men det här hördes.")
+            return .salvaged(text: heard, note: Notice.salvaged)
         }
-        return .nothing(note: failed ?? "Inget tal uppfattades. Försök igen.")
+        return .nothing(note: failed ?? Notice.noSpeech)
     }
 
     private func settle(_ how: Ending) {
@@ -270,17 +269,11 @@ final class Dictation {
         tell?(how)
     }
 
-    /// Felen från taltjänsten är inte skrivna för någon att läsa. Det här är.
+    /// Felen från taltjänsten är inte skrivna för någon att läsa. Texterna
+    /// ligger i `Notice`, så att de går att mäta med tester utan telefon och
+    /// så att appen, tangentbordet och iMessage-tillägget säger samma sak.
     private static func reason(_ error: Error) -> String {
-        let problem = error as NSError
-        // 1110 betyder "no speech detected" och är det vanligaste av dem alla.
-        if problem.code == 1110 || problem.code == 203 {
-            return "Hörde inget. Tryck på Tala och prova igen."
-        }
-        if problem.domain == NSURLErrorDomain {
-            return "Taltjänsten nådde inte nätet. Prova igen, eller hämta svenska för offline-diktering."
-        }
-        return "Taltjänsten kunde inte tolka talet just nu. Försök igen."
+        Notice.speechFailure(error)
     }
 
     // MARK: - Mikrofonen

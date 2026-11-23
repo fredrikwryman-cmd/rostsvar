@@ -88,7 +88,10 @@ public class Home extends Activity {
             Mic.release(Home.this);
             // Texten står redan i fältet: delresultaten skrevs dit medan
             // användaren talade. Det enda som fattas är ett besked.
-            note = "Taltjänsten svarade inte. Det som hördes står kvar — tryck på Tala om för att fortsätta.";
+            // Texten står redan i fältet: delresultaten skrevs dit medan
+            // användaren talade. Hördes inget får det inte påstås att något
+            // står kvar, och hördes något får det inte påstås att inget gjorde.
+            note = Notices.afterSilence(heardThisRound(), Notices.TALK);
             render();
         }
     };
@@ -277,7 +280,7 @@ public class Home extends Activity {
         setContentView(page);
 
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            note = "Telefonen har ingen taltjänst som kan tolka tal. Installera eller aktivera en rösttjänst med svenska.";
+            note = Notices.NO_SERVICE;
         }
         render();
 
@@ -482,7 +485,7 @@ public class Home extends Activity {
         // Bubblan eller rösttangentbordet kan hålla mikrofonen. Hellre ett
         // besked om var den är än ett upptaget-fel från taltjänsten.
         if (!Mic.take(this)) {
-            note = "Mikrofonen används av Tap&Talk någon annanstans. Avsluta dikteringen där först.";
+            note = Notices.BUSY_ELSEWHERE;
             render();
             return;
         }
@@ -546,6 +549,14 @@ public class Home extends Activity {
     @Override protected void onResume() {
         super.onResume();
         if (granted()) micBlocked = false;
+        // Taltjänsten kan ha kommit eller försvunnit medan appen låg undan —
+        // nätet, eller en rösttjänst som avinstallerats. Hellre ett besked i
+        // förväg än ett fel efter att användaren talat färdigt.
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            note = Notices.NO_SERVICE;
+        } else if (Notices.NO_SERVICE.equals(note)) {
+            note = "Tryck på Tala och diktera. Du läser texten och väljer själv var den skickas.";
+        }
         // Bubblan kan ha stängts från sin egen notis medan appen låg undan.
         wantBubble = Bubble.running();
         render();
@@ -596,37 +607,21 @@ public class Home extends Activity {
             if (!working) return;
             closeRound();
             // Hann något höras står det kvar i fältet, och då är det inte
-            // sant att inget uppfattades.
-            boolean something = draft.getText().toString().trim().length() > base.trim().length();
-            note = something
-                    ? "Taltjänsten avslutade med ett fel, men det här hördes. Läs igenom texten."
-                    : reason(code);
+            // sant att inget uppfattades. Regeln bor i Notices.afterFailure.
+            if (code == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) micBlocked = !granted();
+            note = Notices.afterFailure(code, heardThisRound(), Notices.TALK);
             render();
         }
         @Override public void onEvent(int type, Bundle params) { }
     }
 
-    private String reason(int code) {
-        switch (code) {
-            case SpeechRecognizer.ERROR_NO_MATCH:
-            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
-                return "Hörde inget. Tryck på Tala och prova igen.";
-            case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
-                micBlocked = !granted();
-                return "Taltjänsten fick inte använda mikrofonen. Tillåt mikrofon och prova igen.";
-            case SpeechRecognizer.ERROR_NETWORK:
-            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
-                return "Taltjänsten nådde inte nätet. Många telefoner klarar svenska utan nät när språket är hämtat.";
-            case SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED:
-            case SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE:
-                return "Taltjänsten har inte svenska installerad. Hämta svenska i telefonens röstinställningar.";
-            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
-                return "Taltjänsten var upptagen. Tryck på Tala igen.";
-            case SpeechRecognizer.ERROR_AUDIO:
-                return "Mikrofonen gick inte att läsa. Stäng andra appar som spelar in och prova igen.";
-            default:
-                return "Taltjänsten svarade med ett fel (" + code + "). Tryck på Tala för att prova igen.";
-        }
+    /**
+     * Sant när den här omgången hann höra något som står kvar i fältet.
+     * Grunden är texten som redan stod där när dikteringen startade, så allt
+     * som är längre än grunden kom från den här omgången.
+     */
+    private boolean heardThisRound() {
+        return draft.getText().toString().trim().length() > base.trim().length();
     }
 
     /**

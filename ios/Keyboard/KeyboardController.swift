@@ -98,6 +98,14 @@ final class KeyboardController: UIInputViewController {
         render()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        // Tangentbordet fälls upp på nytt för varje fält, och läget kan ha
+        // bytts sedan sist: nätet kom eller försvann. Hellre ett besked i
+        // förväg än ett fel efter att användaren talat färdigt.
+        if hasFullAccess && !ears.isAvailable { tell(Notice.unavailable) }
+    }
+
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         stopDictation()
@@ -293,7 +301,7 @@ final class KeyboardController: UIInputViewController {
             return
         }
         guard ears.isAvailable else {
-            tell("Svensk taligenkänning är inte tillgänglig just nu.")
+            tell(Notice.unavailable)
             return
         }
         let id = UUID()

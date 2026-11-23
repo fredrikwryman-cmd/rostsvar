@@ -119,6 +119,7 @@ struct HomeScreen: View {
         .onReceive(NotificationCenter.default.publisher(
             for: UIApplication.didBecomeActiveNotification)) { _ in
                 if Dictation.permitted { micBlocked = false }
+                checkService()
             }
     }
 
@@ -507,7 +508,7 @@ struct HomeScreen: View {
         }
         guard ears.isAvailable else {
             Buzz.warn()
-            note = "Svensk taligenkänning är inte tillgänglig just nu."
+            note = Notice.unavailable
             return
         }
 
@@ -593,8 +594,21 @@ struct HomeScreen: View {
 
     // MARK: - Appens gång
 
+    /// Säger till i förväg när svensk taligenkänning inte går att nå, i
+    /// stället för att låta användaren trycka på Tala och få ett fel.
+    /// Läget kan ha bytts medan appen låg undan: nätet kom eller försvann.
+    private func checkService() {
+        guard state.phase == .idle else { return }
+        if !ears.isAvailable {
+            note = Notice.unavailable
+        } else if note == Notice.unavailable {
+            note = "Tryck på Tala och diktera. Du läser texten och väljer själv var den skickas."
+        }
+    }
+
     private func arrive() {
         if Dictation.permitted { micBlocked = false }
+        checkService()
         // Första starten går direkt till guiden, som på Android.
         guard !guideSeen else { return }
         guideSeen = true

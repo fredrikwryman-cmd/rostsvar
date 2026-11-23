@@ -95,7 +95,7 @@ public class Bubble extends Service {
                 heard = "";
                 deliver(text);
             } else {
-                say("Taltjänsten svarade inte. Tryck på bubblan och prova igen.");
+                say(Notices.afterSilence(false, Notices.BUBBLE));
             }
             Mic.release(Bubble.this);
         }
@@ -378,7 +378,7 @@ public class Bubble extends Service {
             return;
         }
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            say("Telefonen har ingen taltjänst som kan tolka tal.");
+            say(Notices.NO_SERVICE);
             return;
         }
         // Mikrofonen kan ha dragits tillbaka i inställningarna sedan bubblan
@@ -391,7 +391,7 @@ public class Bubble extends Service {
         // En diktering i rösttangentbordet eller i appen har mikrofonen.
         // Hellre ett besked om det än ett fel från taltjänsten.
         if (!Mic.take(this)) {
-            say("Mikrofonen används av Tap&Talk någon annanstans. Avsluta dikteringen där först.");
+            say(Notices.BUSY_ELSEWHERE);
             return;
         }
         if (speech == null) {
@@ -530,25 +530,10 @@ public class Bubble extends Service {
                 heard = "";
                 return;
             }
-            switch (code) {
-                case SpeechRecognizer.ERROR_NO_MATCH:
-                case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
-                    say("Hörde inget. Tryck på bubblan och prova igen.");
-                    break;
-                case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
-                    say("Taltjänsten fick inte använda mikrofonen. Tillåt mikrofonen i appen.");
-                    break;
-                case SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED:
-                case SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE:
-                    say("Taltjänsten har inte svenska installerad.");
-                    break;
-                case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
-                    say("Taltjänsten var upptagen. Tryck igen.");
-                    break;
-                default:
-                    say("Taltjänsten svarade med ett fel (" + code + ").");
-                    break;
-            }
+            // Hela tabellen ligger i Notices. Förr hade bubblan ingen gren
+            // för nätet, så utan nät fick användaren "ett fel (2)" i stället
+            // för att få veta att svenska går att hämta för offline-bruk.
+            say(Notices.afterFailure(code, false, Notices.BUBBLE));
         }
 
         @Override public void onEvent(int type, Bundle params) { }

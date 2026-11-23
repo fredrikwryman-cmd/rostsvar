@@ -28,21 +28,21 @@ final class DictationEndingTests: XCTestCase {
     /// Svarar taltjänsten inte alls ska det som hörts ändå levereras.
     func testSilenceFromTheServiceKeepsTheText() {
         let how = Dictation.ending(heard: "Tre ägg och smör", final: false,
-                                   failed: "Taltjänsten svarade inte. Försök igen.")
+                                   failed: Notice.noAnswer)
         XCTAssertEqual(how, .salvaged(text: "Tre ägg och smör",
-                                      note: "Taltjänsten blev inte klar, men det här hördes."))
+                                      note: Notice.salvaged))
     }
 
     func testNothingHeardReportsTheReason() {
         let how = Dictation.ending(heard: "", final: false,
-                                   failed: "Hörde inget. Tryck på Tala och prova igen.")
-        XCTAssertEqual(how, .nothing(note: "Hörde inget. Tryck på Tala och prova igen."))
+                                   failed: Notice.noSpeech)
+        XCTAssertEqual(how, .nothing(note: Notice.noSpeech))
     }
 
     /// Ett slutresultat utan text är inte ett resultat.
     func testBlankFinalResultReportsNothingHeard() {
         let how = Dictation.ending(heard: "   \n ", final: true, failed: nil)
-        XCTAssertEqual(how, .nothing(note: "Inget tal uppfattades. Försök igen."))
+        XCTAssertEqual(how, .nothing(note: Notice.noSpeech))
     }
 
     /// Avslutas dikteringen utan både fel och slutresultat är texten ändå klar.
