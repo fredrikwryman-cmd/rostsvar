@@ -32,8 +32,8 @@ with tempfile.TemporaryDirectory() as tmp:
     manifest.getroot().set("package", namespace)
     ns = "{http://schemas.android.com/apk/res/android}"
     ET.register_namespace("android", ns[1:-1])
-    manifest.getroot().set(ns + "versionCode", "9")
-    manifest.getroot().set(ns + "versionName", "0.9")
+    manifest.getroot().set(ns + "versionCode", "10")
+    manifest.getroot().set(ns + "versionName", "0.10")
     manifest.write(out / "AndroidManifest.xml", encoding="utf-8")
     run(tools / "aapt2.exe", "compile", "--dir", source / "res", "-o", out / "res.zip")
     run(tools / "aapt2.exe", "link", "-I", android, "--manifest", out / "AndroidManifest.xml",

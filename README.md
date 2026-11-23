@@ -369,7 +369,7 @@ apksigner (v3).
 
 Den mätningen är äldre än paketbytet. Den gjordes på versionCode 6, när paketet
 hade `se.`-prefix; klasserna låg då under det paketnamnet och heter i paketet nu
-`com.techrabbit.tapntalk.Home` och så vidare. versionCode står på 9 och
+`com.techrabbit.tapntalk.Home` och så vidare. versionCode står på 10 och
 visningsnamnet är `Tap&Talk`. Ingen ny APK är byggd, så siffrorna ovan gäller
 inte det nuvarande bygget.
 
