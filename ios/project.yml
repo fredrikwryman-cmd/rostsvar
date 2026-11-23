@@ -6,7 +6,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.7"
+    MARKETING_VERSION: "0.8"
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGN_STYLE: Automatic
 targets:
@@ -85,6 +85,9 @@ targets:
       - path: Tests
       - path: Messages/DraftState.swift
       - path: Shared/Dictation.swift
+      # Dikteringsskärmens regler ligger skilda från skärmen just för att
+      # kunna mätas här. Filen drar in Foundation och ingenting annat.
+      - path: App/HomeState.swift
     settings:
       base:
         TARGETED_DEVICE_FAMILY: "1"

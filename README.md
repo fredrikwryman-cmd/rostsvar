@@ -92,6 +92,34 @@ fram igen, så guiden följer med utan att man trycker vidare. Sist ett provfäl
 där man dikterar och får kvittot att det fungerar. Så länge något steg fattas
 står en varning kvar på hemskärmen, som namnger just det som fattas.
 
+## iPhone · appens dikteringsskärm
+
+Appens startskärm är en dikteringsskärm med samma uppbyggnad som Androids
+`Home.java`: stor **Tala**-knapp som ett tryck startar och ett nytt tryck
+avslutar, ett fält som fylls löpande medan man talar, texten redigerbar för hand
+efteråt, **Skicka** som lämnar texten till iOS egna delningsruta
+(`UIActivityViewController`), och **Rensa** som tömmer fältet. Samma palett som
+Android — svart `#000000`, accent `#3FE08A` — och samma ordval på knapparna:
+Tala, Tala om, Klar, Tillåt mikrofon. Guiden och Om ligger som knappar högst
+upp.
+
+Taligenkänningen är den delade `ios/Shared/Dictation.swift`, samma som
+tangentbordet och iMessage-tillägget. Ingen egen kopia, så avslutsregeln i
+`Dictation.ending` gäller också här: har något hörts levereras det, och ett tomt
+slutresultat skriver aldrig över det.
+
+Reglerna ligger i `ios/App/HomeState.swift`, skilda från skärmen just för att
+gå att mäta utan telefon. Där bor också grunden: texten som stod i fältet när
+dikteringen startade. Delresultaten ersätter varandra ovanpå den, så texten
+växer medan man talar utan att stapla sig, och en text man rättat för hand är
+den nästa diktering läggs efter. Skärmen skiljer dessutom "det står text i
+fältet" från "något hördes just nu", så att en omgång som inte hörde något
+aldrig rapporteras som lyckad.
+
+Lämnas appen med mikrofonen öppen avslutas dikteringen i stället för att
+avbrytas: det som hörts levereras och står kvar, och beskedet säger att
+mikrofonen stängdes när appen lämnades.
+
 ## iPhone · tangentbordet
 
 Tap & Talk är också ett tangentbord på iPhone, så dikteringen går att använda i
@@ -207,6 +235,7 @@ Håll isär de tre stegen. En rad ändras först när steget faktiskt är gjort.
 | iOS-app och iMessage-tillägg | nej, ändrade sedan senaste bygget | nej | nej |
 | iOS-tangentbord | nej | nej | nej |
 | iOS kom igång-guide | nej | nej | nej |
+| iOS dikteringsskärm | nej | nej | nej |
 | Android | ja | — | nej |
 
 **iOS, uppmätt.** Osignerat Release-bygge för iPhone på macOS-byggare med
@@ -217,8 +246,9 @@ ozonerade platser. 16 tester gröna på iPhone-simulator.
 
 **iOS, ännu inte mätt.** Tangentbordstillägget `se.rostsvar.mobile.Keyboard`,
 den delade dikteringen i `ios/Shared/Dictation.swift`, de sex testerna i
-`DictationEndingTests`, kom igång-guiden i `ios/App/Onboarding.swift` och den
-omskrivna startskärmen är skrivna men **inte kompilerade** — det kräver en Mac
+`DictationEndingTests`, kom igång-guiden i `ios/App/Onboarding.swift`,
+dikteringsskärmen i `ios/App/HomeScreen.swift` med `HomeState` och dess sexton
+tester, och den omskrivna startskärmen är skrivna men **inte kompilerade** — det kräver en Mac
 eller en körning av iOS-flödet, och ingen körning har startats. Siffrorna ovan
 gäller bygget före de ändringarna.
 
@@ -254,6 +284,20 @@ vykontrollern och tangentbordet använder:
 - ett byte av konversation rensar utkastet, även mitt i en inspelning
 - ett andra tryck på Skicka kan inte ge ett andra meddelande
 - ett misslyckat skick behåller utkastet; ett lyckat rensar det
+
+`HomeStateTests` mäter dikteringsskärmens egna regler, sexton stycken:
+
+- delresultaten ersätter varandra och staplas aldrig
+- det som dikteras läggs efter texten som redan stod i fältet
+- en tom tolkning raderar aldrig det som hörts
+- en text användaren rättat för hand är den nästa diktering läggs efter
+- mikrofonen är öppen bara under inspelning, aldrig medan behörighet frågas och
+  aldrig medan taltjänsten slutför
+- Skicka och Rensa väntar tills mikrofonen är stängd, och fältet går inte att
+  skriva i medan den är på
+- "det står text i fältet" skiljs från "något hördes just nu", så att en omgång
+  som inte hörde något aldrig rapporteras som lyckad
+- Rensa glömmer också grunden, så nästa diktering börjar om från tomt
 
 `DictationEndingTests` mäter rättningen av buggen där texten försvann:
 

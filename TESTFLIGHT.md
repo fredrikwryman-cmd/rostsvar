@@ -78,9 +78,29 @@ Interna testare kräver ingen granskning från Apple. Exportefterlevnad är reda
 besvarad i appens Info.plist (`ITSAppUsesNonExemptEncryption = false`), så den
 frågan ska inte dyka upp.
 
-## Steg 7 · Kom igång-guiden och tangentbordet
+## Steg 7 · Appens skärm, guiden och tangentbordet
 
 Det här är huvudvägen, och därför det första som provas.
+
+Först appens egen dikteringsskärm:
+
+1. Öppna **Tap & Talk** och stäng guiden. Tryck på **Tala** och säg en mening
+   med å, ä och ö. Kontrollera att texten fylls på medan du talar.
+2. Tryck på **Klar**. Kontrollera att slutresultatet ersätter delresultaten och
+   att den orangea mikrofonpricken i statusraden slocknar.
+3. Rätta texten för hand. Tryck på **Tala om** och säg en mening till —
+   kontrollera att den nya texten läggs **efter** den du rättade.
+4. Tryck på **Skicka** och kontrollera att iOS delningsruta öppnas och att
+   Messenger, Signal och Meddelanden går att välja. Skicka till dig själv.
+5. Tryck på **Rensa** och kontrollera att fältet blir tomt.
+6. Tryck på **Tala**, lämna appen medan mikrofonen är på, och gå tillbaka.
+   Kontrollera att texten som hunnit höras står kvar och att beskedet säger att
+   mikrofonen stängdes när du lämnade appen. **Inget som sagts får försvinna.**
+7. Tryck på **Tala** och säg ingenting. Kontrollera att beskedet säger att
+   inget hördes — och att det **inte** säger det om det redan står text i
+   fältet från förra omgången.
+
+Sedan guiden och tangentbordet:
 
 1. Öppna **Tap & Talk**. Guiden ska visa sig av sig själv vid första start.
 2. Steg 1, tryck på **Tillåt mikrofonen** och svara ja på båda frågorna
