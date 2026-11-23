@@ -62,13 +62,39 @@ Hämta den:
 "%LOCALAPPDATA%\Android\Sdk\cmdline-tools\latest\bin\sdkmanager.bat" --install "system-images;android-35;google_apis;x86_64"
 ```
 
-**Emulatorn blir inte klar inom tre minuter**
-Stäng emulatorfönstret och kör `starta.bat` igen. Går det inte andra gången:
-starta emulatorn från Android Studio (Device Manager) och kör sedan
+**Emulatorfönstret hamnar utanför skärmen**
+
+```
+starta.bat nollstall
+```
+
+Nollställer fönstrets läge och storlek. Emulatorskärmen är 1080 × 2400, vilket
+i 1:1 är högre än de flesta datorskärmar, så fönstret körs i 33 procent uppe
+till vänster. `starta.bat` ställer det själv när AVD:n skapas.
+
+**Emulatorn fryser under boot**
+`avdmanager` skapar AVD:n med `hw.gpu.enabled = no`, och mjukvarurendering
+klarar inte en skärm i den storleken. `starta.bat` slår på grafiken och höjer
+minnet till 2048M på en nyskapad AVD. Är AVD:n äldre: ta bort den och låt
+`starta.bat` göra en ny.
+
+```
+"%LOCALAPPDATA%\Android\Sdk\cmdline-tools\latest\bin\avdmanager.bat" delete avd -n TapnTalk_API35
+```
+
+**Emulatorn blir inte klar inom sex minuter**
+Stäng emulatorfönstret och kör `starta.bat nollstall`. Går det inte andra
+gången: starta emulatorn från Android Studio (Device Manager) och kör sedan
 `starta.bat`, som då bara installerar.
 
 **Emulatorn startar långsamt eller inte alls**
-Hårdvaruacceleration saknas. Slå på **Virtual Machine Platform** och
+Hårdvaruacceleration saknas. Kontrollera med
+
+```
+"%LOCALAPPDATA%\Android\Sdk\emulator\emulator.exe" -accel-check
+```
+
+Står det inte *installed and usable*: slå på **Virtual Machine Platform** och
 **Windows Hypervisor Platform** under *Slå på eller av Windows-funktioner*,
 och starta om datorn.
 
