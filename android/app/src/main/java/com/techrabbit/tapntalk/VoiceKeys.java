@@ -22,7 +22,7 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.Toast;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,6 +60,13 @@ public class VoiceKeys extends InputMethodService {
     private final List<Button> glyphs = new ArrayList<Button>();
 
     private LinearLayout board;
+    /**
+     * Statusraden. iOS-tangentbordet har haft en sedan början; här fanns
+     * ingen, och allt gick genom en toast som dessutom tego vid de två
+     * vanligaste felen. Tryck på Tala, säg inget, tryck Klar: ingenting
+     * hände, och användaren fick aldrig veta varför.
+     */
+    private TextView says;
     private Button micKey;
     private Button shiftKey;
     private Button layerKey;
@@ -93,10 +100,12 @@ public class VoiceKeys extends InputMethodService {
             if (!accepting && pending.length() == 0) return;
             accepting = false;
             listening = false;
+            // Läses före settle: settle tömmer pending.
+            boolean heard = pending.length() > 0;
             settle(true);
             paintMic();
             Mic.release(VoiceKeys.this);
-            say("Taltjänsten svarade inte. Det som hördes står kvar.");
+            say(Notices.afterSilence(heard, Notices.TALK));
         }
     };
 
@@ -108,10 +117,20 @@ public class VoiceKeys extends InputMethodService {
         board.setBackgroundColor(BOARD);
         board.setPadding(dp(3), dp(6), dp(3), dp(8));
 
+        says = new TextView(this);
+        says.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        says.setTextColor(DIM);
+        says.setGravity(Gravity.CENTER);
+        says.setMaxLines(2);
+        says.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        says.setPadding(dp(10), dp(2), dp(10), dp(4));
+        board.addView(says, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
         glyphs.clear();
         for (int i = 0; i < LETTERS.length; i++) {
             LinearLayout line = row();
-            if (i == 2) line.addView(shiftKey = tool("⇧", 1.5f, new Runnable() {
+            if (i == 2) line.addView(shiftKey = tool("⇧", "Skift", 1.5f, new Runnable() {
                 @Override public void run() { shiftTapped(); }
             }));
             String keys = LETTERS[i];
@@ -125,22 +144,22 @@ public class VoiceKeys extends InputMethodService {
         }
 
         LinearLayout tools = row();
-        tools.addView(layerKey = tool("123", 1.4f, new Runnable() {
+        tools.addView(layerKey = tool("123", "Siffror och tecken", 1.4f, new Runnable() {
             @Override public void run() { symbols = !symbols; relabel(); }
         }));
-        tools.addView(tool("⌨", 1.2f, new Runnable() {
+        tools.addView(tool("⌨", "Tillbaka till föregående tangentbord", 1.2f, new Runnable() {
             @Override public void run() { back(); }
         }));
-        tools.addView(tool(",", 1f, new Runnable() {
+        tools.addView(tool(",", "Komma", 1f, new Runnable() {
             @Override public void run() { type(","); }
         }));
-        tools.addView(tool("mellanslag", 3.6f, new Runnable() {
+        tools.addView(tool("mellanslag", "Mellanslag", 3.6f, new Runnable() {
             @Override public void run() { type(" "); }
         }));
-        tools.addView(tool(".", 1f, new Runnable() {
+        tools.addView(tool(".", "Punkt", 1f, new Runnable() {
             @Override public void run() { type("."); }
         }));
-        tools.addView(tool("⏎", 1.4f, new Runnable() {
+        tools.addView(tool("⏎", "Retur", 1.4f, new Runnable() {
             @Override public void run() { enter(); }
         }));
         board.addView(tools);
@@ -190,12 +209,21 @@ public class VoiceKeys extends InputMethodService {
         return key;
     }
 
-    /** En funktionstangent: mörkare, dämpad text, egen bredd. */
-    private Button tool(String label, float weight, final Runnable tap) {
+    /**
+     * En funktionstangent: mörkare, dämpad text, egen bredd.
+     *
+     * @param face   det som står på tangenten, ofta en glyf
+     * @param spoken det TalkBack läser upp. En glyf som ⇧ eller ⏎ säger
+     *               ingenting till den som inte ser den, så varje
+     *               funktionstangent bär sitt ord. Samma ord som
+     *               iOS-tangentbordet använder.
+     */
+    private Button tool(String face, String spoken, float weight, final Runnable tap) {
         Button key = new Button(this);
         key.setAllCaps(false);
-        key.setText(label);
-        key.setTextSize(TypedValue.COMPLEX_UNIT_SP, label.length() > 2 ? 14 : 18);
+        key.setText(face);
+        key.setContentDescription(spoken);
+        key.setTextSize(TypedValue.COMPLEX_UNIT_SP, face.length() > 2 ? 14 : 18);
         key.setTextColor(DIM);
         key.setPadding(0, 0, 0, 0);
         key.setBackground(skin(TOOL, TOOL_DOWN));
@@ -211,6 +239,7 @@ public class VoiceKeys extends InputMethodService {
         Button key = new Button(this);
         key.setAllCaps(false);
         key.setText("⌫");
+        key.setContentDescription("Backsteg");
         key.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         key.setTextColor(DIM);
         key.setPadding(0, 0, 0, 0);
@@ -312,9 +341,13 @@ public class VoiceKeys extends InputMethodService {
         }
         if (shiftKey != null) {
             shiftKey.setText(shiftLock ? "⇪" : "⇧");
+            shiftKey.setContentDescription(shiftLock ? "Skift låst" : "Skift");
             shiftKey.setTextColor(shift || shiftLock ? GREEN : DIM);
         }
-        if (layerKey != null) layerKey.setText(symbols ? "abc" : "123");
+        if (layerKey != null) {
+            layerKey.setText(symbols ? "abc" : "123");
+            layerKey.setContentDescription(symbols ? "Bokstäver" : "Siffror och tecken");
+        }
     }
 
     private void shiftTapped() {
@@ -380,18 +413,20 @@ public class VoiceKeys extends InputMethodService {
     private void micTapped() {
         if (listening) { stopListening(); return; }
         if (!dictation) {
-            say("Diktering är avstängd i det här fältet.");
+            say("Diktering är avstängd i det här fältet. Rätta med tangenterna, "
+                    + "eller byt till ett vanligt textfält för att diktera.");
             return;
         }
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            say("Tillåt mikrofonen i Tap&Talk först.");
+            say("Ett tangentbord får inte fråga om mikrofonen själv. Appen "
+                    + "öppnas nu: tillåt mikrofonen där och kom tillbaka hit.");
             Intent open = new Intent(this, Home.class);
             open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(open);
             return;
         }
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            say("Telefonen har ingen taltjänst som kan tolka tal.");
+            say(Notices.NO_SERVICE);
             return;
         }
         startListening();
@@ -405,7 +440,7 @@ public class VoiceKeys extends InputMethodService {
         // Bubblan eller hemskärmen kan hålla mikrofonen. Hellre ett besked
         // om det än ett fel från taltjänsten.
         if (!Mic.take(this)) {
-            say("Mikrofonen används av Tap&Talk någon annanstans. Avsluta dikteringen där först.");
+            say(Notices.BUSY_ELSEWHERE);
             return;
         }
         if (speech == null) {
@@ -422,6 +457,7 @@ public class VoiceKeys extends InputMethodService {
         ask.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
         ask.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
         listening = true;
+        say(Notices.LISTENING);
         paintMic();
         speech.startListening(ask);
     }
@@ -430,6 +466,7 @@ public class VoiceKeys extends InputMethodService {
     private void stopListening() {
         if (!listening) return;
         listening = false;
+        say(Notices.FINISHING);
         paintMic();
         if (speech != null) speech.stopListening();
         // Svarar taltjänsten inte alls står den preliminära texten kvar som
@@ -459,6 +496,7 @@ public class VoiceKeys extends InputMethodService {
         Mic.release(this);
         if (speech != null) speech.cancel();
         settle(false);
+        say(Notices.ABANDONED);
         paintMic();
     }
 
@@ -537,13 +575,17 @@ public class VoiceKeys extends InputMethodService {
             Mic.release(VoiceKeys.this);
             String heard = first(results);
             InputConnection field = getCurrentInputConnection();
-            if (field != null && heard != null && heard.length() > 0) {
+            boolean something = heard != null && heard.length() > 0;
+            if (field != null && something) {
                 pending = "";
                 field.commitText(heard + " ", 1);
             } else {
                 // Inget sista svar: det som hörts under vägen står kvar.
+                something = pending.length() > 0;
                 settle(true);
             }
+            say(something ? Notices.DONE_KEYBOARD
+                    : Notices.failure(SpeechRecognizer.ERROR_NO_MATCH, Notices.TALK));
             paintMic();
         }
         @Override public void onError(int code) {
@@ -553,10 +595,13 @@ public class VoiceKeys extends InputMethodService {
             hand.removeCallbacks(giveUp);
             Mic.release(VoiceKeys.this);
             // Det som redan hörts behålls, så ett avbrott aldrig äter text.
+            // Flaggan läses före settle, som tömmer pending.
+            boolean heard = pending.length() > 0;
             settle(true);
             paintMic();
-            String word = reason(code);
-            if (word != null) say(word);
+            // Alltid ett besked. Förr returnerade reason() null vid de två
+            // vanligaste felen, och då stod tangentbordet helt tyst.
+            say(Notices.afterFailure(code, heard, Notices.TALK));
         }
         @Override public void onEvent(int type, Bundle params) { }
     }
@@ -567,29 +612,13 @@ public class VoiceKeys extends InputMethodService {
         return words == null || words.isEmpty() ? null : words.get(0);
     }
 
-    /** Null betyder tyst: inget att säga till användaren om. */
-    private String reason(int code) {
-        switch (code) {
-            case SpeechRecognizer.ERROR_NO_MATCH:
-            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
-                return null;
-            case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
-                return "Tillåt mikrofonen i Tap&Talk först.";
-            case SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED:
-            case SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE:
-                return "Taltjänsten har inte svenska installerad.";
-            case SpeechRecognizer.ERROR_NETWORK:
-            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
-                return "Taltjänsten nådde inte nätet.";
-            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
-                return "Taltjänsten var upptagen. Prova igen.";
-            default:
-                return "Taltjänsten svarade med ett fel (" + code + ").";
-        }
-    }
-
+    /**
+     * Beskedet hamnar i statusraden ovanför tangenterna, inte i en toast.
+     * En toast hinner inte läsas, går inte att läsa om, och tangentbordet
+     * ligger dessutom ofta över den plats där den visas.
+     */
     private void say(String text) {
-        Toast.makeText(this, text, Toast.LENGTH_LONG).show();
+        if (says != null) says.setText(text);
     }
 
     // ------------------------------------------------------------ tjänstens liv
@@ -606,6 +635,7 @@ public class VoiceKeys extends InputMethodService {
         // gick att stänga. Nu stängs dikteringen på riktigt, och det som
         // hörts blir riktig text först.
         closeMicrophone();
+        say("");
         relabel();
         paintMic();
     }
