@@ -61,6 +61,29 @@ public class Home extends Activity {
 
     private SpeechRecognizer speech;
     private boolean listening;
+    /**
+     * Sant från Tala till sista svaret, också efter att mikrofonen stängts.
+     * Startas en ny omgång innan den förra svarat skriver den gamla
+     * tolkningen in sig mitt i den nya, och taltjänsten svarar dessutom med
+     * upptaget. Flaggan håller den andra omgången tillbaka.
+     */
+    private boolean working;
+    private final android.os.Handler hand =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    /** Hur länge ett uteblivet svar väntas ut innan knappen släpps fri. */
+    private static final long NO_ANSWER = 8000L;
+    private final Runnable giveUp = new Runnable() {
+        @Override public void run() {
+            if (!working) return;
+            working = false;
+            listening = false;
+            Mic.release(Home.this);
+            // Texten står redan i fältet: delresultaten skrevs dit medan
+            // användaren talade. Det enda som fattas är ett besked.
+            note = "Taltjänsten svarade inte. Det som hördes står kvar — tryck på Tala om för att fortsätta.";
+            render();
+        }
+    };
     /** Texten som redan stod i fältet när dikteringen startade. */
     private String base = "";
     /** Sant när mikrofonen är avslagen för appen i systeminställningarna. */
@@ -357,6 +380,11 @@ public class Home extends Activity {
 
     private void micTapped() {
         if (listening) { stopListening(); return; }
+        if (working) {
+            note = "Texten tolkas. Vänta ett ögonblick.";
+            render();
+            return;
+        }
         if (micBlocked && !granted()) { openSettings(); return; }
         if (!granted()) {
             note = "Mikrofonen behövs för att diktera. Välj Tillåt i rutan som visas.";
@@ -396,6 +424,13 @@ public class Home extends Activity {
 
     private void startListening() {
         if (listening) return;
+        // Bubblan eller rösttangentbordet kan hålla mikrofonen. Hellre ett
+        // besked om var den är än ett upptaget-fel från taltjänsten.
+        if (!Mic.take(this)) {
+            note = "Mikrofonen används av Tap & Talk någon annanstans. Avsluta dikteringen där först.";
+            render();
+            return;
+        }
         if (speech == null) {
             if (!SpeechRecognizer.isRecognitionAvailable(this)) { render(); return; }
             speech = SpeechRecognizer.createSpeechRecognizer(this);
@@ -413,6 +448,7 @@ public class Home extends Activity {
         ask.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
 
         listening = true;
+        working = true;
         note = "Mikrofonen är på. Tala svenska och tryck på Klar när du är färdig.";
         render();
         speech.startListening(ask);
@@ -424,15 +460,27 @@ public class Home extends Activity {
         note = "Tolkar det du sa …";
         render();
         if (speech != null) speech.stopListening();
+        hand.removeCallbacks(giveUp);
+        hand.postDelayed(giveUp, NO_ANSWER);
+    }
+
+    /** Omgången är över: tidsgränsen avbokad, mikrofonen lämnad tillbaka. */
+    private void closeRound() {
+        working = false;
+        listening = false;
+        hand.removeCallbacks(giveUp);
+        Mic.release(this);
     }
 
     /** Mikrofonen stängs när skärmen lämnas. Inget spelas in och inget sparas. */
     @Override protected void onStop() {
         super.onStop();
         if (listening) {
-            listening = false;
             note = "Mikrofonen stängdes när du lämnade appen. Tryck på Tala för att fortsätta.";
         }
+        // Omgången är över vad som än pågick, och mikrofonen ska inte ligga
+        // tagen för de andra ytorna när skärmen inte finns.
+        closeRound();
         if (speech != null) {
             speech.cancel();
             speech.destroy();
@@ -472,18 +520,32 @@ public class Home extends Activity {
                 listening = false;
                 note = "Tolkar det du sa …";
                 render();
+                // Talet är slut, tolkningen inte. Omgången hålls öppen tills
+                // svaret kommer, eller tills tiden går ut.
+                hand.removeCallbacks(giveUp);
+                hand.postDelayed(giveUp, NO_ANSWER);
             }
         }
-        @Override public void onPartialResults(Bundle partial) { heard(partial, false); }
+        @Override public void onPartialResults(Bundle partial) {
+            if (!working) return;
+            heard(partial, false);
+        }
         @Override public void onResults(Bundle results) {
+            if (!working) return;
             heard(results, true);
-            listening = false;
+            closeRound();
             note = "Läs igenom texten, rätta den om du vill, och tryck på Skicka.";
             render();
         }
         @Override public void onError(int code) {
-            listening = false;
-            note = reason(code);
+            if (!working) return;
+            closeRound();
+            // Hann något höras står det kvar i fältet, och då är det inte
+            // sant att inget uppfattades.
+            boolean something = draft.getText().toString().trim().length() > base.trim().length();
+            note = something
+                    ? "Taltjänsten avslutade med ett fel, men det här hördes. Läs igenom texten."
+                    : reason(code);
             render();
         }
         @Override public void onEvent(int type, Bundle params) { }

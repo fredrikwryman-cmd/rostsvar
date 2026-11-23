@@ -35,6 +35,13 @@ final class Dictation {
 
     private var hasTap = false
     private var audioActive = false
+    /// Sant mellan finish() och svaret. Hindrar att ljudet avslutas två
+    /// gånger, vilket lade en andra tidsgräns och ett andra endAudio på en
+    /// taltjänst som redan höll på att svara.
+    private var finishing = false
+    /// Lyssnaren på avbrott i ljudsessionen: ett samtal, eller en annan app
+    /// som tar mikrofonen.
+    private var interruption: NSObjectProtocol?
     /// Byts vid varje start, så att en sen återkoppling från en gammal
     /// diktering inte kan röra en ny.
     private var run = UUID()
@@ -116,6 +123,7 @@ final class Dictation {
         run = id
         heard = ""
         settled = false
+        finishing = false
         self.partial = partial
         self.ending = ending
 
@@ -153,6 +161,22 @@ final class Dictation {
                 }
             }
 
+            // Ett inkommande samtal, eller en annan app som tar mikrofonen,
+            // river ljudet under oss. Taltjänsten skulle då tiga till
+            // tidsgränsen nedan. I stället avslutas dikteringen här, så att
+            // det som hörts levereras med en gång.
+            interruption = NotificationCenter.default.addObserver(
+                forName: AVAudioSession.interruptionNotification,
+                object: AVAudioSession.sharedInstance(),
+                queue: .main
+            ) { [weak self] note in
+                guard let self, self.run == id, self.isListening else { return }
+                let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+                guard let raw,
+                      AVAudioSession.InterruptionType(rawValue: raw) == .began else { return }
+                self.finish()
+            }
+
             DispatchQueue.main.asyncAfter(deadline: .now() + cap) { [weak self] in
                 guard let self, self.run == id, self.isListening else { return }
                 self.finish()
@@ -167,7 +191,8 @@ final class Dictation {
     /// Användaren är klar. Ljudet avslutas, men sessionen lämnas igång tills
     /// taltjänsten svarat — annars hinner den inte slutföra texten.
     func finish() {
-        guard !settled, isListening || task != nil else { return }
+        guard !settled, !finishing, isListening || task != nil else { return }
+        finishing = true
         isListening = false
         stopInput()
         // Måste komma efter stopInput och före varje nedrivning: det är det
@@ -188,6 +213,7 @@ final class Dictation {
     /// Avbryter. Ingen återkoppling ges, och texten är den som ringde ansvarig för.
     func cancel() {
         settled = true
+        finishing = false
         run = UUID()
         partial = nil
         ending = nil
@@ -235,6 +261,7 @@ final class Dictation {
     private func settle(_ how: Ending) {
         guard !settled else { return }
         settled = true
+        finishing = false
         isListening = false
         let tell = ending
         partial = nil
@@ -269,6 +296,10 @@ final class Dictation {
 
     /// Stänger allt, inklusive sessionen. Tål att kallas flera gånger.
     private func releaseEverything() {
+        if let interruption {
+            NotificationCenter.default.removeObserver(interruption)
+            self.interruption = nil
+        }
         stopInput()
         engine.reset()
         task?.cancel()

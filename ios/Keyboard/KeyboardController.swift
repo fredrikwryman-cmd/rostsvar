@@ -30,6 +30,10 @@ final class KeyboardController: UIInputViewController {
     private var digits = false
     private var extraPage = false
     private var listening = false
+    /// Vakt för dikteringen. Byts vid varje start och vid varje avbrott, så
+    /// att en omgång användaren lämnat inte kan starta mikrofonen eller
+    /// skriva något efteråt. Appen och iMessage-tillägget har samma vakt.
+    private var run = UUID()
     /// Det dikteringen själv har skrivit i fältet, och alltså äger. Behövs
     /// för att kunna byta ut en tolkning mot nästa utan att röra användarens
     /// egen text.
@@ -261,7 +265,14 @@ final class KeyboardController: UIInputViewController {
     // MARK: - Dikteringen
 
     @objc private func micTapped() {
-        if listening { ears.finish(); return }
+        if listening {
+            // Klar: ljudet avslutas och svaret inväntas. Att det pågår måste
+            // synas, annars ser tangentbordet dött ut medan taltjänsten
+            // skriver sin sista tolkning.
+            tell("Slutför texten …")
+            ears.finish()
+            return
+        }
         // Ett tangentbord får inte röra mikrofonen utan fullständig åtkomst,
         // och får heller inte fråga om den själv. Då säger vi det i stället.
         guard hasFullAccess else {
@@ -273,20 +284,25 @@ final class KeyboardController: UIInputViewController {
             tell("Svensk taligenkänning är inte tillgänglig just nu.")
             return
         }
+        let id = UUID()
+        run = id
         mine = ""
         tell("Kontrollerar mikrofon och taligenkänning …")
         ears.authorize { [weak self] refused in
-            guard let self else { return }
+            // Hann användaren trycka på en tangent medan frågan ställdes är
+            // omgången över. Då får mikrofonen inte starta efteråt.
+            guard let self, self.run == id else { return }
             if let refused { self.tell(refused + " Öppna Tap & Talk-appen."); return }
-            self.begin()
+            self.begin(id)
         }
     }
 
-    private func begin() {
+    private func begin(_ id: UUID) {
         let refused = ears.start(partial: { [weak self] text in
-            self?.write(text)
+            guard let self, self.run == id else { return }
+            self.write(text)
         }, ending: { [weak self] how in
-            guard let self else { return }
+            guard let self, self.run == id else { return }
             self.listening = false
             switch how {
             case .done(let text):
@@ -310,6 +326,10 @@ final class KeyboardController: UIInputViewController {
     }
 
     private func stopDictation() {
+        // Vakten byts alltid, också när mikrofonen inte hunnit starta: en
+        // fråga om tillstånd kan vara ute, och svaret får inte dra igång en
+        // diktering efter att användaren tagit över med tangenterna.
+        run = UUID()
         guard listening else { return }
         listening = false
         ears.cancel()
@@ -326,14 +346,17 @@ final class KeyboardController: UIInputViewController {
     /// tecken för tecken och det nya läggs till. Användarens egen text rörs
     /// aldrig, eftersom den ligger före `mine`.
     private func write(_ text: String) {
+        // Först: äger vi fortfarande texten före markören? Har användaren
+        // flyttat markören eller markerat något gör vi inte det, och då
+        // raderas ingenting — annars hade backsteget ätit användarens egen
+        // text. Reglerna står i ProxyWriting och mäts av ProxyWritingTests.
+        mine = ProxyWriting.owned(mine: mine,
+                                  before: textDocumentProxy.documentContextBeforeInput,
+                                  selected: textDocumentProxy.selectedText)
         guard text != mine else { return }
-        let shared = text.commonPrefix(with: mine)
-        let toErase = mine.count - shared.count
-        if toErase > 0 {
-            for _ in 0..<toErase { textDocumentProxy.deleteBackward() }
-        }
-        let rest = String(text.dropFirst(shared.count))
-        if !rest.isEmpty { textDocumentProxy.insertText(rest) }
+        let step = ProxyWriting.plan(text: text, mine: mine)
+        for _ in 0..<step.erase { textDocumentProxy.deleteBackward() }
+        if !step.insert.isEmpty { textDocumentProxy.insertText(step.insert) }
         mine = text
     }
 }

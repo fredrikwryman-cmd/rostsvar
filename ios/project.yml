@@ -70,6 +70,9 @@ targets:
     sources:
       - Keyboard
       - path: Shared/Dictation.swift
+      # Reglerna för hur tangentbordet skriver i andras fält, skilda från
+      # tangentbordet för att kunna mätas av testerna.
+      - path: Shared/Proxy.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: se.rostsvar.mobile.Keyboard
@@ -88,6 +91,7 @@ targets:
       # Dikteringsskärmens regler ligger skilda från skärmen just för att
       # kunna mätas här. Filen drar in Foundation och ingenting annat.
       - path: App/HomeState.swift
+      - path: Shared/Proxy.swift
     settings:
       base:
         TARGETED_DEVICE_FAMILY: "1"

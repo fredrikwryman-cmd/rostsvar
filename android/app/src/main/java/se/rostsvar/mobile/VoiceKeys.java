@@ -82,6 +82,24 @@ public class VoiceKeys extends InputMethodService {
     /** Falskt i lösenordsfält och liknande, där diktering inte hör hemma. */
     private boolean dictation = true;
 
+    /** Hur länge ett uteblivet svar från taltjänsten väntas ut. */
+    private static final long NO_ANSWER = 8000L;
+    /**
+     * Taltjänsten svarade inte. Den preliminära texten blir riktig text, så
+     * att inget som sagts kan kastas av nästa programbyte.
+     */
+    private final Runnable giveUp = new Runnable() {
+        @Override public void run() {
+            if (!accepting && pending.length() == 0) return;
+            accepting = false;
+            listening = false;
+            settle(true);
+            paintMic();
+            Mic.release(VoiceKeys.this);
+            say("Taltjänsten svarade inte. Det som hördes står kvar.");
+        }
+    };
+
     // ------------------------------------------------------------- tangenterna
 
     @Override public View onCreateInputView() {
@@ -361,6 +379,12 @@ public class VoiceKeys extends InputMethodService {
         // Ett svar från förra dikteringen kan vara på väg. Släpp det först,
         // annars skrivs den gamla meningen in mitt i den nya.
         if (accepting) abandon();
+        // Bubblan eller hemskärmen kan hålla mikrofonen. Hellre ett besked
+        // om det än ett fel från taltjänsten.
+        if (!Mic.take(this)) {
+            say("Mikrofonen används av Tap & Talk någon annanstans. Avsluta dikteringen där först.");
+            return;
+        }
         if (speech == null) {
             speech = SpeechRecognizer.createSpeechRecognizer(this);
             speech.setRecognitionListener(new Ears());
@@ -385,6 +409,19 @@ public class VoiceKeys extends InputMethodService {
         listening = false;
         paintMic();
         if (speech != null) speech.stopListening();
+        // Svarar taltjänsten inte alls står den preliminära texten kvar som
+        // just preliminär, och ett programbyte kan kasta den. Tidsgränsen
+        // gör den till riktig text i stället.
+        waitForAnswer();
+    }
+
+    /**
+     * Håller omgången öppen en stund efter att mikrofonen stängts, och
+     * räddar texten om inget svar kommer.
+     */
+    private void waitForAnswer() {
+        hand.removeCallbacks(giveUp);
+        hand.postDelayed(giveUp, NO_ANSWER);
     }
 
     /**
@@ -395,6 +432,8 @@ public class VoiceKeys extends InputMethodService {
         if (!accepting && !listening && pending.length() == 0) return;
         accepting = false;
         listening = false;
+        hand.removeCallbacks(giveUp);
+        Mic.release(this);
         if (speech != null) speech.cancel();
         settle(false);
         paintMic();
@@ -404,6 +443,8 @@ public class VoiceKeys extends InputMethodService {
     private void closeMicrophone() {
         accepting = false;
         listening = false;
+        hand.removeCallbacks(giveUp);
+        Mic.release(this);
         settle(false);
         if (speech != null) {
             speech.cancel();
@@ -452,6 +493,9 @@ public class VoiceKeys extends InputMethodService {
             if (!accepting) return;
             listening = false;
             paintMic();
+            // Talet är slut, tolkningen inte. Omgången hålls öppen tills
+            // svaret kommer, eller tills tiden går ut.
+            waitForAnswer();
         }
         @Override public void onPartialResults(Bundle partial) {
             if (!accepting) return;
@@ -466,6 +510,8 @@ public class VoiceKeys extends InputMethodService {
             if (!accepting) return;
             accepting = false;
             listening = false;
+            hand.removeCallbacks(giveUp);
+            Mic.release(VoiceKeys.this);
             String heard = first(results);
             InputConnection field = getCurrentInputConnection();
             if (field != null && heard != null && heard.length() > 0) {
@@ -481,6 +527,8 @@ public class VoiceKeys extends InputMethodService {
             if (!accepting) return;
             accepting = false;
             listening = false;
+            hand.removeCallbacks(giveUp);
+            Mic.release(VoiceKeys.this);
             // Det som redan hörts behålls, så ett avbrott aldrig äter text.
             settle(true);
             paintMic();
@@ -529,8 +577,12 @@ public class VoiceKeys extends InputMethodService {
         shift = false;
         shiftLock = false;
         symbols = false;
-        accepting = false;
-        pending = "";
+        // Fältet startas om. Förr nollades flaggorna bara, och då kunde
+        // mikrofonen ligga kvar öppen med en preliminär text som ingen
+        // längre tog emot — alltså tappad text och en mikrofon som inte
+        // gick att stänga. Nu stängs dikteringen på riktigt, och det som
+        // hörts blir riktig text först.
+        closeMicrophone();
         relabel();
         paintMic();
     }

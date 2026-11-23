@@ -299,6 +299,18 @@ vykontrollern och tangentbordet använder:
   som inte hörde något aldrig rapporteras som lyckad
 - Rensa glömmer också grunden, så nästa diktering börjar om från tomt
 
+`ProxyWritingTests` mäter gränsen för när tangentbordet får radera i ett annat
+programs fält, tretton stycken. Backsteget är den farliga delen: tangentbordet
+byter ut en tolkning mot nästa genom att radera bakåt från markören, och ligger
+inte dess egen text där längre raderar det användarens.
+
+- vår egen text närmast före markören får bytas ut
+- flyttad markör: tangentbordet äger ingenting och raderar ingenting
+- markerad text: likaså, eftersom backsteget hade ätit markeringen
+- lämnar programmet ingen text ifrån sig gäller tangentbordets egen bokföring
+- en växande tolkning raderar ingenting, en ändrad svans bara svansen
+- å, ä och ö räknas som ett tecken var
+
 `DictationEndingTests` mäter rättningen av buggen där texten försvann:
 
 - ett slutresultat levererar texten
@@ -309,6 +321,25 @@ vykontrollern och tangentbordet använder:
 
 Testerna rör inte mikrofonen, taligenkänningen eller Meddelanden. De mäter
 reglerna, inte enheten.
+
+### Mikrofonen delas av tre ytor
+
+Bubblan, rösttangentbordet och hemskärmen ligger i samma process på Android och
+vet inget om varandra. Startar två av dem taligenkänningen samtidigt svarar
+Android med upptaget på den andra. `Mic` är en spärr som gör att den som är sist
+ute får veta det i förväg i stället: *"Mikrofonen används av Tap & Talk någon
+annanstans."* Spärren går att ta över när den är över 70 sekunder gammal, så att
+en yta som dödas av systemet inte kan låsa mikrofonen för resten av processens
+liv — gränsen ligger över dikteringens egen längsta omgång.
+
+Alla tre ytorna håller dessutom omgången öppen efter att mikrofonen stängts,
+eftersom taltjänsten skriver sin sista tolkning efter att talet tagit slut. Ett
+nytt tryck under tiden svarar *"Texten tolkas. Vänta ett ögonblick."* i stället
+för att starta en andra omgång som den gamla meningen hade skrivit sig in i.
+Svarar taltjänsten inte alls går en gräns på åtta sekunder: det som hunnit höras
+levereras ändå. På iPhone gör `Dictation` samma sak med fem sekunder, och
+avslutar dessutom dikteringen när ett samtal eller en annan app tar mikrofonen,
+så att texten inte ligger och väntar på en session som redan är riven.
 
 ### Första provet på telefonen
 

@@ -17,7 +17,9 @@ import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.Icon;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.provider.Settings;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
@@ -63,8 +65,41 @@ public class Bubble extends Service {
 
     private SpeechRecognizer speech;
     private boolean listening;
+    /**
+     * Sant från Tala till sista svaret, också efter att mikrofonen stängts.
+     * Taltjänsten skriver sin sista tolkning efter att talet tagit slut, och
+     * startas en ny omgång under tiden levereras den gamla meningen mitt i
+     * den nya. Flaggan håller den andra omgången tillbaka till svaret kommit.
+     */
+    private boolean working;
     /** Sista tolkningen. Finns den kvar vid ett fel levereras den ändå. */
     private String heard = "";
+    /** Programmet som ägde fältet när dikteringen startade. */
+    private String target;
+
+    private final Handler hand = new Handler(Looper.getMainLooper());
+    /**
+     * Svarar taltjänsten inte alls får texten inte bli inlåst. Gränsen är
+     * satt över det en vanlig sluttolkning tar.
+     */
+    private static final long NO_ANSWER = 8000L;
+    private final Runnable giveUp = new Runnable() {
+        @Override public void run() {
+            if (!working) return;
+            working = false;
+            listening = false;
+            paint();
+            // Det som hunnit höras levereras. Hördes inget sägs det.
+            if (heard.length() > 0) {
+                String text = heard;
+                heard = "";
+                deliver(text);
+            } else {
+                say("Taltjänsten svarade inte. Tryck på bubblan och prova igen.");
+            }
+            Mic.release(Bubble.this);
+        }
+    };
 
     /** Sant mellan start och stopp. Hemskärmens strömbrytare läser den. */
     static boolean running() {
@@ -113,7 +148,7 @@ public class Bubble extends Service {
             return START_NOT_STICKY;
         }
 
-        raise();
+        if (!raise()) return START_NOT_STICKY;
         if (knob == null) show();
         return START_STICKY;
     }
@@ -138,8 +173,13 @@ public class Bubble extends Service {
 
     // -------------------------------------------------------------- notisen
 
-    /** Tyst notis med lägsta vikt, plus en knapp som stänger bubblan. */
-    private void raise() {
+    /**
+     * Tyst notis med lägsta vikt, plus en knapp som stänger bubblan.
+     *
+     * @return falskt när Android nekade förgrundstjänsten. Då har tjänsten
+     *         lagt sig ned och den som ringde ska inte fortsätta.
+     */
+    private boolean raise() {
         NotificationManager shade = getSystemService(NotificationManager.class);
         if (shade != null && shade.getNotificationChannel(CHANNEL) == null) {
             NotificationChannel channel = new NotificationChannel(
@@ -168,8 +208,19 @@ public class Bubble extends Service {
                         "Stäng", off).build())
                 .build();
 
-        startForeground(NOTE_ID, note, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
+        // Android kan neka en förgrundstjänst som startas om från bakgrunden
+        // efter att systemet dödat den. Ett nej får inte bli en kraschslinga:
+        // då lägger sig tjänsten ned, och strömbrytaren i appen startar den
+        // igen när användaren vill.
+        try {
+            startForeground(NOTE_ID, note, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
+        } catch (RuntimeException refused) {
+            alive = false;
+            stopSelf();
+            return false;
+        }
         alive = true;
+        return true;
     }
 
     // --------------------------------------------------------------- bubblan
@@ -226,7 +277,9 @@ public class Bubble extends Service {
         circle.setStroke(dp(2), listening ? Look.GREEN : 0x55000000);
         knob.setBackground(circle);
         knob.setTextColor(Look.DARK_INK);
-        knob.setText(listening ? "Klar" : "Tala");
+        // Tre lägen, inte två: vila, lyssnar, och tolkar. Utan det sista ser
+        // bubblan ledig ut medan taltjänsten fortfarande arbetar.
+        knob.setText(listening ? "Klar" : (working ? "…" : "Tala"));
         if (!listening) {
             knob.setScaleX(1f);
             knob.setScaleY(1f);
@@ -304,10 +357,31 @@ public class Bubble extends Service {
             if (speech != null) speech.stopListening();
             listening = false;
             paint();
+            // Mikrofonen är stängd, men svaret är inte inne. Håll omgången
+            // öppen, och ge upp om taltjänsten tiger.
+            hand.removeCallbacks(giveUp);
+            hand.postDelayed(giveUp, NO_ANSWER);
+            return;
+        }
+        if (working) {
+            say("Texten tolkas. Vänta ett ögonblick.");
             return;
         }
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
             say("Telefonen har ingen taltjänst som kan tolka tal.");
+            return;
+        }
+        // Mikrofonen kan ha dragits tillbaka i inställningarna sedan bubblan
+        // startade. Då är ett besked bättre än ett fel från taltjänsten.
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            say("Mikrofonen är inte tillåten längre. Slå på den i Tap & Talk.");
+            return;
+        }
+        // En diktering i rösttangentbordet eller i appen har mikrofonen.
+        // Hellre ett besked om det än ett fel från taltjänsten.
+        if (!Mic.take(this)) {
+            say("Mikrofonen används av Tap & Talk någon annanstans. Avsluta dikteringen där först.");
             return;
         }
         if (speech == null) {
@@ -315,6 +389,9 @@ public class Bubble extends Service {
             speech.setRecognitionListener(new Ears());
         }
         heard = "";
+        // Vilket program fältet tillhör, så att texten inte hamnar i en app
+        // användaren bytte till medan tolkningen pågick.
+        target = Writer.focusedPackage();
 
         Intent ask = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         ask.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -325,12 +402,16 @@ public class Bubble extends Service {
         ask.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
 
         listening = true;
+        working = true;
         paint();
         speech.startListening(ask);
     }
 
     private void quiet() {
         listening = false;
+        working = false;
+        hand.removeCallbacks(giveUp);
+        Mic.release(this);
         if (speech != null) {
             speech.cancel();
             speech.destroy();
@@ -347,15 +428,31 @@ public class Bubble extends Service {
         String clean = text.trim();
         if (clean.length() == 0) return;
 
+        // Bytte användaren app medan texten tolkades hör den inte hemma i
+        // det fält som råkar ha fokus nu. Då räddas den i urklipp i stället.
+        String now = Writer.focusedPackage();
+        if (target != null && now != null && !now.equals(target)) {
+            toClipboard(clean, "Du bytte app medan texten tolkades. Den ligger i urklipp — "
+                    + "håll in i fältet och välj Klistra in.");
+            return;
+        }
+
         if (Writer.write(clean)) return;
 
+        toClipboard(clean, Writer.ready()
+                ? "Hittade inget textfält. Texten ligger i urklipp — håll in i fältet och välj Klistra in."
+                : "Tillgänglighetstjänsten är inte påslagen. Texten ligger i urklipp — klistra in den.");
+    }
+
+    /** Sista utposten: texten hamnar i urklipp, och användaren får veta det. */
+    private void toClipboard(String clean, String message) {
         ClipboardManager clip = getSystemService(ClipboardManager.class);
         if (clip != null) {
             clip.setPrimaryClip(ClipData.newPlainText("Tap & Talk", clean));
-            say(Writer.ready()
-                    ? "Hittade inget textfält. Texten ligger i urklipp — håll in i fältet och välj Klistra in."
-                    : "Tillgänglighetstjänsten är inte påslagen. Texten ligger i urklipp — klistra in den.");
+            say(message);
         } else {
+            // Inget urklipp att lägga den i. Då sägs texten rakt ut, så att
+            // den åtminstone går att läsa och skriva av.
             say("Texten gick inte att leverera: " + clean);
         }
     }
@@ -394,24 +491,29 @@ public class Bubble extends Service {
         @Override public void onEndOfSpeech() {
             listening = false;
             paint();
+            // Talet är slut, men tolkningen är inte klar. Omgången står
+            // öppen tills svaret kommer, eller tills tiden går ut.
+            hand.removeCallbacks(giveUp);
+            hand.postDelayed(giveUp, NO_ANSWER);
         }
 
         @Override public void onPartialResults(Bundle partial) {
+            if (!working) return;
             String text = first(partial);
             if (text != null) heard = text;
         }
 
         @Override public void onResults(Bundle results) {
-            listening = false;
-            paint();
+            if (!working) return;
+            close();
             String text = first(results);
             deliver(text != null && text.length() > 0 ? text : heard);
             heard = "";
         }
 
         @Override public void onError(int code) {
-            listening = false;
-            paint();
+            if (!working) return;
+            close();
             // Hann något sägas innan felet ska det levereras ändå.
             if (heard.length() > 0) {
                 deliver(heard);
@@ -440,5 +542,17 @@ public class Bubble extends Service {
         }
 
         @Override public void onEvent(int type, Bundle params) { }
+
+        /**
+         * Omgången är över: mikrofonen stängd, tidsgränsen avbokad och
+         * mikrofonen lämnad tillbaka till de andra ytorna.
+         */
+        private void close() {
+            working = false;
+            listening = false;
+            hand.removeCallbacks(giveUp);
+            Mic.release(Bubble.this);
+            paint();
+        }
     }
 }

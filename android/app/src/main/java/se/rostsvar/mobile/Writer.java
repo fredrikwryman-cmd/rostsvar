@@ -49,6 +49,29 @@ public class Writer extends AccessibilityService {
         return live != null;
     }
 
+    /**
+     * Vilket program som äger det fält som har skrivfokus, eller null när
+     * inget fält har det och när tjänsten inte är påslagen.
+     *
+     * Bubblan frågar om det här innan den börjar lyssna och en gång till
+     * innan den skriver. Har användaren bytt app under vägen ska texten inte
+     * skrivas in i ett fält hon inte talade till.
+     */
+    static String focusedPackage() {
+        Writer now = live;
+        if (now == null) return null;
+        try {
+            AccessibilityNodeInfo node = now.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+            if (node == null) return null;
+            CharSequence name = node.getPackageName();
+            return name == null ? null : name.toString();
+        } catch (RuntimeException broken) {
+            // Fönstret kan ha rivits mellan frågan och svaret. Vet vi inte
+            // vilket program det är, påstår vi inget.
+            return null;
+        }
+    }
+
     // ------------------------------------------------------------- livscykeln
 
     @Override protected void onServiceConnected() {
