@@ -176,6 +176,22 @@ har skrivit: den gemensamma början av gamla och nya tolkningen behålls, resten
 raderas tecken för tecken och det nya läggs till. Användarens egen text rörs
 aldrig.
 
+### Paket-id börjar på com., inte se.
+
+Appen heter `com.rostsvar.mobile`, tangentbordet `com.rostsvar.mobile.Keyboard`
+och iMessage-tillägget `com.rostsvar.mobile.Messages`. Prefixet är inte en smak-
+fråga. Ett paket-id som börjar på `se.` gör att iOS inte visar tangentbordet
+under *Lägg till nytt tangentbord*: tillägget installeras och signeras, men
+listan hoppar tyst över det, och appen får inget besked. Kankoda (KeyboardKit)
+mätte det i testappar där bara prefixet skilde — `com.`, `eu.`, `de.`, `da.` och
+`dk.` visas, `se.` visas inte — och anmälde det till Apple som **FB13611131**,
+ännu inte rättat. `se` är också språkkoden för nordsamiska, och samiska
+tangentbord kom i iOS 17.2, där felet först dök upp.
+
+Det här var orsaken till att tangentbordet inte gick att lägga till i version
+1.0 (1). Android-sidan rör det inte: där heter paketet fortfarande
+`se.rostsvar.mobile`, och ett paketnamn som byts där kostar installationerna.
+
 ### Kom igång-guiden på iPhone
 
 Appen har samma femstegsguide som Android, i samma ordning: mikrofonen, lägg
@@ -283,7 +299,7 @@ Håll isär de tre stegen. En rad ändras först när steget faktiskt är gjort.
 | Del | Kompilerat | Uppladdat till TestFlight | Provat på iPhone |
 | --- | --- | --- | --- |
 | iOS-app och iMessage-tillägg | nej, ändrade sedan senaste bygget | nej | nej |
-| iOS-tangentbord | nej | nej | nej |
+| iOS-tangentbord | ja, men paket-id ändrat sedan dess | nej | ja, visades inte i listan |
 | iOS kom igång-guide | nej | nej | nej |
 | iOS dikteringsskärm | nej | nej | nej |
 | iOS Tech Rabbit-design | nej | nej | nej |
@@ -295,7 +311,7 @@ Xcode 16.4 och iOS 18.5 SDK. Noll varningar. Tillägget bäddas in i appen som
 `com.apple.message-payload-provider`. App- och iMessage-ikoner kompilerar utan
 ozonerade platser. 16 tester gröna på iPhone-simulator.
 
-**iOS, ännu inte mätt.** Tangentbordstillägget `se.rostsvar.mobile.Keyboard`,
+**iOS, ännu inte mätt.** Tangentbordstillägget `com.rostsvar.mobile.Keyboard`,
 den delade dikteringen i `ios/Shared/Dictation.swift`, de sex testerna i
 `DictationEndingTests`, kom igång-guiden i `ios/App/Onboarding.swift`,
 dikteringsskärmen i `ios/App/HomeScreen.swift` med `HomeState` och dess sexton
@@ -310,6 +326,14 @@ först på en riktig iPhone. Till det hör nu också om Archivo verkligen laddas
 att `UIAppFonts` stämmer och att de fyra PostScript-namnen träffar rätt syns
 bara när appen kör. Gör de inte det byter SwiftUI tyst till systemtypsnittet,
 så skärmen ser rätt ut i formen men fel i bokstäverna.
+
+**iOS, uppmätt på telefon.** Version 1.0 (1) installerades som ad hoc-bygge på
+en iPhone. Alla tre paketen fanns med och var signerade, men tangentbordet gick
+inte att lägga till i `Inställningar → Allmänt → Tangentbord → Tangentbord →
+Lägg till nytt tangentbord`. Orsaken var paket-id:ts `se.`-prefix, se *Paket-id
+börjar på com., inte se.* ovan. Prefixet är rättat i `ios/project.yml` och
+`MARKETING_VERSION` är höjd till 1.1, men rättningen är inte provad på telefon:
+det kräver ett nytt bygge, nya App ID:n hos Apple och en ny installation.
 
 `ios/App/Look.swift` är kvar men används inte av någon fil: dikteringsskärmen
 var dess enda användare, och guiden och Om ritas nu med Tech Rabbit-tokenen
