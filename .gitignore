@@ -23,3 +23,6 @@ android/app/build/
 .DS_Store
 Thumbs.db
 __pycache__/
+
+# Sidkopior från Playwright, skapas vid felsökning i webbläsare.
+.playwright-mcp/
