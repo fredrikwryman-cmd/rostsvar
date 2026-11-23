@@ -2,7 +2,7 @@ import Messages
 import UIKit
 import UniformTypeIdentifiers
 
-final class MessagesController: MSMessagesAppViewController {
+final class MessagesController: MSMessagesAppViewController, UITextViewDelegate {
     private var state = DraftState()
     /// Vakt för taligenkänningen. Byts när dikteringen avbryts eller går om.
     private var generation = UUID()
@@ -41,13 +41,16 @@ final class MessagesController: MSMessagesAppViewController {
 
         draft.font = .preferredFont(forTextStyle: .body)
         draft.adjustsFontForContentSizeCategory = true
-        draft.isEditable = false
+        draft.isEditable = true
         draft.isSelectable = true
+        draft.delegate = self
+        draft.inputAccessoryView = dismissBar()
         draft.backgroundColor = .secondarySystemBackground
         draft.textColor = .label
         draft.layer.cornerRadius = 12
         draft.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
         draft.accessibilityLabel = "Ditt utkast"
+        draft.accessibilityHint = "Går att rätta för hand när dikteringen är över."
         draft.heightAnchor.constraint(greaterThanOrEqualToConstant: 120).isActive = true
 
         paint(mic, prominent: false)
@@ -87,6 +90,30 @@ final class MessagesController: MSMessagesAppViewController {
         render()
     }
 
+    /// Systemtangentbordet täcker hela panelen medan man rättar texten, och
+    /// en meddelandepanel har ingen plats för en verktygsrad. Raden ovanför
+    /// tangentbordet är den enda vägen ut som alltid finns. Ordet är inte
+    /// "Klar": det betyder stäng mikrofonen här.
+    private func dismissBar() -> UIToolbar {
+        let bar = UIToolbar()
+        bar.sizeToFit()
+        let hide = UIBarButtonItem(title: "Dölj tangentbordet", style: .done,
+                                  target: self, action: #selector(stopEditing))
+        bar.items = [UIBarButtonItem(systemItem: .flexibleSpace), hide]
+        return bar
+    }
+
+    @objc private func stopEditing() {
+        draft.resignFirstResponder()
+    }
+
+    /// Användarens egen rättning går in i tillståndet, så att Skicka och
+    /// Rensa följer det som faktiskt står i fältet.
+    func textViewDidChange(_ field: UITextView) {
+        state.edit(field.text)
+        render()
+    }
+
     private func paint(_ button: UIButton, prominent: Bool) {
         button.titleLabel?.font = .preferredFont(forTextStyle: .title3)
         button.titleLabel?.adjustsFontForContentSizeCategory = true
@@ -101,7 +128,10 @@ final class MessagesController: MSMessagesAppViewController {
 
     private func render() {
         status.text = note
+        // Texten sätts bara när den skiljer sig, annars flyttas markören
+        // varje gång panelen ritas om medan användaren skriver.
         if draft.text != state.draft { draft.text = state.draft }
+        draft.isEditable = state.canEdit
         let talking = state.phase == .recording
         mic.setTitle(talking ? "Klar" : (state.hasDraft ? "Tala om" : "Tala"), for: .normal)
         mic.accessibilityLabel = talking ? "Klar, stäng mikrofonen" : "Tala, starta mikrofonen"
@@ -133,6 +163,7 @@ final class MessagesController: MSMessagesAppViewController {
 
     override func willResignActive(with conversation: MSConversation) {
         super.willResignActive(with: conversation)
+        draft.resignFirstResponder()
         // Utkastet nollas, men det som hörts kastas inte: det läggs i
         // urklipp, som bubblan gör på Android när texten inte kan skrivas i
         // ett fält. Appen ska aldrig tappa det som sagts.

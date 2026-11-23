@@ -32,6 +32,20 @@ struct DraftState: Equatable {
 
     var canTalk: Bool { phase == .idle || phase == .recording }
 
+    /// Utkastet går att rätta för hand när inget pågår, som
+    /// `HomeState.canEdit` på startskärmen. Panelen sa "Läs igenom och tryck
+    /// på Skicka" om ett fält som inte gick att skriva i: hörde taltjänsten
+    /// fel fanns ingen väg utom att diktera om allt.
+    var canEdit: Bool { phase == .idle }
+
+    /// Användaren rättar utkastet för hand. Bara när inget pågår: en
+    /// tolkning som är på väg in får inte tappas mot en tangenttryckning,
+    /// och en text som redan lämnats till Meddelanden får inte ändras.
+    mutating func edit(_ text: String) {
+        guard phase == .idle else { return }
+        draft = text
+    }
+
     /// Avbryt går att trycka på så snart det finns något att avbryta. Aldrig
     /// medan ett meddelande skickas: då är det för sent att ångra sig.
     var canCancel: Bool { phase != .sending && (phase != .idle || hasDraft) }
