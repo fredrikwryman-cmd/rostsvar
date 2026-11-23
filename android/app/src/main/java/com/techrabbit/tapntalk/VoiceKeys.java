@@ -541,9 +541,16 @@ public class VoiceKeys extends InputMethodService {
         if (micKey == null) return;
         boolean on = listening;
         micKey.setText(on ? "Klar" : (dictation ? "Tala" : "Diktering av"));
-        micKey.setContentDescription(on
-                ? "Klar, stäng mikrofonen"
-                : "Tala, diktera in i fältet");
+        // Stod "Tala, diktera in i fältet" också när tangenten sa "Diktering
+        // av" i ett lösenordsfält, alltså en etikett som inte gick att följa.
+        if (on) {
+            micKey.setContentDescription("Klar, stäng mikrofonen");
+        } else if (dictation) {
+            micKey.setContentDescription("Tala, diktera in i fältet");
+        } else {
+            micKey.setContentDescription(
+                    "Diktering av. Det går inte att diktera i det här fältet.");
+        }
         micKey.setBackground(skin(dictation ? (on ? GREEN_DEEP : GREEN) : TOOL,
                 dictation ? GREEN_DEEP : TOOL_DOWN));
         micKey.setTextColor(dictation ? DARK_INK : DIM);

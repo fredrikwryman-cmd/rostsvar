@@ -193,7 +193,9 @@ public class Home extends Activity {
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         bubble = new Switch(this);
-        bubble.setContentDescription("Starta eller stoppa den flytande knappen");
+        // Etiketten börjar med den text som syns intill, "Flytande knapp",
+        // och säger sedan vad strömbrytaren gör.
+        bubble.setContentDescription("Flytande knapp. Starta eller stäng den.");
         bubble.setMinimumWidth(dp(56));
         bubble.setMinimumHeight(dp(48));
         bubble.setOnClickListener(new View.OnClickListener() {

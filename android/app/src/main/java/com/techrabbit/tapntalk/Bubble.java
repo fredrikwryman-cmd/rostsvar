@@ -272,7 +272,6 @@ public class Bubble extends Service {
         knob.setAllCaps(false);
         knob.setGravity(Gravity.CENTER);
         knob.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        knob.setContentDescription("Tap&Talk, tryck för att diktera");
         paint();
 
         where = new WindowManager.LayoutParams(
@@ -322,13 +321,19 @@ public class Bubble extends Service {
         knob.setTextColor(Look.DARK_INK);
         // Tre lägen, inte två: vila, lyssnar, och tolkar. Utan det sista ser
         // bubblan ledig ut medan taltjänsten fortfarande arbetar.
+        // Beskrivningen sätts här tillsammans med texten, inte en gång i
+        // show(). Förr sa den "tryck för att diktera" också medan mikrofonen
+        // var på och medan tolkningen pågick.
         if (listening) {
             knob.setText("Klar");
+            knob.setContentDescription("Klar. Mikrofonen är på, tryck för att stänga den.");
         } else if (working) {
             // Inte String.repeat: bygget kompileras mot Java 8.
             knob.setText(Motion.wanted(Bubble.this) ? BEATS[Math.max(1, dots) - 1] : "…");
+            knob.setContentDescription("Tap&Talk tolkar det du sa. Vänta ett ögonblick.");
         } else {
             knob.setText("Tala");
+            knob.setContentDescription("Tala. Tap&Talk, tryck för att diktera.");
         }
         if (!listening) {
             knob.setScaleX(1f);
