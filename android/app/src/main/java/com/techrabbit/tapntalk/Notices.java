@@ -1,6 +1,7 @@
 package com.techrabbit.tapntalk;
 
 import android.speech.SpeechRecognizer;
+import android.util.Log;
 
 /**
  * Beskeden om taltjänsten, på ett ställe.
@@ -16,8 +17,10 @@ import android.speech.SpeechRecognizer;
  * på Tala i appen och i tangentbordet, men på bubblan när det är bubblan som
  * lyssnar — därför skickas det in.
  *
- * Klassen har inget beroende till Android vid körning: konstanterna i
- * SpeechRecognizer är static final int och bakas in av kompilatorn.
+ * Konstanterna i SpeechRecognizer är static final int och bakas in av
+ * kompilatorn, men sedan punkt 17 loggas felkoden här, och android.util.Log
+ * är ett riktigt beroende. Ska tabellen mätas på en ren JVM behöver Log
+ * skärmas av först.
  */
 final class Notices {
 
@@ -68,6 +71,8 @@ final class Notices {
      */
     static String afterFailure(int code, boolean heard, String again) {
         if (heard) {
+            // Koden loggas även här: texten räddades, men felet hände.
+            Log.w(TAG, "taltjansten svarade med fel " + code + ", text raddad");
             return "Taltjänsten avslutade med ett fel, men det här hördes. "
                     + "Läs igenom texten.";
         }
@@ -86,8 +91,22 @@ final class Notices {
         return "Taltjänsten svarade inte. " + again + " och prova igen.";
     }
 
-    /** Felet som en mening, utan hänsyn till om något hördes. */
+    /** Taggen felkoderna loggas under. `adb logcat -s TapnTalk` visar dem. */
+    private static final String TAG = "TapnTalk";
+
+    /**
+     * Felet som en mening, utan hänsyn till om något hördes.
+     *
+     * Koden loggas men visas inte. Förr stod den i rutan — "Taltjänsten
+     * svarade med ett fel (7)" — vilket inte hjälper någon som ska diktera,
+     * och den som felsöker hittar den i logcat i stället.
+     */
     static String failure(int code, String again) {
+        Log.w(TAG, "taltjansten svarade med fel " + code);
+        return sentence(code, again);
+    }
+
+    private static String sentence(int code, String again) {
         switch (code) {
             case SpeechRecognizer.ERROR_NO_MATCH:
             case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
