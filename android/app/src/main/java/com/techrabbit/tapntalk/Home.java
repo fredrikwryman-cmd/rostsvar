@@ -43,6 +43,8 @@ public class Home extends Activity {
     private static final int FIELD = Look.FIELD;
     private static final int BORDER = Look.BORDER;
     private static final int OFF = Look.OFF;
+    private static final int DIM_DOT = Look.DIM_DOT;
+    private static final int DARK_INK = Look.DARK_INK;
     private static final int WARN = Look.WARN;
 
     private static final int MIC_PERMISSION = 1;
@@ -387,20 +389,25 @@ public class Home extends Activity {
                 : (micBlocked ? "Öppna inställningarna och tillåt mikrofonen" : "Tala, starta mikrofonen"));
         mic.setEnabled(canTalk);
         mic.setBackground(box(canTalk ? (listening ? GREEN_DEEP : GREEN) : FIELD, canTalk ? 0 : BORDER, dp(16)));
-        mic.setTextColor(canTalk ? 0xFF05140C : OFF);
+        mic.setTextColor(canTalk ? DARK_INK : OFF);
 
         // Samma regel som HomeState.canClear och canSend på iOS: båda väntar
         // tills dikteringen är över. En delningsruta över en öppen mikrofon
         // vore ingen tjänst mot användaren, och ett rensat fält mitt i en
         // tolkning skulle fyllas igen av svaret.
         boolean resting = !listening && !working;
-        clear.setEnabled(hasText && resting);
-        clear.setBackground(box(hasText && resting ? FIELD : 0x00000000, BORDER, dp(14)));
-        clear.setTextColor(hasText && resting ? INK : OFF);
+        // Samma roller som på iOS: Rensa är kortets yta med kant, Skicka är
+        // fylld grön med mörk text. Skicka var en grön ram förut, alltså en
+        // annan knapp än appens primärknapp på iOS. Formen är kvar
+        // rektangulär — det är Androids konvention.
+        boolean ready = hasText && resting;
+        clear.setEnabled(ready);
+        clear.setBackground(box(FIELD, ready ? DIM_DOT : BORDER, dp(14)));
+        clear.setTextColor(ready ? INK : OFF);
 
-        send.setEnabled(hasText && resting);
-        send.setBackground(box(0x00000000, hasText && resting ? GREEN : BORDER, dp(14)));
-        send.setTextColor(hasText && resting ? GREEN : OFF);
+        send.setEnabled(ready);
+        send.setBackground(box(ready ? GREEN : FIELD, ready ? 0 : BORDER, dp(14)));
+        send.setTextColor(ready ? DARK_INK : OFF);
 
         draft.setFocusable(!listening);
         draft.setFocusableInTouchMode(!listening);

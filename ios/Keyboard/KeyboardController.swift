@@ -8,15 +8,17 @@ import UIKit
 /// Apples taltjänst, och bara medan mikrofonknappen är igång.
 final class KeyboardController: UIInputViewController {
 
-    // Samma palett som appen och Android-sidan: svart, #3FE08A.
-    private let bg = UIColor.black
-    private let ink = UIColor(white: 0.95, alpha: 1)
-    private let dim = UIColor(red: 0.60, green: 0.64, blue: 0.63, alpha: 1)
-    private let green = UIColor(red: 0.247, green: 0.878, blue: 0.541, alpha: 1)
-    private let greenDeep = UIColor(red: 0.086, green: 0.639, blue: 0.353, alpha: 1)
-    private let darkInk = UIColor(red: 0.02, green: 0.078, blue: 0.047, alpha: 1)
-    private let keyFill = UIColor(white: 0.14, alpha: 1)
-    private let keyEdge = UIColor(white: 0.22, alpha: 1)
+    // Samma palett som appen och Android-sidan, ur Shared/Palette.swift.
+    // Stod förut som egna literaler här, med ett grönt som varken var appens
+    // eller Androids — tre gröna i en app som har en accent.
+    private let bg = Palette.ui(Palette.bg)
+    private let ink = Palette.ui(Palette.text)
+    private let dim = Palette.ui(Palette.muted)
+    private let green = Palette.ui(Palette.green)
+    private let greenDeep = Palette.ui(Palette.greenDeep)
+    private let darkInk = Palette.ui(Palette.onGreen)
+    private let keyFill = Palette.ui(Palette.keyFill)
+    private let keyEdge = Palette.ui(Palette.keyEdge)
 
     /// Svensk layout. Å, Ä och Ö sitter där de sitter på ett svenskt
     /// tangentbord, sist på de två övre raderna.
@@ -67,7 +69,10 @@ final class KeyboardController: UIInputViewController {
         mic.backgroundColor = green
         mic.setTitleColor(darkInk, for: .normal)
         mic.titleLabel?.font = .systemFont(ofSize: 20, weight: .semibold)
-        mic.layer.cornerRadius = 10
+        // Primärknappen är ett piller i appen och i iMessage-tillägget. Här
+        // är den en tangent bland tangenter, men radien följer höjden på samma
+        // sätt, så formen känns igen.
+        mic.layer.cornerRadius = 12
         mic.addTarget(self, action: #selector(micTapped), for: .touchUpInside)
 
         let page = UIStackView(arrangedSubviews: [status, rows, mic])
