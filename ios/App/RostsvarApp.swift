@@ -4,35 +4,72 @@ import SwiftUI
 struct RostsvarApp: App {
     var body: some Scene {
         WindowGroup {
-            NavigationStack {
-                List {
-                    Section("Så gör du") {
-                        Step(1, "Öppna en konversation i Meddelanden.")
-                        Step(2, "Tryck på plustecknet vid skrivfältet och välj Tap & Talk bland iMessage-apparna.")
-                        Step(3, "Tryck på Tala och diktera på svenska.")
-                        Step(4, "Tryck på Klar, läs igenom utkastet och tryck på Skicka.")
+            Home()
+        }
+    }
+}
+
+/// Startskärmen. Tangentbordet är huvudvägen: med det dikterar man i varje
+/// app där man skriver. iMessage-tillägget finns kvar som genväg i
+/// Meddelanden, men pekas inte längre ut som förstaval.
+private struct Home: View {
+
+    /// Guiden visas en gång av sig själv, sedan när man själv öppnar den.
+    /// Samma nyckel som Android använder, så att de två sidorna går att
+    /// läsa som ett och samma upplägg.
+    @AppStorage("guiden_visad") private var guideSeen = false
+    @State private var showGuide = false
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Button {
+                        showGuide = true
+                    } label: {
+                        Label(guideSeen ? "Öppna kom igång-guiden" : "Kom igång", systemImage: "list.number")
                     }
-                    Section("Tangentbordet") {
-                        Text("Tap & Talk är också ett tangentbord, så du kan diktera i varje app där du skriver.")
-                        Step(1, "Inställningar → Allmänt → Tangentbord → Tangentbord → Lägg till nytt tangentbord, och välj Tap & Talk.")
-                        Step(2, "Tryck på Tap & Talk i listan och slå på Tillåt fullständig åtkomst. Utan den får tangentbordet inte använda mikrofonen, och kan inte be om den själv.")
-                        Step(3, "Tryck på jordgloben i ditt vanliga tangentbord tills Tap & Talk kommer fram, och tryck på Tala.")
-                        Text("Tangentbordet skriver bara i det fält du står i. Ingenting av det du skriver sparas eller lämnar telefonen.")
-                    }
-                    Section("Avbryta") {
-                        Text("Avbryt stänger mikrofonen och rensar utkastet. Inget skickas förrän du trycker på Skicka.")
-                        Text("Utkastet rensas också när du lämnar Tap & Talk eller byter konversation.")
-                    }
-                    Section("Om mikrofonen") {
-                        Text("Mikrofonen är igång bara mellan Tala och Klar. Tap & Talk sparar ingen inspelning och ingen meddelandehistorik.")
-                        Text("Tap & Talk väljer taligenkänning på enheten när den svenska igenkännaren stöder det. Annars kan Apples taltjänst använda nätet.")
-                    }
-                    Section("Version") {
-                        LabeledContent("Tap & Talk", value: Self.version)
-                    }
+                    .accessibilityLabel("Öppna kom igång-guiden")
+                } header: {
+                    Text("Så kommer du igång")
+                } footer: {
+                    Text("Fem steg: mikrofonen, lägg till tangentbordet, Tillåt fullständig åtkomst, byt till Tap & Talk, och prova.")
                 }
-                .navigationTitle("Tap & Talk")
+
+                Section("Tangentbordet") {
+                    Text("Tap & Talk är ett tangentbord. Du dikterar svenska i varje app där du skriver — meddelanden, mejl, anteckningar, sökfält.")
+                    Step(1, "Byt till Tap & Talk med jordgloben 🌐 nere till vänster.")
+                    Step(2, "Tryck på Tala och säg din mening.")
+                    Step(3, "Tryck på Klar. Texten står kvar i fältet, och du rättar den med tangenterna om du vill.")
+                    Text("Tangentbordet skriver bara i det fält du står i. Ingenting av det du skriver loggas, sparas eller lämnar telefonen.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Genväg i Meddelanden") {
+                    Text("Tap & Talk finns också som liten app inne i Meddelanden: tryck på plustecknet vid skrivfältet och välj Tap & Talk. Samma diktering, men bara i Meddelanden — tangentbordet är huvudvägen och fungerar överallt.")
+                }
+
+                Section("Om mikrofonen") {
+                    Text("Mikrofonen är igång bara mellan Tala och Klar. Tap & Talk sparar ingen inspelning och ingen meddelandehistorik.")
+                    Text("Tap & Talk väljer taligenkänning på enheten när den svenska igenkännaren stöder det. Annars kan Apples taltjänst använda nätet.")
+                    Text("Hörs något men taltjänsten avslutar med fel behålls texten ändå. Det du sagt ska aldrig gå förlorat.")
+                }
+
+                Section("Version") {
+                    LabeledContent("Tap & Talk", value: Self.version)
+                }
             }
+            .navigationTitle("Tap & Talk")
+        }
+        .sheet(isPresented: $showGuide) {
+            Onboarding()
+        }
+        .onAppear {
+            // Första starten går direkt till guiden, som på Android.
+            guard !guideSeen else { return }
+            guideSeen = true
+            showGuide = true
         }
     }
 

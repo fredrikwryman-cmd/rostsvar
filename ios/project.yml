@@ -6,7 +6,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.1"
+    MARKETING_VERSION: "0.7"
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGN_STYLE: Automatic
 targets:
@@ -15,6 +15,10 @@ targets:
     platform: iOS
     sources:
       - App
+      # Guiden frågar om mikrofon och taligenkänning genom samma Dictation
+      # som tilläggen använder, så att appen och tangentbordet säger samma
+      # sak om samma tillstånd.
+      - path: Shared/Dictation.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: se.rostsvar.mobile

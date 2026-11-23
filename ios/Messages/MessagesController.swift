@@ -16,6 +16,9 @@ final class MessagesController: MSMessagesAppViewController {
     private let ears = Dictation()
 
     private let status = UILabel()
+    /// En rad som säger var huvudvägen går. Tillägget är genvägen i
+    /// Meddelanden; tangentbordet gör samma sak i varje app.
+    private let aside = UILabel()
     private let draft = UITextView()
     private let mic = UIButton(type: .system)
     private let stop = UIButton(type: .system)
@@ -57,11 +60,17 @@ final class MessagesController: MSMessagesAppViewController {
         send.accessibilityLabel = "Skicka utkastet i konversationen"
         send.addTarget(self, action: #selector(sendDraft), for: .touchUpInside)
 
+        aside.font = .preferredFont(forTextStyle: .caption1)
+        aside.adjustsFontForContentSizeCategory = true
+        aside.numberOfLines = 0
+        aside.textColor = .tertiaryLabel
+        aside.text = "Tap & Talk-tangentbordet dikterar i alla appar. Det här är genvägen i Meddelanden."
+
         let row = UIStackView(arrangedSubviews: [mic, stop])
         row.distribution = .fillEqually
         row.spacing = 10
 
-        let stack = UIStackView(arrangedSubviews: [status, draft, row, send])
+        let stack = UIStackView(arrangedSubviews: [status, draft, row, send, aside])
         stack.axis = .vertical
         stack.spacing = 10
         stack.translatesAutoresizingMaskIntoConstraints = false

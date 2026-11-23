@@ -78,9 +78,34 @@ Interna testare kräver ingen granskning från Apple. Exportefterlevnad är reda
 besvarad i appens Info.plist (`ITSAppUsesNonExemptEncryption = false`), så den
 frågan ska inte dyka upp.
 
-## Steg 7 · Första provet på iPhone
+## Steg 7 · Kom igång-guiden och tangentbordet
 
-Gör provet i en konversation med dig själv.
+Det här är huvudvägen, och därför det första som provas.
+
+1. Öppna **Tap & Talk**. Guiden ska visa sig av sig själv vid första start.
+2. Steg 1, tryck på **Tillåt mikrofonen** och svara ja på båda frågorna
+   (mikrofon och taligenkänning). Kontrollera att steget blir grönt.
+3. Steg 2 och 3, tryck på **Öppna inställningarna**, lägg till tangentbordet
+   och slå på **Tillåt fullständig åtkomst**. Gå tillbaka till appen och
+   kontrollera att guiden ser likadan ut — de stegen är märkta *kontrollera
+   själv*, och appen ska inte påstå att de är klara.
+4. Steg 5, tryck i provfältet, håll in **🌐** och välj **Tap & Talk**. Tryck på
+   **Tala**, säg en mening med å, ä och ö, och tryck på **Klar**.
+5. Kontrollera att texten kom in i fältet medan du talade, att kvittot visar
+   att texten kom in, och att å, ä och ö blev rätt.
+6. Prova tangenterna: skift, backsteg, siffror och skiljetecken, **⌫**,
+   mellanslag, retur och **⌨** tillbaka till föregående tangentbord.
+7. Öppna **Messenger**, **Signal** och **Mejl**, byt till Tap & Talk och
+   diktera i varje. Kontrollera att texten hamnar i rätt fält och att din
+   egen redan skrivna text inte rörs.
+8. Stäng av **Tillåt fullständig åtkomst** igen och kontrollera att
+   tangentbordet säger det i klartext i stället för att tiga, och hänvisar
+   till appen. Slå på den igen efteråt.
+
+## Steg 8 · Genvägen i Meddelanden
+
+Gör provet i en konversation med dig själv. Det här är tillägget, inte
+huvudvägen: samma diktering, men bara i Meddelanden.
 
 1. Öppna **Meddelanden**, välj konversationen, tryck på plustecknet vid
    skrivfältet och välj **Tap & Talk**.
@@ -94,13 +119,14 @@ Gör provet i en konversation med dig själv.
 6. Lämna Tap & Talk, öppna en annan konversation och öppna Tap & Talk där.
    Kontrollera att utkastfältet är tomt.
 
-## Steg 8 · Messenger och Signal på iPhone
+## Steg 9 · AssistiveTouch, att jämföra med
 
-Tillägget i steg 7 fungerar **bara i Meddelanden**. iOS släpper inte in ett
-iMessage-tillägg i andra chattappar. För Messenger och Signal finns ett annat
-flöde som bygger på iOS egna delar: en genväg som dikterar och kopierar, kopplad
-till den flytande AssistiveTouch-knappen. Ingenting av Tap & Talks egen kod är
-inblandad — det här är ett alternativ att jämföra med, inte appen vi bygger.
+Tillägget i steg 8 fungerar **bara i Meddelanden**. iOS släpper inte in ett
+iMessage-tillägg i andra chattappar. Det är tangentbordet i steg 7 som löser
+Messenger och Signal, och det provas där. Upplägget nedan bygger i stället på
+iOS egna delar: en genväg som dikterar och kopierar, kopplad till den flytande
+AssistiveTouch-knappen. Ingenting av Tap & Talks egen kod är inblandad — det är
+ett alternativ att jämföra tangentbordet med, inte appen vi bygger.
 
 Ställ in en gång:
 

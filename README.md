@@ -6,6 +6,10 @@ Diktera ett svenskt textmeddelande och skicka det i konversationen du redan har 
 
 ## Prova den flytande knappen på din iPhone redan nu
 
+Det här är ett upplägg av iOS egna delar, att jämföra med medan appen ännu inte
+är installerad. Är appen installerad behövs det inte: Tap & Talk-tangentbordet
+dikterar direkt i skrivfältet, utan urklipp och utan genvägar.
+
 1. Öppna **Genvägar**, skapa en genväg och döp den till **Tap & Talk**.
 2. Lägg till **Diktera text**, välj svenska och låt dikteringen avslutas efter en paus. Lägg därefter till **Kopiera till urklipp**, med den dikterade texten som indata. Välj enbart lokalt urklipp om alternativet visas. Kör genvägen en gång och godkänn efterfrågad åtkomst.
 3. Öppna **Inställningar → Hjälpmedel → Tryck → AssistiveTouch**. Aktivera knappen. Under **Dubbeltryck**, bläddra till genvägarna och välj **Tap & Talk**. Om genvägen saknas i listan kan du koppla den till **Tryck på baksidan** under hjälpmedlens tryckinställningar.
@@ -106,10 +110,37 @@ har skrivit: den gemensamma början av gamla och nya tolkningen behålls, resten
 raderas tecken för tecken och det nya läggs till. Användarens egen text rörs
 aldrig.
 
-## iMessage · inbyggt tillägg
+### Kom igång-guiden på iPhone
 
-Källkoden under **ios** innehåller en iPhone-app och ett tillägg för Meddelanden.
-När tillägget är installerat öppnas det från iMessage-apparna i konversationen.
+Appen har samma femstegsguide som Android, i samma ordning: mikrofonen, lägg
+till tangentbordet, **Tillåt fullständig åtkomst**, byt till Tap & Talk, och ett
+provfält. Varje steg som görs i Inställningar visar hela vägen dit i klartext
+(`Inställningar → Allmänt → Tangentbord → Tangentbord → …`) och har en knapp som
+öppnar Inställningar. Guiden visas vid första start och öppnas sedan från
+hemskärmen.
+
+Skillnaden mot Android är vad appen får veta. Android kan läsa av alla fem
+stegen; iOS kan bara läsa av mikrofonen och taligenkänningen, genom samma
+`Dictation` som tilläggen använder. Om tangentbordet är tillagt, har fullständig
+åtkomst eller är framme just nu säger iOS ingenting till appen. De fyra stegen
+är därför märkta **kontrollera själv** och räknas aldrig som klara — ett
+påstående appen inte kan backa upp hör inte dit. Mikrofonsteget läses om vid
+`onAppear` och vid `UIApplication.didBecomeActiveNotification`, eftersom
+användaren kommer tillbaka från Inställningar utan att appen får något resultat.
+
+Provfältet är ett `UITextView`, inte ett `TextField`, av ett enda skäl: det kan
+läsa `textInputMode` och rapportera vilket språk tangentbordet uppger. Vilket
+tangentbord som skrev säger iOS inte, så kvittot redovisar det som går att mäta
+— att texten kom in, och språket — och säger sedan exakt vad användaren själv
+ska titta efter: den svarta raden med den gröna **Tala**-knappen.
+
+## iMessage · genvägen i Meddelanden
+
+Källkoden under **ios** innehåller en iPhone-app, ett tangentbord och ett tillägg
+för Meddelanden. Tangentbordet är huvudvägen och fungerar i varje app;
+iMessage-tillägget är en genväg i Meddelanden och pekas inte ut som förstaval,
+varken i appen eller i tillägget, som bär en rad om var huvudvägen går. När
+tillägget är installerat öppnas det från iMessage-apparna i konversationen.
 
 **Tala → Klar → läs → Skicka** använder svensk taligenkänning och skickar texten
 med `MSConversation.sendText` efter ditt tryck. **Tala om** ersätter utkastet.
@@ -173,8 +204,9 @@ Håll isär de tre stegen. En rad ändras först när steget faktiskt är gjort.
 
 | Del | Kompilerat | Uppladdat till TestFlight | Provat på iPhone |
 | --- | --- | --- | --- |
-| iOS-app och iMessage-tillägg | ja | nej | nej |
+| iOS-app och iMessage-tillägg | nej, ändrade sedan senaste bygget | nej | nej |
 | iOS-tangentbord | nej | nej | nej |
+| iOS kom igång-guide | nej | nej | nej |
 | Android | ja | — | nej |
 
 **iOS, uppmätt.** Osignerat Release-bygge för iPhone på macOS-byggare med
@@ -184,13 +216,16 @@ Xcode 16.4 och iOS 18.5 SDK. Noll varningar. Tillägget bäddas in i appen som
 ozonerade platser. 16 tester gröna på iPhone-simulator.
 
 **iOS, ännu inte mätt.** Tangentbordstillägget `se.rostsvar.mobile.Keyboard`,
-den delade dikteringen i `ios/Shared/Dictation.swift` och de sex nya testerna i
-`DictationEndingTests` är skrivna men **inte kompilerade** — det kräver en Mac
+den delade dikteringen i `ios/Shared/Dictation.swift`, de sex testerna i
+`DictationEndingTests`, kom igång-guiden i `ios/App/Onboarding.swift` och den
+omskrivna startskärmen är skrivna men **inte kompilerade** — det kräver en Mac
 eller en körning av iOS-flödet, och ingen körning har startats. Siffrorna ovan
 gäller bygget före de ändringarna.
 
-**Android, uppmätt.** Lokalt bygge med Build Tools 36.0.0 mot Platform 35,
-utan fel. `Tap-and-Talk-android-test.apk` är 158 109 byte, versionCode 6, med en
+**Android, uppmätt vid versionCode 6.** Lokalt bygge med Build Tools 36.0.0 mot
+Platform 35, utan fel. Sedan dess är versionen höjd till **7 / 0.7** utan nytt
+bygge, så siffrorna nedan gäller paketet med versionCode 6.
+`Tap-and-Talk-android-test.apk` är 158 109 byte, versionCode 6, med en
 `classes.dex` på 54 544 byte. Paketet begär `RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`,
 `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MICROPHONE` och `POST_NOTIFICATIONS` —
 inget nät, ingen lagring, ingen plats. Det har en startbar aktivitet,

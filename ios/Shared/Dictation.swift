@@ -52,6 +52,28 @@ final class Dictation {
 
     // MARK: - Tillstånd
 
+    /// Läser av om både taligenkänning och mikrofon redan är tillåtna, utan
+    /// att fråga. Guiden behöver det för att kunna bocka av steget när
+    /// användaren kommer tillbaka från Inställningar.
+    static var permitted: Bool {
+        guard SFSpeechRecognizer.authorizationStatus() == .authorized else { return false }
+        if #available(iOS 17.0, *) {
+            return AVAudioApplication.shared.recordPermission == .granted
+        }
+        return AVAudioSession.sharedInstance().recordPermission == .granted
+    }
+
+    /// Sant när användaren har svarat nej en gång. Då frågar iOS inte igen,
+    /// och enda vägen vidare är Inställningar.
+    static var permissionRefused: Bool {
+        if SFSpeechRecognizer.authorizationStatus() == .denied
+            || SFSpeechRecognizer.authorizationStatus() == .restricted { return true }
+        if #available(iOS 17.0, *) {
+            return AVAudioApplication.shared.recordPermission == .denied
+        }
+        return AVAudioSession.sharedInstance().recordPermission == .denied
+    }
+
     /// Frågar om taligenkänning och mikrofon. Svarar med nil när allt är
     /// tillåtet, annars med en mening att visa.
     func authorize(_ done: @escaping (String?) -> Void) {
