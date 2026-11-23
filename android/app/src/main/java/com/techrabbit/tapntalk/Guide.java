@@ -56,7 +56,18 @@ public class Guide extends Activity {
     /** Antalet steg som går att bocka av. */
     private static final int STEPS = 5;
 
+    /** Stegens namn. Används både när listan byggs och när den läses upp. */
+    private static final String[] NAMES = {
+            "Tillåt mikrofonen",
+            "Visa över andra appar",
+            "Låt appen skriva i fältet",
+            "Slå på tangentbordet",
+            "Byt till Tap&Talk"
+    };
+
     private TextView counter;
+    /** Raderna i steglistan. Varje rad är en knapp som går tillbaka dit. */
+    private final LinearLayout[] rows = new LinearLayout[STEPS];
     private final TextView[] marks = new TextView[STEPS];
     private final TextView[] labels = new TextView[STEPS];
     private TextView heading;
@@ -69,6 +80,13 @@ public class Guide extends Activity {
     private Button close;
 
     private int step = STEP_MIC;
+    /**
+     * Sant när användaren själv har valt ett steg i listan. Då slutar guiden
+     * gå framåt av sig själv: har man gått tillbaka för att läsa om steg 2
+     * ska listan inte rycka bort sidan under fingret nästa gång fönstret får
+     * fokus.
+     */
+    private boolean picked;
     private boolean micBlocked;
     /** Tangentbordet öppnas en gång när provet visas, sedan får användaren råda. */
     private boolean opened;
@@ -154,28 +172,39 @@ public class Guide extends Activity {
         counter.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         page.addView(counter, line(dp(4), dp(18)));
 
-        String[] names = {
-                "Tillåt mikrofonen",
-                "Visa över andra appar",
-                "Låt appen skriva i fältet",
-                "Slå på tangentbordet",
-                "Byt till Tap&Talk"
-        };
         for (int i = 0; i < STEPS; i++) {
+            final int which = i;
             LinearLayout rad = new LinearLayout(this);
             rad.setOrientation(LinearLayout.HORIZONTAL);
             rad.setGravity(Gravity.CENTER_VERTICAL);
+            // Listan såg ut som fem knappar men var fem etiketter, och steget
+            // gick bara framåt: den som ville läsa om steg 2 kom inte dit.
+            rad.setMinimumHeight(dp(48));
+            rad.setPadding(dp(4), dp(4), dp(8), dp(4));
+            rad.setBackground(Look.skin(0x00000000, Look.FIELD, dp(10)));
+            rad.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    picked = true;
+                    step = which;
+                    render();
+                }
+            });
 
             marks[i] = new TextView(this);
             marks[i].setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
-            marks[i].setWidth(dp(28));
+            marks[i].setMinWidth(dp(28));
+            // Bocken och ringen säger ingenting till den som inte ser dem.
+            // Hela raden bär texten i stället, satt i render().
+            marks[i].setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             rad.addView(marks[i]);
 
             labels[i] = new TextView(this);
-            labels[i].setText(names[i]);
+            labels[i].setText(NAMES[i]);
             labels[i].setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            labels[i].setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             rad.addView(labels[i]);
 
+            rows[i] = rad;
             page.addView(rad, line(dp(5), 0));
         }
 
@@ -291,9 +320,10 @@ public class Guide extends Activity {
         super.onResume();
         if (micOk(this)) micBlocked = false;
         // Guiden går framåt av sig själv, men aldrig bakåt: har man nått
-        // provet står man kvar där även om något stängs av under tiden.
+        // provet står man kvar där även om något stängs av under tiden. Och
+        // har användaren själv valt ett steg i listan rör sig ingenting.
         int next = firstUndone();
-        if (next > step) step = next;
+        if (!picked && next > step) step = next;
         render();
     }
 
@@ -303,6 +333,13 @@ public class Guide extends Activity {
             marks[i].setText(klar ? "✓" : (i == step ? "›" : "○"));
             marks[i].setTextColor(klar ? Look.GREEN : (i == step ? Look.INK : Look.OFF));
             labels[i].setTextColor(klar ? Look.INK : (i == step ? Look.INK : Look.OFF));
+            // Läget bars förut bara av glyfen och färgen. Nu står det i ord,
+            // och raden säger dessutom att den går att trycka på.
+            String lage = klar ? "Klart" : (i == step ? "Visas nu" : "Inte gjort än");
+            rows[i].setContentDescription(
+                    "Steg " + (i + 1) + " av " + STEPS + ", " + NAMES[i]
+                    + ". " + lage + ". Tryck för att läsa steget.");
+            rows[i].setSelected(i == step);
         }
 
         boolean testing = step == STEP_TEST;
@@ -461,6 +498,7 @@ public class Guide extends Activity {
         if (code != MIC_PERMISSION) return;
         if (micOk(this)) {
             micBlocked = false;
+            picked = false;
             step = firstUndone();
         } else {
             micBlocked = !shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO);
@@ -473,7 +511,7 @@ public class Guide extends Activity {
         super.onWindowFocusChanged(focus);
         if (!focus) return;
         int next = firstUndone();
-        if (next > step) step = next;
+        if (!picked && next > step) step = next;
         render();
         // Tangentbordet fälls upp en gång när provet nås, sedan råder
         // användaren. Det görs här, när fönstret verkligen har fokus.
