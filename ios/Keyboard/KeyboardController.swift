@@ -50,7 +50,43 @@ final class KeyboardController: UIInputViewController {
     private let rows = UIStackView()
     private let mic = UIButton(type: .system)
 
+    /// Tangentbordets höjd. Går att ändra när textstorleken byts.
+    private var tall: NSLayoutConstraint?
+
     deinit { ears.cancel() }
+
+    // MARK: - Dynamic Type
+
+    /// Systemfont som växer med textstorleken i Inställningar, med ett tak.
+    ///
+    /// Tangentbordet hade bara `.systemFont(ofSize:)` rakt igenom och ändrade
+    /// sig inte en punkt — medan appen skalar allt genom `TRFont` och
+    /// iMessage-tillägget genom `preferredFont`. Taket finns för att en
+    /// tangent har en bestämd höjd: bokstaven får växa, men inte ur rutan.
+    private func scaled(_ size: CGFloat,
+                        _ weight: UIFont.Weight = .regular,
+                        style: UIFont.TextStyle = .body,
+                        cap: CGFloat) -> UIFont {
+        UIFontMetrics(forTextStyle: style)
+            .scaledFont(for: .systemFont(ofSize: size, weight: weight),
+                        maximumPointSize: cap)
+    }
+
+    /// Höjden följer textstorleken, men inte obegränsat: ett tangentbord som
+    /// tar halva skärmen hjälper ingen. 296 vid standardstorlek.
+    private var boardHeight: CGFloat {
+        let want = UIFontMetrics(forTextStyle: .body)
+            .scaledValue(for: 296, compatibleWith: traitCollection)
+        return min(max(296, want), 430)
+    }
+
+    override func traitCollectionDidChange(_ previous: UITraitCollection?) {
+        super.traitCollectionDidChange(previous)
+        guard previous?.preferredContentSizeCategory
+                != traitCollection.preferredContentSizeCategory else { return }
+        tall?.constant = boardHeight
+        build()
+    }
 
     // MARK: - Vy
 
@@ -58,7 +94,8 @@ final class KeyboardController: UIInputViewController {
         super.viewDidLoad()
         view.backgroundColor = bg
 
-        status.font = .systemFont(ofSize: 12)
+        status.font = scaled(12, style: .caption1, cap: 20)
+        status.adjustsFontForContentSizeCategory = true
         status.textColor = dim
         status.numberOfLines = 2
         status.textAlignment = .center
@@ -74,7 +111,8 @@ final class KeyboardController: UIInputViewController {
 
         mic.backgroundColor = green
         mic.setTitleColor(darkInk, for: .normal)
-        mic.titleLabel?.font = .systemFont(ofSize: 20, weight: .semibold)
+        mic.titleLabel?.font = scaled(20, .semibold, cap: 28)
+        mic.titleLabel?.adjustsFontForContentSizeCategory = true
         // Primärknappen är ett piller i appen och i iMessage-tillägget. Här
         // är den en tangent bland tangenter, men radien följer höjden på samma
         // sätt, så formen känns igen.
@@ -101,9 +139,10 @@ final class KeyboardController: UIInputViewController {
         ])
 
         // Ett tangentbord måste själv säga hur högt det är.
-        let tall = view.heightAnchor.constraint(equalToConstant: 296)
-        tall.priority = UILayoutPriority(999)
-        tall.isActive = true
+        let high = view.heightAnchor.constraint(equalToConstant: boardHeight)
+        high.priority = UILayoutPriority(999)
+        high.isActive = true
+        tall = high
 
         build()
         render()
@@ -130,7 +169,8 @@ final class KeyboardController: UIInputViewController {
         button.setTitle(title, for: .normal)
         button.backgroundColor = keyFill
         button.setTitleColor(accent ? green : ink, for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: accent ? 16 : 19)
+        button.titleLabel?.font = accent ? scaled(16, cap: 22) : scaled(19, cap: 26)
+        button.titleLabel?.adjustsFontForContentSizeCategory = true
         button.titleLabel?.adjustsFontSizeToFitWidth = true
         button.titleLabel?.minimumScaleFactor = 0.6
         button.layer.cornerRadius = 7
