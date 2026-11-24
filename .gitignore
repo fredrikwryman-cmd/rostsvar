@@ -15,6 +15,13 @@ android/app/build/
 *.p12
 *.keystore
 *.jks
+
+# Releasenyckelns lösenord står i din egen gradle.properties i
+# användarmappen, utanför repot. En gradle.properties här inne är
+# nästan alltid en kopia av den som råkat hamna fel. Behövs en riktig
+# projektfil en dag: git add -f.
+gradle.properties
+local.properties
 *.p8
 *.mobileprovision
 *.cer

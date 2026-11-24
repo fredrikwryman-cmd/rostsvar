@@ -1,5 +1,19 @@
 plugins { id 'com.android.application' version '8.9.2' }
 
+// Releasenyckeln. De fyra värdena står i C:\Users\<du>\.gradle\gradle.properties,
+// alltså i användarmappen och aldrig i repot, och nyckelfilen ligger utanför
+// projektet. Saknas något av dem byggs release osignerad i stället för att
+// bygget kraschar: den som bara vill se att koden kompilerar ska inte behöva
+// ha nyckeln. En osignerad APK går inte att installera och en osignerad AAB
+// går inte att lämna till Google Play, så varningen nedan talar klarspråk.
+def keyPath = findProperty('TAPTALK_STORE_FILE')
+def keyStore = keyPath == null ? null : file(keyPath)
+def storeSecret = findProperty('TAPTALK_STORE_PASSWORD')
+def keyName = findProperty('TAPTALK_KEY_ALIAS')
+def keySecret = findProperty('TAPTALK_KEY_PASSWORD')
+def signable = keyStore != null && keyStore.exists() &&
+        storeSecret != null && keyName != null && keySecret != null
+
 android {
     namespace 'com.techrabbit.tapntalk'
     compileSdk 35
@@ -10,11 +24,40 @@ android {
         versionCode 10
         versionName '0.10'
     }
+    signingConfigs {
+        if (signable) {
+            release {
+                storeFile keyStore
+                storePassword storeSecret.toString()
+                keyAlias keyName.toString()
+                keyPassword keySecret.toString()
+            }
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig = signable ? signingConfigs.release : null
+        }
+    }
     // Enhetstesterna körs på en vanlig JVM, utan telefon och utan emulator.
     // Notices loggar felkoden med android.util.Log, och den klassen finns
     // bara som tom skalfil i android.jar: utan raden nedan kastar varje
     // anrop "not mocked" i stället för att göra ingenting.
     testOptions { unitTests.returnDefaultValues = true }
+}
+
+// Bara när något faktiskt byggs för release, inte vid varje gradle-anrop.
+if (!signable) {
+    tasks.matching { it.name == 'assembleRelease' || it.name == 'bundleRelease' }
+            .configureEach {
+                doFirst {
+                    logger.lifecycle('Tap&Talk: ingen releasenyckel hittad, resultatet '
+                            + 'blir OSIGNERAT. Lägg TAPTALK_STORE_FILE, '
+                            + 'TAPTALK_STORE_PASSWORD, TAPTALK_KEY_ALIAS och '
+                            + 'TAPTALK_KEY_PASSWORD i din egen '
+                            + '.gradle/gradle.properties.')
+                }
+            }
 }
 
 dependencies {

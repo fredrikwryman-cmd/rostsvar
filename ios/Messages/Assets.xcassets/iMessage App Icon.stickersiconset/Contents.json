@@ -3,9 +3,9 @@
     {
       "filename": "Marketing-1024x768.png",
       "idiom": "ios-marketing",
-      "platform": "ios",
       "scale": "1x",
-      "size": "1024x768"
+      "size": "1024x768",
+      "platform": "ios"
     },
     {
       "filename": "universal-27x20@2x.png",
