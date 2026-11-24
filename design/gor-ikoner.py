@@ -28,8 +28,8 @@ iOS
 Alla iOS-filer skrivs som RGB. En appikon med alfakanal avvisas vid
 uppladdning, och rundade hörn ritas aldrig in: iOS rundar själv.
 
-Skriptet ersätter android/tools/make_icons.py och ios/Tools/make_icons.py,
-som ritar den äldre grafiken ur appicon.svg i stället för ur källbilden.
+Det här är enda stället ikonerna görs på. De två äldre skripten, som ritade
+grafiken ur appicon.svg, är borttagna.
 """
 from __future__ import annotations
 

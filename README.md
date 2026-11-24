@@ -276,8 +276,9 @@ Bygget körs på en macOS-byggare hos GitHub Actions. Ingen Mac behövs lokalt.
   Connect-API:t, med samma hemligheter som TestFlight-flödet. Nyckeln behöver
   rollen App Manager eller Admin för att få registrera enheter.
 
-Ikonerna skapas av `ios/Tools/make_icons.py` (Python med Pillow) och ligger
-färdiga i repot. Kör skriptet igen bara om grafiken ska bytas.
+Ikonerna skapas av `design/gor-ikoner.py` (Python med Pillow) ur
+`design/ikon-taptalk.png` och ligger färdiga i repot. Samma skript gör
+Androids ikoner. Kör det igen bara om källbilden ska bytas.
 
 Lokalt på en Mac med Xcode och XcodeGen, i mappen `ios`:
 
@@ -298,7 +299,7 @@ python build_debug.py
 
 Resultatet hamnar i `build/TapnTalk-android-test.apk`. Byggskriptet skapar en lokal testnyckel vid första körningen. En lokalt ombyggd APK kan därför ha en annan signatur än den medföljande.
 
-Appikonen skapas av `android/tools/make_icons.py` (Python med Pillow) och ligger färdig i repot. Den ritar samma kaninmikrofon som iOS-ikonen, men i kvadratisk variant och i Androids lager: en bakgrund, en symbol och en helbild per täthet. Kör skriptet igen bara om grafiken ska bytas.
+Appikonerna skapas av `design/gor-ikoner.py` ur `design/ikon-taptalk.png` och ligger färdiga i repot: en helbild och en rund variant per täthet, plus den adaptiva ikonens två lager. Samma skript gör iOS-ikonerna och butiksikonen. Kör det igen bara om källbilden ska bytas.
 
 **Actions → Bygg Tap&Talk för Android (test-APK) → Run workflow** gör samma bygge på en Linux-byggare och lägger APK:n som artefakt. Det bygget använder Gradle och Androids vanliga felsökningsnyckel.
 
