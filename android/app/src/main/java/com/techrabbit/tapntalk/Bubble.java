@@ -341,6 +341,30 @@ public class Bubble extends Service {
         }
     }
 
+    /**
+     * Flyttar bubblans fönster till det läge som står i {@code where}.
+     *
+     * Dras Visa över andra appar tillbaka medan tjänsten lever river
+     * systemet fönstret, men tjänsten lever vidare och {@code knob} står
+     * kvar. Nästa flytt kastar då IllegalArgumentException — en krasch mitt
+     * i en dragning. Hellre lägger bubblan sig ned och säger varför.
+     *
+     * @return falskt när fönstret är borta. Då är tjänsten på väg ned och
+     *         den som ringde ska inte fortsätta.
+     */
+    private boolean place() {
+        if (knob == null || windows == null) return false;
+        try {
+            windows.updateViewLayout(knob, where);
+            return true;
+        } catch (RuntimeException gone) {
+            knob = null;
+            say("Bubblan kan inte visas längre. Kontrollera Visa över andra appar.");
+            stopSelf();
+            return false;
+        }
+    }
+
     /** Drar man bubblan flyttar den sig och fastnar vid närmaste kant. */
     private final class Drag implements View.OnTouchListener {
         private final int size;
@@ -371,7 +395,7 @@ public class Bubble extends Service {
                     where.x = wasX + dx;
                     where.y = wasY + dy;
                     hold();
-                    windows.updateViewLayout(knob, where);
+                    place();
                     return true;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
@@ -401,7 +425,7 @@ public class Bubble extends Service {
             hold();
             int wide = getResources().getDisplayMetrics().widthPixels;
             where.x = where.x + size / 2 < wide / 2 ? 0 : wide - size;
-            windows.updateViewLayout(knob, where);
+            if (!place()) return;
             getSharedPreferences(Guide.SETTINGS, MODE_PRIVATE).edit()
                     .putInt(AT_X, where.x).putInt(AT_Y, where.y).apply();
         }
@@ -462,7 +486,20 @@ public class Bubble extends Service {
         listening = true;
         working = true;
         paint();
-        speech.startListening(ask);
+        try {
+            speech.startListening(ask);
+        } catch (RuntimeException refused) {
+            // Taltjänsten kan neka i samma stund den ska börja. Utan den här
+            // grenen stod bubblan kvar och tolkade i evighet, med mikrofonen
+            // tagen från de andra ytorna i sjuttio sekunder.
+            listening = false;
+            working = false;
+            paint();
+            Mic.release(this);
+            speech.destroy();
+            speech = null;
+            say(Notices.failure(SpeechRecognizer.ERROR_CLIENT, Notices.BUBBLE));
+        }
     }
 
     /** Startar eller stoppar punkterna. */

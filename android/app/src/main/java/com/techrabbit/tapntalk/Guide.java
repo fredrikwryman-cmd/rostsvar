@@ -442,8 +442,11 @@ public class Guide extends Activity {
         switch (step) {
             case STEP_MIC:
                 if (micBlocked) {
-                    startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.parse("package:" + getPackageName())));
+                    // Genom open(): rutan finns inte under den adressen på
+                    // alla tillverkares skal, och ett nej får inte krascha
+                    // guiden. De andra stegen har gått den vägen sedan början.
+                    open(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:" + getPackageName())), null);
                 } else {
                     requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION);
                 }

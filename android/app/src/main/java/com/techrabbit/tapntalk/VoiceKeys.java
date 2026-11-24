@@ -506,7 +506,19 @@ public class VoiceKeys extends InputMethodService {
         listening = true;
         say(Notices.LISTENING);
         paintMic();
-        speech.startListening(ask);
+        try {
+            speech.startListening(ask);
+        } catch (RuntimeException refused) {
+            // Nekar taltjänsten starten stod tangentbordet kvar och sa
+            // "Lyssnar" utan att lyssna, med mikrofonen tagen.
+            listening = false;
+            accepting = false;
+            Mic.release(this);
+            speech.destroy();
+            speech = null;
+            paintMic();
+            say(Notices.failure(SpeechRecognizer.ERROR_CLIENT, Notices.TALK));
+        }
     }
 
     /** Klar-knappen: mikrofonen stängs, men sista svaret tas emot. */

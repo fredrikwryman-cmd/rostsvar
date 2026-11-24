@@ -344,7 +344,11 @@ public class Home extends Activity {
         }
         // Notisen är Androids krav på en förgrundstjänst. Nekas den körs
         // bubblan ändå, men då syns den inte i notisfältet.
-        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+        // Rättigheten finns först i Android 13. På 11 och 12 är den ett okänt
+        // namn: ingen ruta visas, svaret är alltid nej, och appen ber om en
+        // rättighet som inte finns. Där visas notisen utan att frågas om.
+        if (android.os.Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTE_PERMISSION);
         }
@@ -478,8 +482,16 @@ public class Home extends Activity {
     }
 
     private void openSettings() {
-        startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.parse("package:" + getPackageName())));
+        try {
+            startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:" + getPackageName())));
+        } catch (RuntimeException missing) {
+            // Tillverkarnas skal har inte alla rutor. Guiden gör samma sak i
+            // open(): hellre ett besked om var inställningen ligger.
+            note = "Telefonen öppnade inte inställningarna. Slå på mikrofonen för "
+                    + "Tap&Talk under Appar i telefonens inställningar.";
+            render();
+        }
     }
 
     @Override public void onRequestPermissionsResult(int code, String[] perms, int[] result) {
@@ -510,7 +522,15 @@ public class Home extends Activity {
             return;
         }
         if (speech == null) {
-            if (!SpeechRecognizer.isRecognitionAvailable(this)) { render(); return; }
+            if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+                // Spärren togs två rader upp. Lämnas den inte tillbaka är
+                // mikrofonen låst för bubblan och tangentbordet i sjuttio
+                // sekunder, utan att någon lyssnar.
+                Mic.release(this);
+                note = Notices.NO_SERVICE;
+                render();
+                return;
+            }
             speech = SpeechRecognizer.createSpeechRecognizer(this);
             speech.setRecognitionListener(new Ears());
         }
@@ -529,7 +549,17 @@ public class Home extends Activity {
         working = true;
         note = "Mikrofonen är på. Tala svenska och tryck på Klar när du är färdig.";
         render();
-        speech.startListening(ask);
+        try {
+            speech.startListening(ask);
+        } catch (RuntimeException refused) {
+            // Nekas starten låg appen kvar på "Mikrofonen är på" utan
+            // mikrofon, och spärren var tagen tills den blev gammal.
+            closeRound();
+            speech.destroy();
+            speech = null;
+            note = Notices.failure(SpeechRecognizer.ERROR_CLIENT, Notices.TALK);
+            render();
+        }
     }
 
     private void stopListening() {
