@@ -35,7 +35,7 @@ svenska. Hela testinstruktionen att skicka med filen står i
 5. Läs igenom texten och rätta den för hand om du vill. Ett nytt tryck på **Tala om** lägger till mer tal efter den text som redan står där.
 6. Tryck på **Skicka**. Androids egen delningsruta öppnas och du väljer själv vilken app texten ska till. Appen skickar aldrig något på egen hand.
 
-Appen begär bara mikrofonen. Den har inget konto, ingen analys och når inget nät själv — men telefonens taltjänst, som gör om talet till text, kan använda internet. Inget spelas in och ingen text sparas; stänger du appen är fältet tomt nästa gång.
+Appen begär bara mikrofonen. Den har inget konto, ingen analys och når inget nät själv. Talet tolkas på telefonen när den klarar det: appen ber om enhetstolkning först, både på Android och iPhone. Saknas den går omgången över till telefonens vanliga taltjänst, och den kan använda internet. Inget spelas in och ingen text sparas; stänger du appen är fältet tomt nästa gång.
 
 ### Den flytande knappen
 

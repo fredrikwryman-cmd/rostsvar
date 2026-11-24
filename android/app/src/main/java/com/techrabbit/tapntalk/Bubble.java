@@ -22,7 +22,6 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.provider.Settings;
 import android.speech.RecognitionListener;
-import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -64,6 +63,9 @@ public class Bubble extends Service {
     private TextView knob;
 
     private SpeechRecognizer speech;
+
+    /** Vilken taltjänst omgången kör på, och om bytet redan är gjort. */
+    private final Speech picker = new Speech();
     private boolean listening;
     /** Hur många punkter som visas just nu medan taltjänsten slutför. */
     private int dots;
@@ -449,7 +451,7 @@ public class Bubble extends Service {
             say("Texten tolkas. Vänta ett ögonblick.");
             return;
         }
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+        if (!Speech.available(this)) {
             say(Notices.NO_SERVICE);
             return;
         }
@@ -467,7 +469,16 @@ public class Bubble extends Service {
             return;
         }
         if (speech == null) {
-            speech = SpeechRecognizer.createSpeechRecognizer(this);
+            try {
+                speech = Speech.open(this, picker);
+            } catch (RuntimeException refused) {
+                // Ingen av de två tjänsterna gick att skapa. Spärren togs
+                // två rader upp och måste tillbaka.
+                speech = null;
+                Mic.release(this);
+                say(Notices.failure(SpeechRecognizer.ERROR_CLIENT, Notices.BUBBLE));
+                return;
+            }
             speech.setRecognitionListener(new Ears());
         }
         heard = "";
@@ -475,13 +486,7 @@ public class Bubble extends Service {
         // användaren bytte till medan tolkningen pågick.
         target = Writer.focusedPackage();
 
-        Intent ask = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        ask.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        ask.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "sv-SE");
-        ask.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "sv-SE");
-        ask.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-        ask.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
-        ask.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
+        Intent ask = Speech.request(getPackageName());
 
         listening = true;
         working = true;
@@ -502,6 +507,46 @@ public class Bubble extends Service {
         }
     }
 
+    /**
+     * Gör om omgången på den vanliga taltjänsten.
+     *
+     * Mikrofonspärren hålls kvar hela vägen: släpps den här kan en annan yta
+     * ta den mellan de två försöken, och användaren skulle få "mikrofonen
+     * används någon annanstans" mitt i sin egen diktering.
+     *
+     * @return sant när det nya försöket startade. Falskt betyder att
+     *         {@code onError} ska gå vidare som om inget byte fanns, och då
+     *         är det {@code close()} där som släpper spärren.
+     */
+    private boolean retry() {
+        hand.removeCallbacks(giveUp);
+        drop();
+        try {
+            speech = Speech.cloud(this, picker);
+            speech.setRecognitionListener(new Ears());
+            listening = true;
+            working = true;
+            paint();
+            beat(true);
+            speech.startListening(Speech.request(getPackageName()));
+            return true;
+        } catch (RuntimeException refused) {
+            drop();
+            return false;
+        }
+    }
+
+    /** River taltjänsten utan att bry sig om att den redan kan vara riven. */
+    private void drop() {
+        if (speech == null) return;
+        try {
+            speech.destroy();
+        } catch (RuntimeException gone) {
+            // Redan riven. Inget att göra, inget att säga.
+        }
+        speech = null;
+    }
+
     /** Startar eller stoppar punkterna. */
     private void beat(boolean on) {
         hand.removeCallbacks(tick);
@@ -512,6 +557,7 @@ public class Bubble extends Service {
     private void quiet() {
         listening = false;
         working = false;
+        picker.roundOver();
         hand.removeCallbacks(giveUp);
         beat(false);
         Mic.release(this);
@@ -638,6 +684,11 @@ public class Bubble extends Service {
 
         @Override public void onError(int code) {
             if (!working) return;
+            // Enhetstolkningen kan vara oduglig för svenska på just den
+            // här telefonen. Då görs omgången om på den vanliga
+            // taltjänsten, en gång, utan att släppa mikrofonen och utan
+            // att kasta något som redan hörts.
+            if (picker.swapToCloud(code, heard.length() > 0) && retry()) return;
             close();
             // Hann något sägas innan felet ska det levereras ändå.
             if (heard.length() > 0) {
@@ -660,6 +711,7 @@ public class Bubble extends Service {
         private void close() {
             working = false;
             listening = false;
+            picker.roundOver();
             hand.removeCallbacks(giveUp);
             beat(false);
             Mic.release(Bubble.this);

@@ -10,7 +10,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.speech.RecognitionListener;
-import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.text.InputType;
 import android.util.TypedValue;
@@ -81,6 +80,9 @@ public class VoiceKeys extends InputMethodService {
     private boolean symbols;
 
     private SpeechRecognizer speech;
+
+    /** Vilken taltjänst omgången kör på, och om bytet redan är gjort. */
+    private final Speech picker = new Speech();
     private boolean listening;
     /**
      * Sant mellan Tala och sista svaret. Rör användaren tangenterna under
@@ -472,7 +474,7 @@ public class VoiceKeys extends InputMethodService {
             startActivity(open);
             return;
         }
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+        if (!Speech.available(this)) {
             say(Notices.NO_SERVICE);
             return;
         }
@@ -491,18 +493,21 @@ public class VoiceKeys extends InputMethodService {
             return;
         }
         if (speech == null) {
-            speech = SpeechRecognizer.createSpeechRecognizer(this);
+            try {
+                speech = Speech.open(this, picker);
+            } catch (RuntimeException refused) {
+                // Ingen av de två tjänsterna gick att skapa. Spärren togs
+                // två rader upp och måste tillbaka.
+                speech = null;
+                Mic.release(this);
+                say(Notices.failure(SpeechRecognizer.ERROR_CLIENT, Notices.TALK));
+                return;
+            }
             speech.setRecognitionListener(new Ears());
         }
         pending = "";
         accepting = true;
-        Intent ask = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        ask.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        ask.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "sv-SE");
-        ask.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "sv-SE");
-        ask.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-        ask.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
-        ask.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
+        Intent ask = Speech.request(getPackageName());
         listening = true;
         say(Notices.LISTENING);
         paintMic();
@@ -519,6 +524,46 @@ public class VoiceKeys extends InputMethodService {
             paintMic();
             say(Notices.failure(SpeechRecognizer.ERROR_CLIENT, Notices.TALK));
         }
+    }
+
+    /**
+     * Gör om omgången på den vanliga taltjänsten.
+     *
+     * Mikrofonspärren hålls kvar hela vägen: släpps den här kan bubblan eller
+     * appen ta den mellan de två försöken, och användaren skulle få veta att
+     * mikrofonen används någon annanstans mitt i sin egen diktering.
+     *
+     * @return sant när det nya försöket startade. Falskt betyder att
+     *         {@code onError} går vidare som om inget byte fanns, och då är
+     *         det grenen där som släpper spärren och lämnar ett besked.
+     */
+    private boolean retry() {
+        hand.removeCallbacks(giveUp);
+        drop();
+        try {
+            speech = Speech.cloud(this, picker);
+            speech.setRecognitionListener(new Ears());
+            accepting = true;
+            listening = true;
+            say(Notices.LISTENING);
+            paintMic();
+            speech.startListening(Speech.request(getPackageName()));
+            return true;
+        } catch (RuntimeException refused) {
+            drop();
+            return false;
+        }
+    }
+
+    /** River taltjänsten utan att bry sig om att den redan kan vara riven. */
+    private void drop() {
+        if (speech == null) return;
+        try {
+            speech.destroy();
+        } catch (RuntimeException gone) {
+            // Redan riven. Inget att göra, inget att säga.
+        }
+        speech = null;
     }
 
     /** Klar-knappen: mikrofonen stängs, men sista svaret tas emot. */
@@ -551,6 +596,7 @@ public class VoiceKeys extends InputMethodService {
         if (!accepting && !listening && pending.length() == 0) return;
         accepting = false;
         listening = false;
+        picker.roundOver();
         hand.removeCallbacks(giveUp);
         Mic.release(this);
         if (speech != null) speech.cancel();
@@ -563,6 +609,7 @@ public class VoiceKeys extends InputMethodService {
     private void closeMicrophone() {
         accepting = false;
         listening = false;
+        picker.roundOver();
         hand.removeCallbacks(giveUp);
         Mic.release(this);
         settle(false);
@@ -641,6 +688,7 @@ public class VoiceKeys extends InputMethodService {
             if (!accepting) return;
             accepting = false;
             listening = false;
+            picker.roundOver();
             hand.removeCallbacks(giveUp);
             Mic.release(VoiceKeys.this);
             String heard = first(results);
@@ -660,8 +708,14 @@ public class VoiceKeys extends InputMethodService {
         }
         @Override public void onError(int code) {
             if (!accepting) return;
+            // Enhetstolkningen kan vara oduglig för svenska på just den
+            // här telefonen. Då görs omgången om på den vanliga
+            // taltjänsten, en gång, utan att släppa mikrofonen och utan
+            // att kasta den preliminära texten.
+            if (picker.swapToCloud(code, pending.length() > 0) && retry()) return;
             accepting = false;
             listening = false;
+            picker.roundOver();
             hand.removeCallbacks(giveUp);
             Mic.release(VoiceKeys.this);
             // Det som redan hörts behålls, så ett avbrott aldrig äter text.

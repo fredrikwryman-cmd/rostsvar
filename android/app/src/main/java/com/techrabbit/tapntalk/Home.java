@@ -9,7 +9,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.speech.RecognitionListener;
-import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.text.Editable;
 import android.text.InputType;
@@ -71,6 +70,9 @@ public class Home extends Activity {
     private Button send;
 
     private SpeechRecognizer speech;
+
+    /** Vilken taltjänst omgången kör på, och om bytet redan är gjort. */
+    private final Speech picker = new Speech();
     private boolean listening;
     /**
      * Sant från Tala till sista svaret, också efter att mikrofonen stängts.
@@ -298,7 +300,7 @@ public class Home extends Activity {
 
         setContentView(page);
 
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+        if (!Speech.available(this)) {
             note = Notices.NO_SERVICE;
         }
         render();
@@ -396,7 +398,7 @@ public class Home extends Activity {
     /** Allt som syns härleds ur läget, så att knapparna aldrig ljuger. */
     private void render() {
         boolean hasText = draft.getText().toString().trim().length() > 0;
-        boolean canTalk = SpeechRecognizer.isRecognitionAvailable(this);
+        boolean canTalk = Speech.available(this);
 
         write(status, note);
         spin.setVisibility(working && !listening ? View.VISIBLE : View.GONE);
@@ -522,7 +524,7 @@ public class Home extends Activity {
             return;
         }
         if (speech == null) {
-            if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            if (!Speech.available(this)) {
                 // Spärren togs två rader upp. Lämnas den inte tillbaka är
                 // mikrofonen låst för bubblan och tangentbordet i sjuttio
                 // sekunder, utan att någon lyssnar.
@@ -531,19 +533,23 @@ public class Home extends Activity {
                 render();
                 return;
             }
-            speech = SpeechRecognizer.createSpeechRecognizer(this);
+            try {
+                speech = Speech.open(this, picker);
+            } catch (RuntimeException refused) {
+                // Varken enhetstolkningen eller den vanliga tjänsten gick
+                // att skapa. Spärren är tagen och måste tillbaka.
+                speech = null;
+                Mic.release(this);
+                note = Notices.failure(SpeechRecognizer.ERROR_CLIENT, Notices.TALK);
+                render();
+                return;
+            }
             speech.setRecognitionListener(new Ears());
         }
         base = draft.getText().toString().trim();
         if (base.length() > 0) base = base + " ";
 
-        Intent ask = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        ask.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        ask.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "sv-SE");
-        ask.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "sv-SE");
-        ask.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-        ask.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
-        ask.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
+        Intent ask = Speech.request(getPackageName());
 
         listening = true;
         working = true;
@@ -562,6 +568,46 @@ public class Home extends Activity {
         }
     }
 
+    /**
+     * Gör om omgången på den vanliga taltjänsten.
+     *
+     * Mikrofonspärren hålls kvar hela vägen: släpps den här kan bubblan eller
+     * tangentbordet ta den mellan de två försöken, och användaren skulle få
+     * veta att mikrofonen används någon annanstans mitt i sin egen diktering.
+     *
+     * @return sant när det nya försöket startade. Falskt betyder att
+     *         {@code onError} går vidare som om inget byte fanns, och då är
+     *         det {@code closeRound()} där som släpper spärren.
+     */
+    private boolean retry() {
+        hand.removeCallbacks(giveUp);
+        drop();
+        try {
+            speech = Speech.cloud(this, picker);
+            speech.setRecognitionListener(new Ears());
+            listening = true;
+            working = true;
+            note = "Mikrofonen är på. Tala svenska och tryck på Klar när du är färdig.";
+            render();
+            speech.startListening(Speech.request(getPackageName()));
+            return true;
+        } catch (RuntimeException refused) {
+            drop();
+            return false;
+        }
+    }
+
+    /** River taltjänsten utan att bry sig om att den redan kan vara riven. */
+    private void drop() {
+        if (speech == null) return;
+        try {
+            speech.destroy();
+        } catch (RuntimeException gone) {
+            // Redan riven. Inget att göra, inget att säga.
+        }
+        speech = null;
+    }
+
     private void stopListening() {
         if (!listening) return;
         listening = false;
@@ -576,6 +622,7 @@ public class Home extends Activity {
     private void closeRound() {
         working = false;
         listening = false;
+        picker.roundOver();
         hand.removeCallbacks(giveUp);
         Mic.release(this);
     }
@@ -602,7 +649,7 @@ public class Home extends Activity {
         // Taltjänsten kan ha kommit eller försvunnit medan appen låg undan —
         // nätet, eller en rösttjänst som avinstallerats. Hellre ett besked i
         // förväg än ett fel efter att användaren talat färdigt.
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+        if (!Speech.available(this)) {
             note = Notices.NO_SERVICE;
         } else if (Notices.NO_SERVICE.equals(note)) {
             note = "Tryck på Tala och diktera. Du läser texten och väljer själv var den skickas.";
@@ -655,6 +702,11 @@ public class Home extends Activity {
         }
         @Override public void onError(int code) {
             if (!working) return;
+            // Enhetstolkningen kan vara oduglig för svenska på just den
+            // här telefonen. Då görs omgången om på den vanliga
+            // taltjänsten, en gång, utan att släppa mikrofonen och utan
+            // att kasta det som redan står i fältet.
+            if (picker.swapToCloud(code, heardThisRound()) && retry()) return;
             closeRound();
             // Hann något höras står det kvar i fältet, och då är det inte
             // sant att inget uppfattades. Regeln bor i Notices.afterFailure.

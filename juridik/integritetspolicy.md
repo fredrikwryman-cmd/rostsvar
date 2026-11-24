@@ -1,6 +1,6 @@
 # Integritetspolicy för Tap&Talk
 
-Senast ändrad 24 november 2026. Gäller Tap&Talk för Android och iOS.
+Senast ändrad 25 november 2026. Gäller Tap&Talk för Android och iOS.
 
 Ansvarig för appen är AiM Studios. Frågor och begäranden går till
 info@aimstudios.se.
@@ -12,8 +12,10 @@ nedan går att läsa i appens källkod.
 
 Tap&Talk är ett verktyg som gör tal till text. Appen har inget konto, ingen
 inloggning, ingen server och inga annonser. Den skickar ingenting någonstans
-av egen kraft. Taligenkänningen är den enda delen som kan nå internet, och den
-sköts av operativsystemet, inte av oss.
+av egen kraft. Taligenkänningen är den enda delen som kan nå internet, och
+den sköts av operativsystemet, inte av oss. Appen ber om tolkning på
+telefonen först, på både Android och iPhone. Molnet används bara när
+telefonen saknar stödet.
 
 ## Vilka uppgifter som behandlas
 
@@ -36,19 +38,24 @@ dig eller din telefon.
 ## Ljudet och tredje part
 
 Tap&Talk har ingen egen taligenkänning. Appen lämnar ljudet till den tjänst
-som redan finns i telefonen, och det är där avgörandet ligger.
+som redan finns i telefonen, och begär tolkning på enheten först. Lyckas det
+lämnar ljudet aldrig telefonen.
 
-**Android.** Appen anropar systemets taligenkänning (`SpeechRecognizer`) och
-ber om svenska. På de flesta telefoner är tjänsten Googles, och då gäller
-Googles villkor och integritetspolicy för behandlingen. Om Googles app för
-taligenkänning har svenska hämtad för offline-bruk sker tolkningen på
-telefonen; i annat fall skickas ljudet till Googles servrar. Appen begär inte
-uttryckligen offline-läge, så vilket av de två som gäller avgörs av telefonens
-inställningar och av vilka språkpaket som är hämtade. Appen vet inte vilket
-som sker, och vi får aldrig se ljudet eller texten som skickas.
+**Android.** Appen frågar systemet om enhetstolkning finns
+(`isOnDeviceRecognitionAvailable`) och tar den när svaret är ja, med
+`createOnDeviceSpeechRecognizer`. Det kräver Android 13 eller senare och att
+svenska är hämtad i telefonens taltjänst. Då sker tolkningen på telefonen och
+inget ljud skickas vidare.
 
-**iOS.** Appen använder Apples taligenkänning (`SFSpeechRecognizer`) och begär
-tolkning på enheten när telefonen stöder det
+Saknas enhetstolkningen, eller visar den sig under dikteringen inte klara
+svenska, går omgången över till telefonens vanliga taltjänst. På de flesta
+telefoner är det Googles, och då skickas ljudet till Googles servrar, varpå
+Googles villkor och integritetspolicy gäller för behandlingen. Alternativet
+hade varit att vägra diktera, och det är ingen hjälp för den som behöver
+appen.
+
+**iOS.** Samma ordning. Appen använder Apples taligenkänning
+(`SFSpeechRecognizer`) och begär tolkning på enheten när telefonen stöder det
 (`requiresOnDeviceRecognition` sätts efter `supportsOnDeviceRecognition`). Gör
 den inte det skickas ljudet till Apples servrar, och då gäller Apples villkor.
 
@@ -138,8 +145,9 @@ det inget register hos AiM Studios att begära ut, rätta eller radera. Du har
 av dig med frågor. Vill du ta bort det lilla som ligger på telefonen räcker det
 att avinstallera appen.
 
-Behandlingen hos Google eller Apple, i de fall ljudet går till deras servrar,
-sker under deras eget ansvar. Rättigheter som rör den behandlingen vänder du
+Behandlingen hos Google eller Apple, i de fall telefonen saknar
+enhetstolkning och ljudet går till deras servrar, sker under deras eget
+ansvar. Rättigheter som rör den behandlingen vänder du
 dig till dem med. Båda beskriver den i sina egna integritetspolicyer.
 
 Anser du att något har gått fel kan du klaga hos Integritetsskyddsmyndigheten
@@ -157,12 +165,3 @@ datumet högst upp byts.
 ## Kontakt
 
 info@aimstudios.se
-
-## Öppen fråga
-
-En sak går inte att svara på utifrån koden: om ljudet på Android faktiskt
-lämnar telefonen. Appen begär inte offline-läge, och svaret beror därför på
-vilken taltjänst som är installerad och om svenska är hämtad för offline-bruk.
-Texten ovan säger därför att båda kan ske. Vill vi kunna påstå att ljudet
-stannar på telefonen måste appen begära offline-läge, och då slutar
-dikteringen fungera på telefoner som saknar språkpaketet.

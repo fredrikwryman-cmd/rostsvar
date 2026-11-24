@@ -1,5 +1,6 @@
 package com.techrabbit.tapntalk;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -31,14 +32,16 @@ import java.nio.file.Paths;
 public class StartListeningGuardTest {
 
     /**
-     * Ytorna som startar taligenkänning: filen, det som nollar läget, och
-     * det som lämnar tillbaka mikrofonspärren. Hemskärmen gör båda genom
+     * Ytorna som startar taligenkänning: filen, det som nollar läget, det
+     * som lämnar tillbaka mikrofonspärren i den nekade starten, och det som
+     * lämnar tillbaka den i felgrenen. Hemskärmen gör allt genom
      * closeRound(), de andra två rad för rad.
      */
     private static final String[][] SURFACES = {
-            {"Bubble.java", "working = false", "Mic.release(this)"},
-            {"VoiceKeys.java", "accepting = false", "Mic.release(this)"},
-            {"Home.java", "closeRound()", "closeRound()"},
+            {"Bubble.java", "working = false", "Mic.release(this)", "close()"},
+            {"VoiceKeys.java", "accepting = false", "Mic.release(this)",
+                    "Mic.release(VoiceKeys.this)"},
+            {"Home.java", "closeRound()", "closeRound()", "closeRound()"},
     };
 
     @Test public void varje_start_ligger_i_en_try_som_nollar_laget() throws IOException {
@@ -52,14 +55,25 @@ public class StartListeningGuardTest {
             assertTrue(name + " startar ingen taligenkänning längre, så testet "
                     + "pekar på fel fil", calls > 0);
 
-            int guarded = count(source, "try { speech.startListening(");
-            if (guarded != calls) {
-                fail(name + " har " + calls + " anrop till startListening men "
-                        + guarded + " av dem ligger i en try. Nekar taltjänsten "
-                        + "starten står ytan kvar som lyssnande med mikrofonen tagen.");
+            // Ytorna har två startar nu: den vanliga, och omförsöket på den
+            // vanliga taltjänsten när enhetstolkningen visat sig oduglig.
+            // Båda ska ligga i en try, men de ser olika ut i källan, så det
+            // som räknas är om det finns en try som fortfarande är öppen.
+            for (int at = source.indexOf("speech.startListening("); at >= 0;
+                    at = source.indexOf("speech.startListening(", at + 1)) {
+                if (!insideOpenTry(source, at)) {
+                    fail(name + " har ett anrop till startListening utanför en "
+                            + "try. Nekar taltjänsten starten står ytan kvar som "
+                            + "lyssnande med mikrofonen tagen.");
+                }
+                String after = source.substring(at, Math.min(source.length(), at + 500));
+                assertTrue(name + ": en start utan catch för en nekad start",
+                        after.contains("} catch (RuntimeException"));
             }
 
             int at = source.indexOf("try { speech.startListening(");
+            assertTrue(name + ": den vanliga starten ligger inte i en egen try",
+                    at > 0);
             String caught = source.substring(at, Math.min(source.length(), at + 700));
             assertTrue(name + ": grenen som fångar en nekad start saknar catch",
                     caught.contains("} catch (RuntimeException"));
@@ -99,7 +113,7 @@ public class StartListeningGuardTest {
         int at = source.indexOf("private void startListening() {");
         assertTrue("hemskärmen har ingen startListening() längre", at > 0);
         String method = source.substring(at, Math.min(source.length(), at + 1400));
-        int asks = method.indexOf("if (!SpeechRecognizer.isRecognitionAvailable(this))");
+        int asks = method.indexOf("if (!Speech.available(this))");
         assertTrue("startListening() frågar inte längre om taltjänsten finns", asks > 0);
         assertTrue("spärren tas inte i startListening()", method.contains("Mic.take(this)"));
         String branch = method.substring(asks, Math.min(method.length(), asks + 500));
@@ -107,7 +121,92 @@ public class StartListeningGuardTest {
                 branch.contains("Mic.release(this)"));
     }
 
+    /**
+     * Varje yta skapar sin taltjänst genom Speech, och ingen annanstans.
+     *
+     * Valet mellan enhetstolkning och den vanliga taltjänsten ska bo på ett
+     * ställe. Står ett createSpeechRecognizer kvar i en yta kör just den ytan
+     * molnet oavsett vad telefonen klarar.
+     */
+    @Test public void ingen_yta_skapar_taltjansten_sjalv() throws IOException {
+        for (String[] surface : SURFACES) {
+            String name = surface[0];
+            String source = flat(read(name));
+            assertTrue(name + " skapar ingen taltjänst genom Speech",
+                    source.contains("Speech.open(this, picker)"));
+            assertFalse(name + " skapar taltjänsten själv i stället för genom "
+                            + "Speech, och kör då molnet vad telefonen än klarar",
+                    source.contains("SpeechRecognizer.createSpeechRecognizer"));
+            assertFalse(name + " frågar om taltjänsten utan att räkna med "
+                            + "enhetstolkningen",
+                    source.contains("SpeechRecognizer.isRecognitionAvailable"));
+        }
+    }
+
+    /**
+     * Felgrenen frågar om bytet, och gör det innan omgången stängs.
+     *
+     * Stängdes omgången först vore spärren redan släppt när omförsöket
+     * startade, och en annan yta kunde ta mikrofonen mellan de två försöken.
+     */
+    @Test public void felgrenen_fragar_om_bytet_fore_den_stanger() throws IOException {
+        for (String[] surface : SURFACES) {
+            String name = surface[0];
+            String source = flat(read(name));
+            int at = source.indexOf("public void onError(int code) {");
+            assertTrue(name + " har ingen onError längre", at > 0);
+            String body = source.substring(at, Math.min(source.length(), at + 900));
+            int asks = body.indexOf("picker.swapToCloud(");
+            assertTrue(name + ": felgrenen frågar inte om bytet till den "
+                    + "vanliga taltjänsten", asks > 0);
+            assertTrue(name + ": bytet görs inte av om det inte går",
+                    body.contains("&& retry()) return;"));
+            int releases = body.indexOf(surface[3]);
+            assertTrue(name + ": felgrenen släpper inte spärren", releases > 0);
+            assertTrue(name + ": omgången stängs innan bytet hunnit frågas, "
+                    + "och då är spärren fri mitt i dikteringen", asks < releases);
+        }
+    }
+
+    /**
+     * Omförsöket håller spärren. Släpptes den där kunde bubblan eller
+     * tangentbordet ta mikrofonen mellan de två försöken, och användaren
+     * skulle få veta att mikrofonen används någon annanstans mitt i sin egen
+     * diktering.
+     */
+    @Test public void omforsoket_slapper_aldrig_sparren() throws IOException {
+        for (String[] surface : SURFACES) {
+            String name = surface[0];
+            String source = flat(read(name));
+            int at = source.indexOf("private boolean retry() {");
+            assertTrue(name + " har inget omförsök", at > 0);
+            String body = source.substring(at, Math.min(source.length(), at + 900));
+            int ends = body.indexOf("private void drop()");
+            if (ends > 0) body = body.substring(0, ends);
+            assertFalse(name + ": omförsöket släpper spärren",
+                    body.contains("Mic.release"));
+            assertFalse(name + ": omförsöket stänger omgången",
+                    body.contains("closeRound()"));
+            assertTrue(name + ": omförsöket tar inte den vanliga taltjänsten",
+                    body.contains("Speech.cloud(this, picker)"));
+            assertTrue(name + ": omförsöket startar ingen ny lyssning",
+                    body.contains("speech.startListening("));
+        }
+    }
+
     // ------------------------------------------------------------------ hjälp
+
+    /**
+     * Sant när tecknet på plats {@code at} ligger inne i en try som ännu
+     * inte stängts. Enklaste måttet som tål att try-blocket innehåller mer
+     * än själva anropet.
+     */
+    private static boolean insideOpenTry(String source, int at) {
+        String before = source.substring(0, at);
+        int opened = before.lastIndexOf("try {");
+        if (opened < 0) return false;
+        return before.indexOf("}", opened) < 0;
+    }
 
     /** Allt mellanrum blir ett blanksteg, så indraget inte spelar någon roll. */
     private static String flat(String source) {

@@ -6,15 +6,22 @@ koden inte avgöra.
 
 Appens versionsnamn när det här skrevs: 0.10, versionCode 10.
 
+Sedan direktiv 29 begär appen tolkning på enheten först, på båda
+plattformarna. Går det lämnar inget ljud telefonen. Den vanliga taltjänsten
+används bara när telefonen saknar enhetstolkning, eller när den visar sig
+inte klara svenska. Svaren nedan utgår från att reservvägen finns och
+används på en del telefoner, för det gör den.
+
 ## 1. Data collection and security
 
 **Does your app collect or share any of the required user data types?**
 → **No**, under förutsättning att Play räknar Androids systemtaligenkänning
 som en tjänst på enheten och inte som appens egen insamling.
 **[FREDRIK]** Det här är hela avgörandet i formuläret. Appen skickar inget
-själv, men den lämnar ljudet till systemets `SpeechRecognizer`, som på de
-flesta telefoner är Googles och kan tolka i molnet. Play har inget uttryckligt
-svar för det fallet. Två vägar:
+själv, och frågar efter enhetstolkning först, men reservvägen lämnar ljudet
+till systemets `SpeechRecognizer`, som på de flesta telefoner är Googles och
+kan tolka i molnet. Play har inget uttryckligt svar för det fallet. Två
+vägar:
 
 - Svara **No**, och motivera i policyn att behandlingen sker hos
   operativsystemets taltjänst under Googles eget ansvar.
@@ -38,7 +45,8 @@ Avinstallation tar bort det lilla som ligger på telefonen.
 - Data type: **Voice or sound recordings**.
 - Collected: **No**. Appen sparar inget ljud, varken i fil, minne mellan
   omgångar eller någon annanstans.
-- Shared: **Yes** — ljudet lämnas vidare till telefonens taltjänst.
+- Shared: **Yes** — ljudet lämnas vidare till telefonens taltjänst när
+  enhetstolkning saknas. Finns enhetstolkning delas ingenting.
 - Processed ephemerally: **Yes**.
 - Required or optional: **Required** för dikteringen; appen har ingen annan
   funktion.
@@ -50,8 +58,8 @@ Avinstallation tar bort det lilla som ligger på telefonen.
 
 - Data type: närmast **Personal info → Other** (fritext: "dikterad text").
 - Collected: **No**. Texten går till textfältet och ingen annanstans.
-- Shared: **Yes** om taltjänsten är molnbaserad, eftersom texten kommer
-  därifrån.
+- Shared: **Yes** om omgången gick på den molnbaserade reservvägen, eftersom
+  texten kommer därifrån. Vid enhetstolkning delas ingenting.
 - Processed ephemerally: **Yes**.
 - Purpose: **App functionality**.
 **[FREDRIK]** Play har ingen egen kategori för dikterad text. Om *Other* känns
@@ -110,4 +118,5 @@ Texten ligger i `juridik/integritetspolicy.md` och ska publiceras där.
   **[FREDRIK]** Samma videofråga som ovan.
 - **Data Safety-svaren måste stämma med integritetspolicyn.** Det är den
   vanligaste orsaken till avslag. Väljs **Yes** i punkt 1 ska policyn säga att
-  ljud delas med taltjänstens leverantör, vilket den redan gör.
+  ljud delas med taltjänstens leverantör, vilket den gör, med tillägget att
+  det bara gäller när enhetstolkning saknas.
