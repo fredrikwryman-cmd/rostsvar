@@ -2,6 +2,8 @@
 *.png binary
 *.apk binary
 *.p12 binary
+# Gradle-wrappern. En jar som radbryts om ar en jar som inte startar.
+*.jar binary
 
 # Batfiler maste ha CRLF. cmd.exe snubblar pa LF-radslut i goto-etiketter,
 # och repots eol=lf hade annars checkat ut dem med fel radslut.

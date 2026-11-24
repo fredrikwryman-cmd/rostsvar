@@ -10,4 +10,13 @@ android {
         versionCode 10
         versionName '0.10'
     }
+    // Enhetstesterna körs på en vanlig JVM, utan telefon och utan emulator.
+    // Notices loggar felkoden med android.util.Log, och den klassen finns
+    // bara som tom skalfil i android.jar: utan raden nedan kastar varje
+    // anrop "not mocked" i stället för att göra ingenting.
+    testOptions { unitTests.returnDefaultValues = true }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
 }
