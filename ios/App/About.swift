@@ -9,6 +9,11 @@ struct About: View {
 
     @Environment(\.dismiss) private var dismiss
 
+    /// Av-knappen för haptiken. Nyckeln är `Haptics.key`, samma namn som på
+    /// Android. `@AppStorage` lagrar av och inte på, så att standardläget
+    /// blir påslaget utan att något behöver skrivas vid första starten.
+    @AppStorage(Haptics.key) private var buzzOff = false
+
     var body: some View {
         TRSheet("Om Tap&Talk", close: { dismiss() }) {
             TRCard {
@@ -45,14 +50,33 @@ struct About: View {
             }
 
             TRCard {
+                Text("Vibration").trHeading()
+                Toggle(isOn: Binding(get: { !buzzOff },
+                                     set: { on in
+                                        buzzOff = !on
+                                        // Bekräftelsen på att haptiken är på
+                                        // är själva vibrationen. Slås den av
+                                        // finns inget att känna.
+                                        if on { Haptics.fire(.press) }
+                                     })) {
+                    Text("Vibrera vid tryck och besked")
+                        .trFont(TypeScale.bodyLine)
+                        .foregroundStyle(TR.text)
+                }
+                .tint(TR.green)
+                Text("Appen vibrerar lätt när mikrofonen öppnas och stängs, och när något går fel. Tangentbordets tangenter följer telefonens egen inställning för tangentljud.")
+                    .trFootnote()
+            }
+
+            TRCard {
                 Text("Version").trHeading()
-                HStack(spacing: 12) {
+                HStack(spacing: Metric.gapM) {
                     Text("Tap&Talk")
-                        .trFont(15, .regular, relativeTo: .subheadline)
+                        .trFont(TypeScale.bodyLine)
                         .foregroundStyle(TR.muted)
-                    Spacer(minLength: 8)
+                    Spacer(minLength: Metric.gapS)
                     Text(Self.version)
-                        .trFont(15, .bold, relativeTo: .subheadline)
+                        .trFont(TypeScale.bodyStrongLine)
                         .foregroundStyle(TR.text)
                         .monospacedDigit()
                 }
@@ -82,14 +106,14 @@ struct Step: View {
     }
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
+        HStack(alignment: .firstTextBaseline, spacing: Metric.gapM) {
             Text("\(number)")
-                .trFont(15, .black, relativeTo: .subheadline)
+                .trFont(TypeScale.stepNumber)
                 .monospacedDigit()
                 .foregroundStyle(TR.green)
                 .accessibilityHidden(true)
             Text(text)
-                .trFont(15, .regular, relativeTo: .subheadline, lineHeight: 21)
+                .trFont(TypeScale.body)
                 .foregroundStyle(TR.text)
                 .fixedSize(horizontal: false, vertical: true)
         }

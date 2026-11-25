@@ -14,6 +14,16 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!--
+        Haptiken går i första hand genom performHapticFeedback, som följer
+        telefonens egen inställning för beröringsvibration och inte behöver
+        någon behörighet. Två händelser har ingen konstant som betyder rätt
+        sak — varningen, som ska kännas som två stötar, och upplösningen, som
+        ska kännas hård — och de går genom vibratorn. Den behöver det här.
+        Normal behörighet: ingen ruta, ingen fråga, inga uppgifter om
+        användaren.
+    -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
 
     <application
         android:label="Tap&amp;Talk"

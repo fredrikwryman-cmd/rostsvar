@@ -50,10 +50,15 @@ struct HomeScreen: View {
     /// andande glöd, ingen blinkande markör, inga tonade lägesbyten.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// Lägesbytet tonas 200 ms, utom när rörelse ska vara reducerad. §7.
-    private var fade: Animation? {
-        reduceMotion ? nil : .easeOut(duration: 0.2)
-    }
+    /// Lägesbytet tonas. Svaret kommer från `Move`, som är den enda
+    /// kontrollen för reducerad rörelse: vid påslagen inställning blir
+    /// tonandet en crossfade på 160 ms i stället för att försvinna, för ett
+    /// byte utan animation hoppar, och ett hopp är också rörelse.
+    private var fade: Animation { Move.change(reduced: reduceMotion) }
+
+    /// Appens läge. Skärmen döljs när den inte är i förgrunden: utkastet är
+    /// transkriptet, och transkriptet är känsligt enligt app-profilen.
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
@@ -61,13 +66,14 @@ struct HomeScreen: View {
             GeometryReader { geo in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        header.padding(.top, 6)
-                        ingress.padding(.top, 14)
-                        field.padding(.top, 16)
-                        micBlock.padding(.top, 20)
-                        actions.padding(.top, 16).padding(.bottom, 10)
+                        header.padding(.top, Metric.gapXS)
+                        ingress.padding(.top, Metric.gapML)
+                        field.padding(.top, Metric.gapL)
+                        micBlock.padding(.top, Metric.gapXXL)
+                        actions.padding(.top, Metric.gapL)
+                            .padding(.bottom, Metric.gapSM)
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, Metric.side)
                     // Vid vanliga textstorlekar är minimihöjden hela skärmen.
                     // Då står sidan still och ser ut precis som förut: fältet
                     // tar det som blir över, foten står kvar längst ner. Ställer
@@ -80,6 +86,9 @@ struct HomeScreen: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(TR.bg.ignoresSafeArea())
+        // Fotografiet till app switchern tas under övergången, alltså redan
+        // vid inactive. Ett ställe, för hela skärmen.
+        .trShield(scenePhase != .active)
         // §1: skärmen är ritad bara för mörkt läge.
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showGuide) { Onboarding() }
@@ -93,7 +102,7 @@ struct HomeScreen: View {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 Button("Dölj tangentbordet") { editing = false }
-                    .trFont(16, .bold)
+                    .trFont(TypeScale.button)
                     .foregroundStyle(TR.green)
             }
         }
@@ -126,16 +135,16 @@ struct HomeScreen: View {
     // MARK: - Huvudet, §4.1
 
     private var header: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Metric.gapM) {
             mark
             VStack(alignment: .leading, spacing: 0) {
                 Text("Tap&Talk")
-                    .trFont(28, .black, relativeTo: .title, tracking: -0.5, lineHeight: 32)
+                    .trFont(TypeScale.appName)
                     .foregroundStyle(TR.text)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 Text("TECH RABBIT")
-                    .trFont(12, .bold, relativeTo: .caption, tracking: 0.6)
+                    .trFont(TypeScale.wordmark)
                     .foregroundStyle(TR.green)
                     .lineLimit(1)
             }
@@ -144,17 +153,17 @@ struct HomeScreen: View {
             pill("Guide", hint: "Öppna kom igång-guiden") { showGuide = true }
             pill("Om", hint: "Om appen och tangentbordet") { showAbout = true }
         }
-        .frame(height: 56)
+        .frame(height: Metric.headerHeight)
     }
 
     /// Ikonringen med Tech Rabbits kaninsymbol.
     private var mark: some View {
         ZStack {
             Circle().fill(TR.card)
-            Circle().strokeBorder(TR.green, lineWidth: 1.5)
-            TRIcon.rabbit(22, color: TR.text)
+            Circle().strokeBorder(TR.green, lineWidth: Metric.edge)
+            TRIcon.rabbit(Metric.markIcon, color: TR.text)
         }
-        .frame(width: 40, height: 40)
+        .frame(width: Metric.markSize, height: Metric.markSize)
         .accessibilityHidden(true)
     }
 
@@ -163,15 +172,15 @@ struct HomeScreen: View {
     private func pill(_ title: String, hint: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .trFont(14, .bold, relativeTo: .subheadline)
+                .trFont(TypeScale.pill)
                 .foregroundStyle(TR.text)
-                .padding(.horizontal, 14)
-                .frame(height: 38)
+                .padding(.horizontal, Metric.gapML)
+                .frame(height: Metric.pillHeight)
                 .background(TR.card, in: Capsule())
-                .overlay(Capsule().strokeBorder(TR.border, lineWidth: 1))
+                .overlay(Capsule().strokeBorder(TR.border, lineWidth: Metric.hairline))
         }
         .buttonStyle(.plain)
-        .frame(minHeight: 44)
+        .frame(minHeight: Metric.touch)
         .contentShape(Rectangle())
         // Etiketten börjar med den text som syns, och säger sedan vad
         // knappen gör.
@@ -186,7 +195,7 @@ struct HomeScreen: View {
     /// börjar därför med underlagets text och byts när något händer.
     private var ingress: some View {
         Text(note)
-            .trFont(15, .regular, relativeTo: .subheadline, lineHeight: 21)
+            .trFont(TypeScale.body)
             .foregroundStyle(TR.muted)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -196,16 +205,19 @@ struct HomeScreen: View {
     // MARK: - Textfältet, §4.3
 
     private var field: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Metric.gapS) {
             page
             footer
         }
-        .padding(EdgeInsets(top: 18, leading: 18, bottom: 14, trailing: 18))
+        .padding(EdgeInsets(top: Metric.fieldTop, leading: Metric.cardPad,
+                            bottom: Metric.fieldBottom, trailing: Metric.cardPad))
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(TR.fieldFill, in: RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22)
-            .strokeBorder(state.isRecording ? TR.green : TR.border, lineWidth: 1.5))
-        .frame(minHeight: 96)
+        .background(TR.fieldFill,
+                    in: RoundedRectangle(cornerRadius: Metric.cardRadius))
+        .overlay(RoundedRectangle(cornerRadius: Metric.cardRadius)
+            .strokeBorder(state.isRecording ? TR.green : TR.border,
+                          lineWidth: Metric.edge))
+        .frame(minHeight: Metric.fieldMinHeight)
         .animation(fade, value: state.isRecording)
     }
 
@@ -227,14 +239,11 @@ struct HomeScreen: View {
         ZStack(alignment: .topLeading) {
             TextEditor(text: $state.draft)
                 .scrollContentBackground(.hidden)
-                .trFont(17, .regular, lineHeight: 25)
+                .trFont(TypeScale.draft)
                 .foregroundStyle(TR.text)
                 .tint(TR.green)
-                // TextEditor lägger på eget inre utrymme. Det dras bort här
-                // så att texten står i linje med fältets egen padding om 18
-                // och inte hoppar när ytan byts mot läsytan.
-                .padding(.horizontal, -5)
-                .padding(.vertical, -8)
+                .padding(.horizontal, Metric.editorInsetX)
+                .padding(.vertical, Metric.editorInsetY)
                 .focused($editing)
                 .accessibilityLabel("Din text")
             if state.draft.isEmpty {
@@ -284,7 +293,7 @@ struct HomeScreen: View {
     private func line(caret: Bool) -> some View {
         (Text(state.draft).foregroundColor(TR.text)
             + Text(verbatim: caret ? "▏" : "\u{200B}").foregroundColor(TR.green))
-            .trFont(17, .regular, lineHeight: 25)
+            .trFont(TypeScale.draft)
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .accessibilityLabel("Din text")
             .accessibilityValue(state.draft)
@@ -292,7 +301,7 @@ struct HomeScreen: View {
 
     private var placeholder: some View {
         Text("Texten du dikterar hamnar här. Du kan rätta den för hand.")
-            .trFont(17, .regular, lineHeight: 25)
+            .trFont(TypeScale.draft)
             .foregroundStyle(TR.faint)
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .allowsHitTesting(false)
@@ -302,29 +311,29 @@ struct HomeScreen: View {
     /// Fältets fot: läget till vänster, antalet tecken till höger. §4.3.
     private var footer: some View {
         HStack(spacing: 0) {
-            HStack(spacing: 6) {
+            HStack(spacing: Metric.gapXS) {
                 // Medan taltjänsten slutför byts pricken mot något som rör
                 // sig. Väntan är fem sekunder på iOS och åtta på Android, och
                 // en stillastående prick säger inte att något pågår.
                 if chip == .interpreting {
                     ProgressView()
                         .scaleEffect(0.6)
-                        .frame(width: 10, height: 10)
+                        .frame(width: Metric.spinner, height: Metric.spinner)
                         .tint(TR.muted)
                         .accessibilityHidden(true)
                 } else {
                     Circle()
                         .fill(chip.dot)
-                        .frame(width: 6, height: 6)
+                        .frame(width: Metric.dot, height: Metric.dot)
                         .accessibilityHidden(true)
                 }
                 Text(chip.word)
-                    .trFont(12, .bold, relativeTo: .caption2)
+                    .trFont(TypeScale.chip)
                     .foregroundStyle(chip.ink)
             }
-            Spacer(minLength: 8)
+            Spacer(minLength: Metric.gapS)
             Text("\(state.draft.count) tecken")
-                .trFont(12, .regular, relativeTo: .caption2)
+                .trFont(TypeScale.counter)
                 .foregroundStyle(TR.faint)
         }
         .animation(fade, value: chip)
@@ -371,7 +380,7 @@ struct HomeScreen: View {
     // MARK: - Tala-knappen, §4.4
 
     private var micBlock: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: Metric.gapSM) {
             ZStack {
                 TRRings(listening: state.isRecording, still: reduceMotion)
                 Button { micTapped() } label: { face }
@@ -382,9 +391,9 @@ struct HomeScreen: View {
                                        ? "Avslutar diktering"
                                        : "Startar diktering")
             }
-            .frame(width: 132, height: 132)
+            .frame(width: Metric.micRing, height: Metric.micRing)
             Text(micWord)
-                .trFont(17, .heavy)
+                .trFont(TypeScale.heading)
                 .foregroundStyle(TR.text)
                 .accessibilityHidden(true)
         }
@@ -410,18 +419,18 @@ struct HomeScreen: View {
     private func disc(glow: Double) -> some View {
         Circle()
             .fill(micFill)
-            .frame(width: 88, height: 88)
+            .frame(width: Metric.micDisc, height: Metric.micDisc)
             .shadow(color: micFill.opacity(glow), radius: TRGlow.radius)
             .overlay(glyph)
     }
 
     @ViewBuilder private var glyph: some View {
         if state.isRecording {
-            RoundedRectangle(cornerRadius: 7)
+            RoundedRectangle(cornerRadius: Metric.keyRadius)
                 .fill(Color.white)
-                .frame(width: 28, height: 28)
+                .frame(width: Metric.micStop, height: Metric.micStop)
         } else {
-            TRIcon.mic(34, color: TR.onGreen)
+            TRIcon.mic(Metric.micIcon, color: TR.onGreen)
         }
     }
 
@@ -457,7 +466,7 @@ struct HomeScreen: View {
     // MARK: - Rensa och Skicka, §4.5
 
     private var actions: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Metric.gapSM) {
             clearButton
             sendButton
         }
@@ -469,15 +478,15 @@ struct HomeScreen: View {
             note = "Fältet är tomt. Tryck på Tala och diktera igen."
         } label: {
             let ink = state.canClear ? TR.text : TR.disabled
-            HStack(spacing: 8) {
-                TRIcon.trash(17, color: ink)
-                Text("Rensa").trFont(16, .bold).foregroundStyle(ink)
+            HStack(spacing: Metric.gapS) {
+                TRIcon.trash(Metric.actionIcon, color: ink)
+                Text("Rensa").trFont(TypeScale.button).foregroundStyle(ink)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 52)
+            .frame(height: Metric.controlHeight)
             .background(TR.card, in: Capsule())
             .overlay(Capsule().strokeBorder(
-                state.canClear ? TR.dimDot : TR.border, lineWidth: 1))
+                state.canClear ? TR.dimDot : TR.border, lineWidth: Metric.hairline))
         }
         .buttonStyle(.plain)
         .disabled(!state.canClear)
@@ -487,19 +496,19 @@ struct HomeScreen: View {
 
     private var sendButton: some View {
         Button {
-            Buzz.done()
+            Haptics.fire(.success)
             showShare = true
         } label: {
             let ink = state.canSend ? TR.onGreen : TR.disabled
-            HStack(spacing: 8) {
-                TRIcon.plane(17, color: ink)
-                Text("Skicka").trFont(16, .bold).foregroundStyle(ink)
+            HStack(spacing: Metric.gapS) {
+                TRIcon.plane(Metric.actionIcon, color: ink)
+                Text("Skicka").trFont(TypeScale.button).foregroundStyle(ink)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 52)
+            .frame(height: Metric.controlHeight)
             .background(state.canSend ? TR.green : TR.card, in: Capsule())
             .overlay(Capsule().strokeBorder(
-                state.canSend ? TR.green : TR.border, lineWidth: 1))
+                state.canSend ? TR.green : TR.border, lineWidth: Metric.hairline))
         }
         .buttonStyle(.plain)
         .disabled(!state.canSend)
@@ -513,17 +522,17 @@ struct HomeScreen: View {
         if state.isRecording { finish(); return }
         guard state.phase == .idle else { return }
         if micBlocked && !Dictation.permitted {
-            Buzz.warn()
+            Haptics.fire(.warning)
             openSettings()
             return
         }
         guard ears.isAvailable else {
-            Buzz.warn()
+            Haptics.fire(.warning)
             note = Notice.unavailable
             return
         }
 
-        Buzz.start()
+        Haptics.fire(.recordStart)
         let id = UUID()
         generation = id
         state.ask()
@@ -537,7 +546,7 @@ struct HomeScreen: View {
             }
             // Svarade användaren nej frågar iOS inte igen. Då är det
             // Inställningar som gäller, och knappen säger det.
-            Buzz.warn()
+            Haptics.fire(.warning)
             micBlocked = Dictation.permissionRefused
             state.rest()
             note = micBlocked
@@ -570,13 +579,13 @@ struct HomeScreen: View {
                 if state.heardSomething {
                     settle("Läs igenom texten, rätta den om du vill, och tryck på Skicka.")
                 } else {
-                    Buzz.warn()
+                    Haptics.fire(.warning)
                     settle(why)
                 }
             }
         })
         if let refused {
-            Buzz.warn()
+            Haptics.fire(.warning)
             state.rest()
             note = refused
             return
@@ -597,7 +606,7 @@ struct HomeScreen: View {
     /// sin ending-stängning; här väntar vi bara på svaret.
     private func finish() {
         guard state.isRecording else { return }
-        Buzz.stop()
+        Haptics.fire(.recordStop)
         state.finishRecording()
         note = "Tolkar det du sa …"
         ears.finish()
@@ -639,16 +648,6 @@ struct HomeScreen: View {
         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
         UIApplication.shared.open(url)
     }
-}
-
-/// Haptiken, §8. Lätt stöt när mikrofonen öppnas, medelstark när den
-/// stängs, en bekräftelse när texten lämnas vidare och en varning när något
-/// går fel. Ingenting under pulsen och ingenting medan texten strömmar in.
-private enum Buzz {
-    static func start() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
-    static func stop() { UIImpactFeedbackGenerator(style: .medium).impactOccurred() }
-    static func done() { UINotificationFeedbackGenerator().notificationOccurred(.success) }
-    static func warn() { UINotificationFeedbackGenerator().notificationOccurred(.warning) }
 }
 
 /// iOS egen delningsruta. Appen skickar inget själv: texten lämnas här, och

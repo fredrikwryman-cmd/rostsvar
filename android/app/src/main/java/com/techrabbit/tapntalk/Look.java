@@ -46,6 +46,94 @@ final class Look {
     /** Varningens gula, används bara när något fattas. */
     static final int WARN = 0xFFFFC46B;
 
+    // ------------------------------------------------------------ måtten
+    //
+    // Måtten låg förut som tal i vyerna: dp(20) för sidmarginalen på fem
+    // ställen i tre filer, dp(14) för kortets radie bland tjugotre andra
+    // dp(14) som betydde luft. Det gick att ändra en skärm och tro att man
+    // ändrat alla. Värdena står i dp och är de som redan användes; den här
+    // listan flyttar dem, den ändrar dem inte.
+    //
+    // iOS har samma uppsättning i ios/Shared/Theme.swift. De två
+    // plattformarna kan inte dela en fil, men ska inte skilja sig i värde.
+
+    /** Sidmarginalen på hemskärmen och i guiden. */
+    static final int SIDE = 20;
+    /** Sidans luft upptill och nedtill. */
+    static final int PAGE_TOP = 28;
+    static final int PAGE_BOTTOM = 24;
+    /** Kortets och fältets inre luft. */
+    static final int CARD_PAD = 14;
+    /** Kortets och fältets radie. */
+    static final int RADIUS_CARD = 14;
+    /** Tangentens radie i rösttangentbordet. */
+    static final int RADIUS_KEY = 8;
+    /** Bubblans radie: en cirkel, alltså halva sidan. */
+    static final int RADIUS_ROUND = 28;
+
+    static final int GAP_HAIR = 2;
+    static final int GAP_TICK = 3;
+    static final int GAP_TINY = 4;
+    static final int GAP_XS = 6;
+    static final int GAP_S = 8;
+    static final int GAP_SM = 10;
+    static final int GAP_M = 12;
+    static final int GAP_ML = 14;
+    static final int GAP_L = 16;
+    static final int GAP_XL = 18;
+    static final int GAP_XXL = 20;
+    static final int GAP_HUGE = 28;
+
+    /** Minsta träffyta. 48 dp är Androids golv, inte ett riktmärke. */
+    static final int TOUCH = 48;
+    /** Primär- och sekundärknapp. */
+    static final int CONTROL_H = 52;
+    /** Pillerknappen i huvudet. */
+    static final int PILL_H = 46;
+    static final int PILL_W = 92;
+    /** Tala-knappen på hemskärmen. */
+    static final int MIC_H = 66;
+    /** Bubblans sida. */
+    static final int BUBBLE = 56;
+    /** Textfältets minsta höjd. */
+    static final int FIELD_MIN = 96;
+    /** Snurran som ersätter lägesprickan. */
+    static final int SPINNER = 18;
+
+    /** Kanter: en hårfin linje, och den som bär en komponentgräns. */
+    static final int HAIRLINE = 1;
+    static final int EDGE = 2;
+
+    /**
+     * Avdelaren mellan listrader, som rgba(255,255,255,0.08). Beslut A i
+     * ändringslistan: bara mellan rader, aldrig som komponentgräns — en
+     * gräns ska klara 3:1 och det gör inte den här.
+     */
+    static final int DIVIDER = 0x14FFFFFF;
+
+    // -------------------------------------------------------- typskalan
+    //
+    // Storlekarna i sp, rollerna är de som finns på skärmarna.
+
+    /** Appnamnet i huvudet. */
+    static final int TYPE_APP_NAME = 30;
+    /** Skärmrubrik. */
+    static final int TYPE_TITLE = 22;
+    /** Rubrik i ett kort, och etiketten på Tala-knappen. */
+    static final int TYPE_HEADING = 19;
+    /** Utkastet i fältet. */
+    static final int TYPE_DRAFT = 18;
+    /** Knapptext. */
+    static final int TYPE_BUTTON = 17;
+    /** Brödtext. */
+    static final int TYPE_BODY = 16;
+    /** Sekundär rad. */
+    static final int TYPE_SUBHEAD = 15;
+    /** Lägesord och förklaringsrad. */
+    static final int TYPE_CAPTION = 14;
+    /** Teckenräknaren och etiketter. */
+    static final int TYPE_SMALL = 13;
+
     private Look() { }
 
     static int dp(Context context, int value) {

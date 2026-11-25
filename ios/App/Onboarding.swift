@@ -84,7 +84,7 @@ struct Onboarding: View {
                 Text("Tryck i fältet nedan, byt till Tap&Talk och tryck på Tala. Säg en mening. Texten ska hamna i fältet medan du talar.")
                     .trBody()
                 ProofField(text: $typed, language: $inputLanguage)
-                    .frame(minHeight: 96)
+                    .frame(minHeight: Metric.fieldMinHeight)
                 receipt
             }
         }
@@ -119,7 +119,7 @@ struct Onboarding: View {
 
     /// En rad som bekräftar något appen faktiskt har läst av.
     private func done(_ text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
+        HStack(alignment: .firstTextBaseline, spacing: Metric.gapS) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(TR.green)
                 .accessibilityHidden(true)
@@ -146,7 +146,7 @@ struct Onboarding: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         TRCard {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: Metric.gapS) {
                 Image(systemName: checked ? "checkmark.circle.fill" : "\(number).circle")
                     .foregroundStyle(checked ? TR.green : TR.faint)
                     .accessibilityHidden(true)
@@ -204,10 +204,11 @@ private struct SettingsPath: View {
             .textSelection(.enabled)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(TR.card, in: RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(TR.border, lineWidth: 1))
+            .padding(Metric.gapM)
+            .background(TR.card,
+                        in: RoundedRectangle(cornerRadius: Metric.noteRadius))
+            .overlay(RoundedRectangle(cornerRadius: Metric.noteRadius)
+                .strokeBorder(TR.border, lineWidth: Metric.hairline))
     }
 }
 

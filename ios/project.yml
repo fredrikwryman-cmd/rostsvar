@@ -32,6 +32,11 @@ targets:
       - path: Shared/Palette.swift
       # Beskeden om taltjänsten. Samma mening på alla tre ytorna.
       - path: Shared/Notice.swift
+      # Mått, radier, typskala och rörelsetider. Ligger i Shared av samma
+      # skäl som Palette: tre mål, en uppsättning mått.
+      - path: Shared/Theme.swift
+      # Haptikkartan med sin spärr och sin av-knapp.
+      - path: Shared/Haptics.swift
     settings:
       base:
         # Prefixet är com. och får aldrig bli se. igen. Ett paket-id som börjar
@@ -88,6 +93,8 @@ targets:
       - path: Shared/Dictation.swift
       - path: Shared/Palette.swift
       - path: Shared/Notice.swift
+      - path: Shared/Theme.swift
+      - path: Shared/Haptics.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.techrabbit.tapntalk.Messages
@@ -107,6 +114,8 @@ targets:
       # Reglerna för hur tangentbordet skriver i andras fält, skilda från
       # tangentbordet för att kunna mätas av testerna.
       - path: Shared/Proxy.swift
+      - path: Shared/Theme.swift
+      - path: Shared/Haptics.swift
     settings:
       base:
         # Under appens paket-id, och med com. av samma skäl som i appmålet

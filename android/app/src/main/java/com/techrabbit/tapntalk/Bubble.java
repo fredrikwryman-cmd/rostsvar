@@ -428,6 +428,8 @@ public class Bubble extends Service {
             int wide = getResources().getDisplayMetrics().widthPixels;
             where.x = where.x + size / 2 < wide / 2 ? 0 : wide - size;
             if (!place()) return;
+            // Bubblan låste i läge. Ett objekt som snäpper ska kännas.
+            Haptik.fire(knob, Bubble.this, Haptik.SNAP);
             getSharedPreferences(Guide.SETTINGS, MODE_PRIVATE).edit()
                     .putInt(AT_X, where.x).putInt(AT_Y, where.y).apply();
         }

@@ -16,6 +16,7 @@ import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.view.WindowManager;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
@@ -59,6 +60,8 @@ public class Home extends Activity {
     private TextView warnText;
     private Switch bubble;
     private TextView bubbleNote;
+    /** Av-knappen för haptiken. Samma nyckel som iOS: `haptik_av`. */
+    private Switch buzz;
     private EditText draft;
     private Button mic;
     /**
@@ -113,10 +116,20 @@ public class Home extends Activity {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
 
+        // Utkastet i fältet är transkriptet, och transkriptet är känsligt
+        // enligt app-profilen. FLAG_SECURE gör att Android inte lägger en
+        // bild av skärmen i app switchern — och inte heller låter någon
+        // annan app spela in den. Texten en användare dikterat är ofta ett
+        // meddelande till en människa, och den ska inte ligga kvar som ett
+        // fotografi efter att appen lämnats.
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE);
+
         LinearLayout page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
         page.setBackgroundColor(BG);
-        page.setPadding(dp(20), dp(28), dp(20), dp(24));
+        page.setPadding(dp(Look.SIDE), dp(Look.PAGE_TOP),
+                dp(Look.SIDE), dp(Look.PAGE_BOTTOM));
         page.setFitsSystemWindows(true);
 
         LinearLayout head = new LinearLayout(this);
@@ -206,7 +219,50 @@ public class Home extends Activity {
         power.addView(bubble, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)));
 
-        page.addView(power, row(dp(14), 0));
+        page.addView(power, row(dp(Look.GAP_ML), 0));
+
+        // Av-knappen för haptiken, samma form som bubblans strömbrytare.
+        // Den ligger här och inte i guiden, för guiden är en genomgång man
+        // gör en gång; det här är en inställning man ändrar när som helst.
+        LinearLayout feel = new LinearLayout(this);
+        feel.setOrientation(LinearLayout.HORIZONTAL);
+        feel.setGravity(Gravity.CENTER_VERTICAL);
+        feel.setBackground(box(FIELD, BORDER, dp(Look.RADIUS_CARD)));
+        feel.setPadding(dp(Look.GAP_ML), dp(Look.GAP_M),
+                dp(Look.GAP_SM), dp(Look.GAP_M));
+
+        LinearLayout feelWords = new LinearLayout(this);
+        feelWords.setOrientation(LinearLayout.VERTICAL);
+
+        TextView feelTitle = new TextView(this);
+        feelTitle.setText("Vibration");
+        feelTitle.setTextColor(INK);
+        feelTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_HEADING);
+        feelWords.addView(feelTitle, row(0, 0));
+
+        TextView feelNote = new TextView(this);
+        feelNote.setText("Telefonen vibrerar lätt när mikrofonen öppnas och "
+                + "stängs, och när något går fel.");
+        feelNote.setTextColor(DIM);
+        feelNote.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_CAPTION);
+        feelNote.setLineSpacing(0, 1.25f);
+        feelWords.addView(feelNote, row(dp(Look.GAP_TICK), 0));
+
+        feel.addView(feelWords, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        buzz = new Switch(this);
+        buzz.setContentDescription("Vibration. Slå på eller av.");
+        buzz.setChecked(Haptik.on(this));
+        buzz.setMinimumWidth(dp(Look.BUBBLE));
+        buzz.setMinimumHeight(dp(Look.TOUCH));
+        buzz.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { buzzToggled(); }
+        });
+        feel.addView(buzz, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(Look.TOUCH)));
+
+        page.addView(feel, row(dp(Look.GAP_SM), 0));
 
         // Varningen står kvar så länge något steg i guiden fattas, eftersom
         // appen då bara kan diktera här inne och inte i chattarna.
@@ -312,6 +368,16 @@ public class Home extends Activity {
         if (!seen) openGuide();
     }
 
+    /**
+     * Av-knappen slogs om. Bekräftelsen på att haptiken är på är själva
+     * vibrationen; är den av finns inget att känna, och då står det i
+     * stället i strömbrytarens läge.
+     */
+    private void buzzToggled() {
+        Haptik.set(this, buzz.isChecked());
+        if (buzz.isChecked()) Haptik.fire(buzz, Haptik.PRESS);
+    }
+
     private void openGuide() {
         startActivity(new Intent(this, Guide.class));
     }
@@ -323,6 +389,7 @@ public class Home extends Activity {
      * så dess läge är vad användaren bad om.
      */
     private void bubbleToggled() {
+        Haptik.fire(bubble, Haptik.STATE_CHANGE);
         if (!bubble.isChecked()) {
             Bubble.stop(this);
             wantBubble = false;
@@ -463,19 +530,28 @@ public class Home extends Activity {
     // ------------------------------------------------------- tillstånd och tal
 
     private void micTapped() {
-        if (listening) { stopListening(); return; }
+        if (listening) {
+            Haptik.fire(mic, Haptik.RECORD_STOP);
+            stopListening();
+            return;
+        }
         if (working) {
             note = "Texten tolkas. Vänta ett ögonblick.";
             render();
             return;
         }
-        if (micBlocked && !granted()) { openSettings(); return; }
+        if (micBlocked && !granted()) {
+            Haptik.fire(mic, Haptik.WARNING);
+            openSettings();
+            return;
+        }
         if (!granted()) {
             note = "Mikrofonen behövs för att diktera. Välj Tillåt i rutan som visas.";
             render();
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION);
             return;
         }
+        Haptik.fire(mic, Haptik.RECORD_START);
         startListening();
     }
 
@@ -732,6 +808,7 @@ public class Home extends Activity {
      */
     private void wipe() {
         if (listening || working) return;
+        Haptik.fire(clear, Haptik.PRESS);
         draft.setText("");
         base = "";
         note = "Fältet är tomt. Tryck på Tala och diktera igen.";
@@ -744,6 +821,7 @@ public class Home extends Activity {
     private void share() {
         String text = draft.getText().toString().trim();
         if (text.length() == 0) return;
+        Haptik.fire(send, Haptik.SUCCESS);
         Intent out = new Intent(Intent.ACTION_SEND);
         out.setType("text/plain");
         out.putExtra(Intent.EXTRA_TEXT, text);

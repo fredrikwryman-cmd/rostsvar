@@ -104,6 +104,15 @@ struct TRFont: ViewModifier {
 }
 
 extension View {
+
+    /// Ett steg ur typskalan. Det här är vägen skärmarna ska gå: rollen står
+    /// i `TypeScale`, inte i vyn.
+    func trFont(_ step: TypeScale.Step) -> some View {
+        trFont(step.size, step.weight.swiftUI,
+               relativeTo: step.style.swiftUI,
+               tracking: step.tracking, lineHeight: step.lineHeight)
+    }
+
     func trFont(_ size: CGFloat,
                 _ weight: Font.Weight,
                 relativeTo style: Font.TextStyle = .body,
@@ -115,7 +124,7 @@ extension View {
 
     /// Brödtext, samma som ingressen på startskärmen. §3: 400, 15/21, muted.
     func trBody() -> some View {
-        trFont(15, .regular, relativeTo: .subheadline, lineHeight: 21)
+        trFont(TypeScale.body)
             .foregroundStyle(TR.muted)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -123,7 +132,7 @@ extension View {
 
     /// Den mindre raden: förtydliganden och varningar under brödtexten.
     func trFootnote() -> some View {
-        trFont(12, .regular, relativeTo: .caption)
+        trFont(TypeScale.footnote)
             .foregroundStyle(TR.faint)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -132,7 +141,7 @@ extension View {
     /// Rubrik inuti ett kort. Samma vikt och storlek som etiketten under
     /// Tala-knappen, så att de två skärmarna låter lika i tonen.
     func trHeading() -> some View {
-        trFont(17, .heavy)
+        trFont(TypeScale.heading)
             .foregroundStyle(TR.text)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -148,7 +157,7 @@ struct TRCard<Content: View>: View {
     private let spacing: CGFloat
     private let content: Content
 
-    init(spacing: CGFloat = 10, @ViewBuilder content: () -> Content) {
+    init(spacing: CGFloat = Metric.gapSM, @ViewBuilder content: () -> Content) {
         self.spacing = spacing
         self.content = content()
     }
@@ -158,10 +167,11 @@ struct TRCard<Content: View>: View {
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .background(TR.fieldFill, in: RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22)
-            .strokeBorder(TR.border, lineWidth: 1.5))
+        .padding(Metric.cardPad)
+        .background(TR.fieldFill,
+                    in: RoundedRectangle(cornerRadius: Metric.cardRadius))
+        .overlay(RoundedRectangle(cornerRadius: Metric.cardRadius)
+            .strokeBorder(TR.border, lineWidth: Metric.edge))
     }
 }
 
@@ -176,13 +186,13 @@ struct TRButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .trFont(16, .bold)
+                .trFont(TypeScale.button)
                 .foregroundStyle(filled ? TR.onGreen : TR.text)
                 .frame(maxWidth: .infinity)
-                .frame(height: 52)
+                .frame(height: Metric.controlHeight)
                 .background(filled ? TR.green : TR.card, in: Capsule())
                 .overlay(Capsule().strokeBorder(
-                    filled ? TR.green : TR.dimDot, lineWidth: 1))
+                    filled ? TR.green : TR.dimDot, lineWidth: Metric.hairline))
         }
         .buttonStyle(.plain)
     }
@@ -196,12 +206,12 @@ struct TRBadge: View {
 
     var body: some View {
         Text(text)
-            .trFont(11, .bold, relativeTo: .caption2)
+            .trFont(TypeScale.badge)
             .foregroundStyle(TR.faint)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 4)
+            .padding(.horizontal, Metric.badgeX)
+            .padding(.vertical, Metric.gapTiny)
             .background(TR.card, in: Capsule())
-            .overlay(Capsule().strokeBorder(TR.border, lineWidth: 1))
+            .overlay(Capsule().strokeBorder(TR.border, lineWidth: Metric.hairline))
             .fixedSize()
     }
 }
@@ -224,12 +234,12 @@ struct TRSheet<Content: View>: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: Metric.gapML) {
                     content
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 28)
+                .padding(.horizontal, Metric.side)
+                .padding(.top, Metric.gapS)
+                .padding(.bottom, Metric.gapHuge)
             }
             .scrollDismissesKeyboard(.interactively)
             .background(TRBackdrop())
@@ -237,14 +247,14 @@ struct TRSheet<Content: View>: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Text(title)
-                        .trFont(17, .heavy)
+                        .trFont(TypeScale.heading)
                         .foregroundStyle(TR.text)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Klar", action: close)
-                        .trFont(16, .bold)
+                        .trFont(TypeScale.button)
                         .foregroundStyle(TR.green)
                 }
             }
@@ -254,6 +264,41 @@ struct TRSheet<Content: View>: View {
         }
         .preferredColorScheme(.dark)
         .tint(TR.green)
+    }
+}
+
+// MARK: - Känsligt innehåll
+
+/// Oskärpa över skärmen när appen inte är i förgrunden.
+///
+/// Utkastet i fältet är transkriptet, och transkriptet är känsligt enligt
+/// app-profilen. iOS fotograferar skärmen när appen lämnas, och bilden
+/// ligger kvar i app switchern tills appen öppnas igen — synlig för var och
+/// en som får telefonen i handen.
+///
+/// Oskärpan läggs på vid `inactive` och inte först vid `background`:
+/// fotografiet tas under övergången. Laget tonar in med samma crossfade som
+/// reducerad rörelse använder, och haptiken rörs inte.
+struct TRShield: ViewModifier {
+    let hidden: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .blur(radius: hidden ? Metric.shieldBlur : 0)
+            .overlay {
+                if hidden {
+                    TR.bg.opacity(0.55).ignoresSafeArea().allowsHitTesting(false)
+                }
+            }
+            .animation(.easeInOut(duration: Move.swap), value: hidden)
+    }
+}
+
+extension View {
+    /// Döljer skärmen medan den inte är i förgrunden. Ett ställe, inte ett
+    /// per vy.
+    func trShield(_ hidden: Bool) -> some View {
+        modifier(TRShield(hidden: hidden))
     }
 }
 
@@ -493,19 +538,19 @@ struct TRRings: View {
             if still {
                 ZStack {
                     ring(inset: 0).opacity(restOpacity)
-                    ring(inset: 12).opacity(restOpacity)
+                    ring(inset: Metric.gapM).opacity(restOpacity)
                 }
             } else {
                 TimelineView(.animation) { timeline in
                     let t = timeline.date.timeIntervalSinceReferenceDate
                     ZStack {
                         pulse(inset: 0, at: t, offset: 0)
-                        pulse(inset: 12, at: t, offset: 0.5)
+                        pulse(inset: Metric.gapM, at: t, offset: 0.5)
                     }
                 }
             }
         }
-        .frame(width: 132, height: 132)
+        .frame(width: Metric.micRing, height: Metric.micRing)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
@@ -519,7 +564,7 @@ struct TRRings: View {
 
     private func ring(inset: CGFloat) -> some View {
         Circle()
-            .strokeBorder(color, lineWidth: 1.5)
+            .strokeBorder(color, lineWidth: Metric.edge)
             .padding(inset)
     }
 }
@@ -534,7 +579,6 @@ enum TRGlow {
         return 0.35 + 0.15 * sin(2 * .pi * t / 2.8)
     }
 
-    /// Underlaget anger `box-shadow: 0 0 36px`. CSS räknar radien som hela
-    /// oskärpan, SwiftUI som halva, därför 18 och inte 36.
-    static let radius: CGFloat = 18
+    /// Värdet står i `Metric.glowRadius`, med skälet till halveringen.
+    static let radius: CGFloat = Metric.glowRadius
 }

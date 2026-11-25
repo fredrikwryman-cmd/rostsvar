@@ -223,6 +223,7 @@ public class VoiceKeys extends InputMethodService {
         key.setTag(String.valueOf(base));
         key.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
+                Haptik.fire(v, Haptik.KEY);
                 type(key.getText().toString());
                 if (shift && !shiftLock) { shift = false; relabel(); }
             }
