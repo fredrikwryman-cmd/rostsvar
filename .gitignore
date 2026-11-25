@@ -33,3 +33,7 @@ __pycache__/
 
 # Sidkopior från Playwright, skapas vid felsökning i webbläsare.
 .playwright-mcp/
+
+# JVM-kraschloggar som Gradle lämnar efter sig. Hör inte i repot.
+hs_err_pid*.log
+replay_pid*.log
