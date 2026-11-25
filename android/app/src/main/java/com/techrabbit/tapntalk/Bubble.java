@@ -1,6 +1,9 @@
 package com.techrabbit.tapntalk;
 
 import android.Manifest;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -14,7 +17,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
+import android.graphics.Insets;
 import android.graphics.PixelFormat;
+import android.graphics.Rect;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.Icon;
 import android.os.Bundle;
@@ -27,8 +32,15 @@ import android.speech.SpeechRecognizer;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
+import android.view.ViewAnimationUtils;
+import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.view.WindowManager;
+import android.view.WindowMetrics;
+import android.view.animation.DecelerateInterpolator;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -61,7 +73,36 @@ public class Bubble extends Service {
 
     private WindowManager windows;
     private WindowManager.LayoutParams where;
+    /**
+     * Fönstret bubblan ligger i: knappen, och lägesbytets yta ovanpå den.
+     *
+     * Ytan behöver ett eget lager att växa i, och lagret måste ligga i samma
+     * fönster som knappen. Knappen är kvar som den var.
+     */
+    private FrameLayout shell;
     private TextView knob;
+    /** Lägesbytets yta. Växer över knappen, och är borta däremellan. */
+    private View wash;
+    /** Kastet efter ett släpp. Avbryts om bubblan tas igen. */
+    private ValueAnimator flight;
+    /**
+     * Var fingret låg vid senaste tryck, i knappens egna koordinater.
+     *
+     * Negativt betyder att bytet inte kom av ett tryck: TalkBack trycker
+     * utan finger, och taltjänsten byter läge av sig själv. Då växer ytan
+     * från mitten. Läses en gång och nollas sedan.
+     */
+    private float tapX = -1f;
+    private float tapY = -1f;
+
+    /**
+     * Hur långt farten räcker efter ett släpp, i sekunder av oförminskad
+     * fart. En snärt på 3000 punkter i sekunden bär alltså ungefär 360
+     * punkter vidare innan friktionen ätit upp den.
+     */
+    private static final float GLIDE = 0.12f;
+    /** Längsta tid ett kast får ta. Längre än så känns det som sirap. */
+    private static final long FLIGHT_MAX = 520L;
 
     private SpeechRecognizer speech;
 
@@ -113,7 +154,7 @@ public class Bubble extends Service {
             working = false;
             listening = false;
             beat(false);
-            paint();
+            shift();
             // Det som hunnit höras levereras. Hördes inget sägs det.
             if (heard.length() > 0) {
                 String text = heard;
@@ -174,7 +215,7 @@ public class Bubble extends Service {
         }
 
         if (!raise()) return START_NOT_STICKY;
-        if (knob == null) show();
+        if (shell == null) show();
         return START_STICKY;
     }
 
@@ -185,14 +226,17 @@ public class Bubble extends Service {
     @Override public void onDestroy() {
         alive = false;
         quiet();
-        if (knob != null && windows != null) {
+        halt();
+        if (shell != null && windows != null) {
             try {
-                windows.removeView(knob);
+                windows.removeView(shell);
             } catch (IllegalArgumentException gone) {
                 // Vyn kan redan vara borta om fönstret rivits. Inget att göra.
             }
-            knob = null;
         }
+        shell = null;
+        knob = null;
+        wash = null;
         super.onDestroy();
     }
 
@@ -281,6 +325,25 @@ public class Bubble extends Service {
         knob.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_BODY);
         paint();
 
+        // Ytan som växer vid lägesbyte. Ligger över knappen, tar aldrig emot
+        // ett tryck, och syns bara under de millisekunder bytet tar.
+        wash = new View(this);
+        wash.setVisibility(View.GONE);
+        wash.setClickable(false);
+        wash.setFocusable(false);
+        wash.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+
+        shell = new FrameLayout(this);
+        // Knappen andas med rösten och växer utöver sina egna mått. Utan den
+        // här raden klipper lagret bort andningen.
+        shell.setClipChildren(false);
+        shell.addView(knob, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+        shell.addView(wash, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+
         where = new WindowManager.LayoutParams(
                 size, size,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -292,10 +355,13 @@ public class Bubble extends Service {
         where.gravity = Gravity.TOP | Gravity.START;
 
         SharedPreferences saved = getSharedPreferences(Guide.SETTINGS, MODE_PRIVATE);
-        int wide = getResources().getDisplayMetrics().widthPixels;
-        int high = getResources().getDisplayMetrics().heightPixels;
-        where.x = saved.getInt(AT_X, wide - size);
-        where.y = saved.getInt(AT_Y, high / 2);
+        Rect room = room();
+        where.x = saved.getInt(AT_X, room.right - size);
+        where.y = saved.getInt(AT_Y, room.centerY() - size / 2);
+        // Det sparade läget kan komma från en annan skärm, eller från innan
+        // telefonen vändes. Det hålls inom ytan i stället för att hamna
+        // utanför kanten eller under ett systemfält.
+        hold(size);
 
         // Dragningen ligger i touch-lyssnaren, men trycket går genom en
         // riktig klicklyssnare. TalkBack trycker aldrig med fingrar: det
@@ -307,10 +373,12 @@ public class Bubble extends Service {
         });
         touch(knob, new Drag(size));
         try {
-            windows.addView(knob, where);
+            windows.addView(shell, where);
         } catch (RuntimeException refused) {
             // Händer om rätten dras tillbaka i samma stund. Bubblan kan inte
             // visas, och då ska tjänsten inte ligga kvar och låtsas.
+            shell = null;
+            wash = null;
             knob = null;
             say("Bubblan kunde inte visas. Kontrollera Visa över andra appar.");
             stopSelf();
@@ -333,6 +401,17 @@ public class Bubble extends Service {
 
     /** Grönt i vila, djupare grönt medan mikrofonen är på. */
     private void paint() {
+        paint(true);
+    }
+
+    /**
+     * Samma målning, men ordet kan bytas rakt av.
+     *
+     * @param tone sant när ett nytt ord ska tonas in. Falskt när bytet redan
+     *             bärs av något annat — lägesbytets yta ligger över knappen
+     *             just då, och två toningar i rad är en för mycket.
+     */
+    private void paint(boolean tone) {
         if (knob == null) return;
         GradientDrawable circle = new GradientDrawable();
         circle.setShape(GradientDrawable.OVAL);
@@ -361,7 +440,7 @@ public class Bubble extends Service {
             said = "Tala. Tap&Talk, tryck för att diktera.";
         }
         knob.setContentDescription(said);
-        if (word.equals(knob.getText().toString())) {
+        if (!tone || word.equals(knob.getText().toString())) {
             knob.setText(word);
         } else {
             // Lägesbytet tonar i stället för att hoppa. Tiden kommer från
@@ -392,11 +471,13 @@ public class Bubble extends Service {
      *         den som ringde ska inte fortsätta.
      */
     private boolean place() {
-        if (knob == null || windows == null) return false;
+        if (shell == null || windows == null) return false;
         try {
-            windows.updateViewLayout(knob, where);
+            windows.updateViewLayout(shell, where);
             return true;
         } catch (RuntimeException gone) {
+            shell = null;
+            wash = null;
             knob = null;
             say("Bubblan kan inte visas längre. Kontrollera Visa över andra appar.");
             stopSelf();
@@ -404,13 +485,198 @@ public class Bubble extends Service {
         }
     }
 
-    /** Drar man bubblan flyttar den sig och fastnar vid närmaste kant. */
+    /**
+     * Ytan bubblan får ligga i, i fönstrets egna koordinater.
+     *
+     * Bubblans fönster sätter inte FLAG_LAYOUT_IN_SCREEN, så 0,0 är hörnet
+     * innanför systemfälten — samma hörn som förut, så ett sparat läge
+     * betyder fortfarande samma sak. Det som ändras är hur stor ytan räknas:
+     * måtten kom förut ur DisplayMetrics, som inte vet något om statusrad,
+     * navigeringsfält eller kamerahål, och bubblan kunde hamna under dem.
+     *
+     * WindowMetrics finns från Android 11, och appen kräver Android 11. Vill
+     * telefonen ändå inte svara får de gamla måtten gälla: en bubbla på ett
+     * ungefär är bättre än ingen bubbla.
+     */
+    private Rect room() {
+        Rect fallback = new Rect(0, 0,
+                getResources().getDisplayMetrics().widthPixels,
+                getResources().getDisplayMetrics().heightPixels);
+        if (windows == null) return fallback;
+        try {
+            WindowMetrics metrics = windows.getCurrentWindowMetrics();
+            Rect bounds = metrics.getBounds();
+            Insets bars = metrics.getWindowInsets().getInsetsIgnoringVisibility(
+                    WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+            int wide = bounds.width() - bars.left - bars.right;
+            int high = bounds.height() - bars.top - bars.bottom;
+            if (wide <= 0 || high <= 0) return fallback;
+            return new Rect(0, 0, wide, high);
+        } catch (RuntimeException refused) {
+            return fallback;
+        }
+    }
+
+    /** Håller bubblan inom ytan. */
+    private void hold(int size) {
+        Rect room = room();
+        where.x = Math.max(room.left, Math.min(where.x, room.right - size));
+        where.y = Math.max(room.top, Math.min(where.y, room.bottom - size));
+    }
+
+    /**
+     * Lägesbytet, rev-ux 4.2 A8.
+     *
+     * Bubblan bytte förut färg på plats. Nu växer den nya ytan över knappen
+     * från den punkt där fingret låg — eller från mitten, när bytet inte kom
+     * av ett tryck — och under den har knappen redan bytt färg och ord när
+     * ytan tonar bort. Ingen navigering, inget nytt läge: det är samma knapp
+     * som säger något annat.
+     *
+     * Vid reducerad rörelse görs bytet med den crossfade som redan finns i
+     * {@link Motion}, och ingenting växer.
+     */
+    private void shift() {
+        float atX = tapX;
+        float atY = tapY;
+        tapX = -1f;
+        tapY = -1f;
+        if (knob == null) return;
+        // Ett lägesbyte ska kännas: medium. rev-ux avsnitt 7.
+        Haptik.fire(knob, this, Haptik.STATE_CHANGE);
+        if (wash == null || Motion.paused(this)) {
+            paint();
+            return;
+        }
+        int size = dp(Look.BUBBLE_SIZE);
+        float x = atX < 0f ? size / 2f : atX;
+        float y = atY < 0f ? size / 2f : atY;
+        GradientDrawable over = new GradientDrawable();
+        over.setShape(GradientDrawable.OVAL);
+        over.setColor(listening ? Look.GREEN_DEEP : Look.GREEN);
+        final View face = wash;
+        face.setBackground(over);
+        face.setAlpha(1f);
+        face.setVisibility(View.VISIBLE);
+        // Så långt det är från fingret till den bortaste kanten av knappen.
+        float far = (float) Math.hypot(Math.max(x, size - x), Math.max(y, size - y));
+        Animator grow = ViewAnimationUtils.createCircularReveal(
+                face, Math.round(x), Math.round(y), 0f, far);
+        grow.setDuration(Motion.swap(this, Motion.STATE));
+        grow.addListener(new AnimatorListenerAdapter() {
+            @Override public void onAnimationEnd(Animator done) {
+                // Knappen byter under ytan. Ordet kommer fram när ytan tonar
+                // bort, så att ingenting hoppar.
+                paint(false);
+                face.animate().alpha(0f).setDuration(Motion.CROSSFADE)
+                        .withEndAction(new Runnable() {
+                            @Override public void run() {
+                                face.setVisibility(View.GONE);
+                                face.setAlpha(1f);
+                            }
+                        }).start();
+            }
+        });
+        grow.start();
+    }
+
+    /**
+     * Kastet efter ett släpp, rev-ux 4.2 A13.
+     *
+     * Bubblan stannade förut i samma stund fingret lämnade den, och hoppade
+     * till kanten. Nu fortsätter den med farten den fick, bromsas som något
+     * med vikt, och låser vid närmaste kant.
+     *
+     * Vid reducerad rörelse flyttas den direkt till kanten: ingen fysik,
+     * ingen glidning. Haptiken ligger kvar.
+     */
+    private void fling(final int size, float vx, float vy) {
+        halt();
+        Rect room = room();
+        // Så långt farten hade räckt innan friktionen åt upp den.
+        int toX = Math.round(where.x + vx * GLIDE);
+        int toY = Math.round(where.y + vy * GLIDE);
+        // Närmaste kant räknas på var bubblan hade hamnat, inte på var fingret
+        // släppte: kastar man den åt höger ska den åt höger.
+        final int endX = toX + size / 2 < room.centerX() ? room.left : room.right - size;
+        final int endY = Math.max(room.top, Math.min(toY, room.bottom - size));
+        if (Motion.paused(this)) {
+            where.x = endX;
+            where.y = endY;
+            land();
+            return;
+        }
+        final int startX = where.x;
+        final int startY = where.y;
+        double far = Math.hypot(endX - startX, endY - startY);
+        double speed = Math.hypot(vx, vy);
+        // En avtagande kurva börjar i dubbla medelfarten. Ska den börja i
+        // fingrets fart blir tiden alltså två gånger vägen delat med farten.
+        long time = speed < 1.0 ? Motion.STATE : Math.round(2000.0 * far / speed);
+        time = Math.max(Motion.CROSSFADE, Math.min(time, FLIGHT_MAX));
+        ValueAnimator throwing = ValueAnimator.ofFloat(0f, 1f);
+        throwing.setDuration(time);
+        throwing.setInterpolator(new DecelerateInterpolator());
+        throwing.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override public void onAnimationUpdate(ValueAnimator step) {
+                float part = step.getAnimatedFraction();
+                where.x = Math.round(startX + (endX - startX) * part);
+                where.y = Math.round(startY + (endY - startY) * part);
+                if (!place()) step.cancel();
+            }
+        });
+        throwing.addListener(new AnimatorListenerAdapter() {
+            @Override public void onAnimationEnd(Animator done) {
+                flight = null;
+                where.x = endX;
+                where.y = endY;
+                land();
+            }
+        });
+        flight = throwing;
+        throwing.start();
+    }
+
+    /** Bubblan är framme: den låser, det känns, och läget sparas. */
+    private void land() {
+        if (!place()) return;
+        // Ett objekt som snäpper i läge ska kännas: soft. rev-ux avsnitt 7.
+        Haptik.fire(knob, this, Haptik.SNAP);
+        // Det sparade läget är kanten den snäppte till, inte där fingret
+        // släppte. Då ligger den kvar på samma kant nästa gång.
+        getSharedPreferences(Guide.SETTINGS, MODE_PRIVATE).edit()
+                .putInt(AT_X, where.x).putInt(AT_Y, where.y).apply();
+    }
+
+    /**
+     * Avbryter ett kast som är på väg.
+     *
+     * Lyssnarna tas bort först: ett avbrutet kast ska inte landa, vibrera och
+     * spara ett läge som användaren just tagit tillbaka med fingret.
+     */
+    private void halt() {
+        ValueAnimator old = flight;
+        flight = null;
+        if (old == null) return;
+        old.removeAllListeners();
+        old.cancel();
+    }
+
+    /**
+     * Drar man bubblan flyttar den sig, och kastar man den fortsätter den.
+     *
+     * Farten mäts med telefonens egen {@link VelocityTracker}, samma väg
+     * systemet självt mäter ett svep. Släppet lämnas till {@link #fling},
+     * som står för fysiken och för kanten.
+     */
     private final class Drag implements View.OnTouchListener {
         private final int size;
         private float fromX, fromY;
         private int wasX, wasY;
         private boolean moved;
         private long down;
+        /** Farten i fingret, för kastet efter släpp. */
+        private VelocityTracker speedo;
 
         Drag(int size) {
             this.size = size;
@@ -419,25 +685,42 @@ public class Bubble extends Service {
         @Override public boolean onTouch(View view, MotionEvent touch) {
             switch (touch.getAction()) {
                 case MotionEvent.ACTION_DOWN:
+                    // Tas bubblan mitt i ett kast är det fingret som gäller.
+                    halt();
                     fromX = touch.getRawX();
                     fromY = touch.getRawY();
                     wasX = where.x;
                     wasY = where.y;
                     moved = false;
                     down = System.currentTimeMillis();
+                    // Var fingret låg, för lägesbytets yta.
+                    tapX = touch.getX();
+                    tapY = touch.getY();
+                    track(touch);
                     return true;
                 case MotionEvent.ACTION_MOVE:
+                    track(touch);
                     int dx = Math.round(touch.getRawX() - fromX);
                     int dy = Math.round(touch.getRawY() - fromY);
                     if (Math.abs(dx) > dp(Look.GAP_S) || Math.abs(dy) > dp(Look.GAP_S)) moved = true;
                     if (!moved) return true;
                     where.x = wasX + dx;
                     where.y = wasY + dy;
-                    hold();
+                    hold(size);
                     place();
                     return true;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
+                    track(touch);
+                    float vx = 0f;
+                    float vy = 0f;
+                    if (speedo != null) {
+                        speedo.computeCurrentVelocity(1000);
+                        vx = speedo.getXVelocity();
+                        vy = speedo.getYVelocity();
+                        speedo.recycle();
+                        speedo = null;
+                    }
                     boolean quick = System.currentTimeMillis() - down < 500;
                     if (!moved && quick && touch.getAction() == MotionEvent.ACTION_UP) {
                         // performClick i stället för tapped(): fingret och
@@ -445,30 +728,20 @@ public class Bubble extends Service {
                         view.performClick();
                         return true;
                     }
-                    snap();
+                    // Dragningen var ingen tryckning. Då ska nästa lägesbyte
+                    // inte växa fram ur en punkt fingret lämnade för länge sedan.
+                    tapX = -1f;
+                    tapY = -1f;
+                    fling(size, vx, vy);
                     return true;
                 default:
                     return false;
             }
         }
 
-        /** Håller bubblan inom skärmen medan den dras. */
-        private void hold() {
-            int wide = getResources().getDisplayMetrics().widthPixels;
-            int high = getResources().getDisplayMetrics().heightPixels;
-            where.x = Math.max(0, Math.min(where.x, wide - size));
-            where.y = Math.max(0, Math.min(where.y, high - size));
-        }
-
-        private void snap() {
-            hold();
-            int wide = getResources().getDisplayMetrics().widthPixels;
-            where.x = where.x + size / 2 < wide / 2 ? 0 : wide - size;
-            if (!place()) return;
-            // Bubblan låste i läge. Ett objekt som snäpper ska kännas.
-            Haptik.fire(knob, Bubble.this, Haptik.SNAP);
-            getSharedPreferences(Guide.SETTINGS, MODE_PRIVATE).edit()
-                    .putInt(AT_X, where.x).putInt(AT_Y, where.y).apply();
+        private void track(MotionEvent touch) {
+            if (speedo == null) speedo = VelocityTracker.obtain();
+            speedo.addMovement(touch);
         }
     }
 
@@ -478,7 +751,7 @@ public class Bubble extends Service {
         if (listening) {
             if (speech != null) speech.stopListening();
             listening = false;
-            paint();
+            shift();
             // Mikrofonen är stängd, men svaret är inte inne. Håll omgången
             // öppen, och ge upp om taltjänsten tiger.
             hand.removeCallbacks(giveUp);
@@ -529,7 +802,7 @@ public class Bubble extends Service {
 
         listening = true;
         working = true;
-        paint();
+        shift();
         try {
             speech.startListening(ask);
         } catch (RuntimeException refused) {
@@ -565,7 +838,7 @@ public class Bubble extends Service {
             speech.setRecognitionListener(new Ears());
             listening = true;
             working = true;
-            paint();
+            shift();
             beat(true);
             speech.startListening(Speech.request(getPackageName()));
             return true;
@@ -700,7 +973,7 @@ public class Bubble extends Service {
 
         @Override public void onEndOfSpeech() {
             listening = false;
-            paint();
+            shift();
             // Talet är slut, men tolkningen är inte klar. Omgången står
             // öppen tills svaret kommer, eller tills tiden går ut.
             hand.removeCallbacks(giveUp);
@@ -755,7 +1028,7 @@ public class Bubble extends Service {
             hand.removeCallbacks(giveUp);
             beat(false);
             Mic.release(Bubble.this);
-            paint();
+            shift();
         }
     }
 }
