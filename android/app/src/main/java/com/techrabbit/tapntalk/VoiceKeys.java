@@ -247,7 +247,8 @@ public class VoiceKeys extends InputMethodService {
         key.setAllCaps(false);
         key.setText(face);
         key.setContentDescription(spoken);
-        key.setTextSize(TypedValue.COMPLEX_UNIT_SP, face.length() > 2 ? 14 : 18);
+        key.setTextSize(TypedValue.COMPLEX_UNIT_SP,
+                face.length() > 2 ? Look.TYPE_TOOL_WORD : Look.TYPE_TOOL_GLYPH);
         key.setTextColor(DIM);
         key.setPadding(0, 0, 0, 0);
         key.setBackground(skin(TOOL, TOOL_DOWN));

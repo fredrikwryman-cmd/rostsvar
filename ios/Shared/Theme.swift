@@ -239,11 +239,12 @@ enum TypeScale {
     }
 
     enum Style {
-        case title, body, subheadline, caption, caption2
+        case title, title3, body, subheadline, caption, caption2
 
         var ui: UIFont.TextStyle {
             switch self {
             case .title: return .title1
+            case .title3: return .title3
             case .body: return .body
             case .subheadline: return .subheadline
             case .caption: return .caption1
@@ -254,6 +255,7 @@ enum TypeScale {
         var swiftUI: Font.TextStyle {
             switch self {
             case .title: return .title
+            case .title3: return .title3
             case .body: return .body
             case .subheadline: return .subheadline
             case .caption: return .caption
@@ -307,6 +309,13 @@ enum TypeScale {
     static let draft = Step(17, .regular, .body, lineHeight: 25)
     /// Knapptext.
     static let button = Step(16, .bold)
+    /// Knappen i iMessage-tillägget: Tala, Rensa, Skicka.
+    ///
+    /// Större och lättare än appens knapptext, och det är med flit. Panelen
+    /// i Meddelanden är låg, knapparna är tre av fem saker som finns där,
+    /// och storleken är den de har i dag. Steget flyttar värdet hit, det
+    /// ändrar det inte.
+    static let panelButton = Step(20, .regular, .title3)
     /// Brödtext.
     static let body = Step(15, .regular, .subheadline, lineHeight: 21)
     /// Brödtext utan radhöjd: en rad som inte bryts.

@@ -177,6 +177,16 @@ final class Look {
     static final int TYPE_CAPTION = 14;
     /** Teckenräknaren och etiketter. */
     static final int TYPE_SMALL = 13;
+    /**
+     * Funktionstangent med ett ord på: 123, ABC, Klar.
+     *
+     * Ett ord behöver mer bredd än en glyf och får därför mindre text, annars
+     * står det "Mellansl…" på tangenten. Storleken låg förut som ett tal i
+     * {@code VoiceKeys}.
+     */
+    static final int TYPE_TOOL_WORD = 14;
+    /** Funktionstangent med en glyf på: ⇧, ⌫, ⏎. */
+    static final int TYPE_TOOL_GLYPH = 18;
 
     private Look() { }
 

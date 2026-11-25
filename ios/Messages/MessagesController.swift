@@ -47,7 +47,7 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
         overrideUserInterfaceStyle = .dark
         view.backgroundColor = Palette.ui(Palette.bg)
 
-        status.font = .preferredFont(forTextStyle: .subheadline)
+        status.font = TypeScale.body.uiFont()
         status.adjustsFontForContentSizeCategory = true
         status.numberOfLines = 0
         status.textColor = Palette.ui(Palette.muted)
@@ -101,7 +101,7 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
         send.accessibilityLabel = "Skicka utkastet i konversationen"
         send.addTarget(self, action: #selector(sendDraft), for: .touchUpInside)
 
-        aside.font = .preferredFont(forTextStyle: .caption1)
+        aside.font = TypeScale.footnote.uiFont()
         aside.adjustsFontForContentSizeCategory = true
         aside.numberOfLines = 0
         aside.textColor = Palette.ui(Palette.faint)
@@ -177,7 +177,7 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
     /// Samma knappform som Rensa och Skicka på startskärmen: piller, grön
     /// när den är vägen vidare, annars kortets yta med kant.
     private func paint(_ button: UIButton, prominent: Bool) {
-        button.titleLabel?.font = .preferredFont(forTextStyle: .title3)
+        button.titleLabel?.font = TypeScale.panelButton.uiFont()
         button.titleLabel?.adjustsFontForContentSizeCategory = true
         button.titleLabel?.adjustsFontSizeToFitWidth = true
         button.titleLabel?.minimumScaleFactor = 0.8
