@@ -82,6 +82,20 @@ enum Metric {
     static let editorInsetY: CGFloat = -8
     /// Huvudets höjd på startskärmen.
     static let headerHeight: CGFloat = 56
+    /// Toppfältet: den smala raden som ligger kvar när huvudet kollapsat.
+    static let barHeight: CGFloat = 44
+    /// Hur långt man ska behöva scrolla för att huvudet är helt kollapsat.
+    static let collapse: CGFloat = 72
+    /// Hur mycket ordmärket krymper på vägen.
+    static let collapseScale: CGFloat = 0.18
+    /// Vid hur stor del av kollapsen den lilla versionen tonar in. rev-ux
+    /// 4.3 punkt 1: ca 60 procent.
+    static let barReveal: Double = 0.6
+    /// Toppfältet får glas och avdelare först när innehåll ligger under det.
+    /// rev-ux 4.3 punkt 2: scroll över 4 pt.
+    static let glassFrom: CGFloat = 4
+    /// Och är helt påslaget här.
+    static let glassFull: CGFloat = 24
     /// Textfältets minsta höjd.
     static let fieldMinHeight: CGFloat = 96
     /// Lägesprickan i fältets fot, och snurran som ersätter den.
@@ -89,6 +103,24 @@ enum Metric {
     static let spinner: CGFloat = 10
 
     // MARK: - Linjer
+
+    // MARK: - Tangentbordets egna mått
+
+    /// Luften mellan två tangenter, och mellan två rader.
+    static let keyGap: CGFloat = 5
+    static let rowGap: CGFloat = 6
+    /// Tangentbordets egen marginal, som är trängre än appens: varje punkt
+    /// här är en punkt mindre tangent.
+    static let boardInsetX: CGFloat = 4
+    static let boardInsetY: CGFloat = 6
+    /// Tala-tangentens höjd i tangentbordet.
+    static let micKeyHeight: CGFloat = 50
+    /// Utkastytans minsta höjd i iMessage-tillägget.
+    static let draftMinHeight: CGFloat = 120
+    /// Tangentbordets höjd följer textstorleken, men inte obegränsat: ett
+    /// tangentbord som tar halva skärmen hjälper ingen.
+    static let boardMin: CGFloat = 296
+    static let boardMax: CGFloat = 430
 
     /// Avdelare och kanter som inte bär en komponentgräns.
     static let hairline: CGFloat = 1
@@ -126,6 +158,19 @@ enum Move {
 
     /// Tryckets nedskalning.
     static let pressScale: CGFloat = 0.97
+    /// Tryckets dämpning när rörelse ska vara reducerad: ingen zoom, bara
+    /// en ton. Något måste hända inom 100 ms, annars känns knappen död.
+    static let pressDim: Double = 0.8
+
+    /// Knappar, chips och ikoner. rev-ux avsnitt 3: damping 24,
+    /// stiffness 340 — i SwiftUI samma kurva som response 0,25 och
+    /// dampingFraction 0,8.
+    static var snappy: Animation { .spring(response: 0.25, dampingFraction: 0.8) }
+
+    /// Animationen för ett tryck.
+    static func press(reduced: Bool) -> Animation {
+        reduced ? .easeInOut(duration: swap) : snappy
+    }
     /// Sidan bakom ett ark.
     static let recedeScale: CGFloat = 0.94
     static let recedeDim: Double = 0.45
@@ -166,11 +211,12 @@ enum TypeScale {
     /// Archivos fyra vikter, oberoende av UIKit och SwiftUI, så att filen
     /// går att bygga i alla tre målen.
     enum Weight {
-        case regular, bold, heavy, black
+        case regular, semibold, bold, heavy, black
 
         var ui: UIFont.Weight {
             switch self {
             case .regular: return .regular
+            case .semibold: return .semibold
             case .bold: return .bold
             case .heavy: return .heavy
             case .black: return .black
@@ -180,6 +226,7 @@ enum TypeScale {
         var swiftUI: Font.Weight {
             switch self {
             case .regular: return .regular
+            case .semibold: return .semibold
             case .bold: return .bold
             case .heavy: return .heavy
             case .black: return .black
@@ -217,22 +264,29 @@ enum TypeScale {
         let style: Style
         let tracking: CGFloat
         let lineHeight: CGFloat?
+        /// Största punktstorlek steget får växa till.
+        ///
+        /// Dynamic Type ska följas, men en tangent har en fast bredd. Utan
+        /// tak växte texten ur sin tangent vid de största inställningarna,
+        /// och då stod det "Mellansl…" på mellanslagstangenten.
+        let cap: CGFloat
 
         init(_ size: CGFloat,
              _ weight: Weight,
              _ style: Style = .body,
              tracking: CGFloat = 0,
-             lineHeight: CGFloat? = nil) {
+             lineHeight: CGFloat? = nil,
+             cap: CGFloat = .greatestFiniteMagnitude) {
             self.size = size
             self.weight = weight
             self.style = style
             self.tracking = tracking
             self.lineHeight = lineHeight
+            self.cap = cap
         }
 
-        /// Samma steg som UIKit-typsnitt, skalat mot sin textstil. Taket
-        /// hindrar att en rad i tangentbordet växer ur sin tangent.
-        func uiFont(cap: CGFloat = .greatestFiniteMagnitude) -> UIFont {
+        /// Samma steg som UIKit-typsnitt, skalat mot sin textstil.
+        func uiFont() -> UIFont {
             UIFontMetrics(forTextStyle: style.ui)
                 .scaledFont(for: .systemFont(ofSize: size, weight: weight.ui),
                             maximumPointSize: cap)
@@ -268,4 +322,16 @@ enum TypeScale {
     static let footnote = Step(12, .regular, .caption)
     /// Etiketten "kontrollera själv" i guiden.
     static let badge = Step(11, .bold, .caption2)
+
+    // Tangentbordets egna steg. De har tak, eftersom en tangent har en
+    // fast bredd. Tangentbordet ritar i systemtypsnittet och inte i
+    // Archivo: tilläggets paket registrerar inga egna typsnitt.
+    /// Statusraden över tangenterna.
+    static let boardStatus = Step(12, .regular, .caption, cap: 20)
+    /// Tala-tangenten.
+    static let boardMic = Step(20, .semibold, .body, cap: 28)
+    /// En vanlig bokstavstangent.
+    static let boardKey = Step(19, .regular, .body, cap: 26)
+    /// En tangent med ord i stället för en bokstav: shift, siffror, Klar.
+    static let boardAccent = Step(16, .regular, .body, cap: 22)
 }

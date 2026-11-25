@@ -40,7 +40,7 @@ enum Haptics {
         case privacy
         /// Texten lämnas vidare.
         case send
-        /// Mikrofonen öppnas.
+        /// Mikrofonen öppnas. Tyngre än när den stängs.
         case recordStart
         /// Mikrofonen stängs.
         case recordStop
@@ -96,17 +96,18 @@ enum Haptics {
             UINotificationFeedbackGenerator().notificationOccurred(.error)
         case .warning:
             UINotificationFeedbackGenerator().notificationOccurred(.warning)
-        case .stateChange, .recordStop:
-            // Mikrofonen stängs tyngre än den öppnas. Det är appens eget
-            // beslut sedan Tech Rabbit-underlaget §8, och rev-ux avsnitt 7
-            // säger att befintliga haptikbeslut går före kartans styrkor.
-            // Ändringslistan vänder på de två när Tala-knappen byggs om.
+        case .stateChange, .recordStart:
+            // Mikrofonen öppnas tyngre än den stängs. Det är vänt mot Tech
+            // Rabbit-underlaget §8 och mot appens fyra första rader, och det
+            // är avsiktligt: ändringslistans rad om Tala-knappen och rev-ux
+            // avsnitt 7 säger start = medium, stopp = light. Att öppna
+            // mikrofonen är det som behöver kännas.
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         case .snap, .privacy:
             UIImpactFeedbackGenerator(style: .soft).impactOccurred()
         case .remove:
             UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
-        case .press, .send, .recordStart:
+        case .press, .send, .recordStop:
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
     }

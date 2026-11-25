@@ -175,6 +175,35 @@ struct TRCard<Content: View>: View {
     }
 }
 
+/// Trycket, rev-ux 4.2 A12: allt tryckbart skalas till 0,97 med `snappy`,
+/// och något händer inom 100 ms.
+///
+/// Med Reducera rörelse påslaget är zoomen borta och trycket tonar i
+/// stället. En knapp som inte svarar alls känns trasig, och inställningen
+/// gäller rörelse, inte återkoppling.
+///
+/// `@Environment` läses i en egen vy och inte i stilen: en `ButtonStyle` är
+/// ingen vy, och miljön kommer inte in i den.
+struct TRPress: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Face(pressed: configuration.isPressed, label: configuration.label)
+    }
+
+    private struct Face<Label: View>: View {
+        let pressed: Bool
+        let label: Label
+
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+        var body: some View {
+            label
+                .scaleEffect(pressed && !reduceMotion ? Move.pressScale : 1)
+                .opacity(pressed && reduceMotion ? Move.pressDim : 1)
+                .animation(Move.press(reduced: reduceMotion), value: pressed)
+        }
+    }
+}
+
 /// En knapp i samma form som Rensa och Skicka: piller, 52 högt, ikon- och
 /// textvikt ur §3. Grön när den är vägen vidare, annars kortets yta med
 /// kant.
@@ -194,7 +223,7 @@ struct TRButton: View {
                 .overlay(Capsule().strokeBorder(
                     filled ? TR.green : TR.dimDot, lineWidth: Metric.hairline))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TRPress())
     }
 }
 
@@ -264,6 +293,32 @@ struct TRSheet<Content: View>: View {
         }
         .preferredColorScheme(.dark)
         .tint(TR.green)
+    }
+}
+
+// MARK: - Scrollen, §4.3
+
+/// Hur långt sidan är scrollad, läst ur layouten och inte ur en tid.
+///
+/// Huvudet kollapsar med fingret: står scrollen still står huvudet still, och
+/// drar man tillbaka växer det tillbaka. En animation på en tid hade lossnat
+/// från fingret i samma stund som någon scrollade snabbt.
+struct TRScrollOffset: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+extension View {
+    /// Mäter hur långt sidan är scrollad inom koordinatrummet `space`.
+    /// Läggs på innehållet inne i en `ScrollView`.
+    func trMeasureScroll(in space: String) -> some View {
+        background(GeometryReader { inner in
+            Color.clear.preference(key: TRScrollOffset.self,
+                                   value: -inner.frame(in: .named(space)).minY)
+        })
     }
 }
 
@@ -351,7 +406,7 @@ struct TRBackdrop: View {
     }
 
     private var edge: some View {
-        Self.bandPath(closed: false).stroke(TR.bandEdge, lineWidth: 1.5)
+        Self.bandPath(closed: false).stroke(TR.bandEdge, lineWidth: Metric.edge)
     }
 
     /// Radiell glöd med centrum (195, 700) och radie 230.
@@ -528,10 +583,14 @@ struct TRRings: View {
     let still: Bool
 
     private var period: Double { listening ? 1.6 : 2.8 }
-    private var amp: Double { listening ? 0.35 : 0.22 }
-    private var maxOp: Double { listening ? 1.0 : 0.8 }
+    /// Vilopulsen är dämpad, punkt 9 i ändringslistan: ringarna växte 22 %
+    /// och tonade från full styrka på en skärm där ingenting hände.
+    /// Lyssnarläget är orört — där är pulsen beskedet om att mikrofonen är
+    /// på.
+    private var amp: Double { listening ? 0.35 : 0.14 }
+    private var maxOp: Double { listening ? 1.0 : 0.5 }
     private var color: Color { listening ? TR.red : TR.green }
-    private var restOpacity: Double { listening ? 0.9 : 0.55 }
+    private var restOpacity: Double { listening ? 0.9 : 0.45 }
 
     var body: some View {
         Group {
@@ -575,8 +634,10 @@ struct TRRings: View {
 enum TRGlow {
     static func opacity(listening: Bool, still: Bool, at t: Double) -> Double {
         if listening { return 0.45 }
-        guard !still else { return 0.35 }
-        return 0.35 + 0.15 * sin(2 * .pi * t / 2.8)
+        guard !still else { return 0.3 }
+        // Andningen är dämpad med vilopulsen, punkt 9: ±0,06 i stället för
+        // ±0,15 runt ett lägre medel.
+        return 0.3 + 0.06 * sin(2 * .pi * t / 2.8)
     }
 
     /// Värdet står i `Metric.glowRadius`, med skälet till halveringen.

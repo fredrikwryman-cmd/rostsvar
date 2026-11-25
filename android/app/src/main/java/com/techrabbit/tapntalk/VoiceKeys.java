@@ -40,10 +40,10 @@ public class VoiceKeys extends InputMethodService {
 
     /** Samma svarta yta och gröna accent som appens skärm. Se Look. */
     private static final int BOARD = Look.BG;
-    private static final int KEY = 0xFF1B1F21;
-    private static final int KEY_DOWN = 0xFF2E3437;
-    private static final int TOOL = 0xFF101315;
-    private static final int TOOL_DOWN = 0xFF1E2325;
+    private static final int KEY = Look.BOARD_BAR;
+    private static final int KEY_DOWN = Look.KEY_DOWN;
+    private static final int TOOL = Look.BOARD;
+    private static final int TOOL_DOWN = Look.KEY;
     private static final int INK = Look.INK;
     private static final int DIM = Look.DIM;
     private static final int GREEN = Look.GREEN;
@@ -121,7 +121,7 @@ public class VoiceKeys extends InputMethodService {
         board = new LinearLayout(this);
         board.setOrientation(LinearLayout.VERTICAL);
         board.setBackgroundColor(BOARD);
-        board.setPadding(dp(3), dp(6), dp(3), dp(8));
+        board.setPadding(dp(Look.GAP_TICK), dp(Look.GAP_XS), dp(Look.GAP_TICK), dp(Look.GAP_S));
 
         LinearLayout said = new LinearLayout(this);
         said.setOrientation(LinearLayout.HORIZONTAL);
@@ -131,17 +131,17 @@ public class VoiceKeys extends InputMethodService {
         spin.setIndeterminate(true);
         spin.setVisibility(View.GONE);
         LinearLayout.LayoutParams spinSlot =
-                new LinearLayout.LayoutParams(dp(16), dp(16));
-        spinSlot.rightMargin = dp(6);
+                new LinearLayout.LayoutParams(dp(Look.GAP_L), dp(Look.GAP_L));
+        spinSlot.rightMargin = dp(Look.GAP_XS);
         said.addView(spin, spinSlot);
 
         says = new TextView(this);
-        says.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        says.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_SMALL);
         says.setTextColor(DIM);
         says.setGravity(Gravity.CENTER);
         says.setMaxLines(2);
         says.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        says.setPadding(dp(10), dp(2), dp(10), dp(4));
+        says.setPadding(dp(Look.GAP_SM), dp(Look.EDGE), dp(Look.GAP_SM), dp(Look.GAP_TINY));
         // Punkt 13: beskedet ska läsas upp när det byts, inte bara stå där.
         says.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         said.addView(says, new LinearLayout.LayoutParams(
@@ -189,12 +189,12 @@ public class VoiceKeys extends InputMethodService {
         LinearLayout talkRow = row();
         micKey = new Button(this);
         micKey.setAllCaps(false);
-        micKey.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
+        micKey.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_HEADING);
         micKey.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { micTapped(); }
         });
         LinearLayout.LayoutParams wide = new LinearLayout.LayoutParams(0, tall(52), 1f);
-        wide.setMargins(dp(3), dp(5), dp(3), dp(2));
+        wide.setMargins(dp(Look.GAP_TICK), dp(Look.GAP_NUDGE), dp(Look.GAP_TICK), dp(Look.EDGE));
         talkRow.addView(micKey, wide);
         board.addView(talkRow);
 
@@ -216,7 +216,7 @@ public class VoiceKeys extends InputMethodService {
     private Button glyph(char base) {
         final Button key = new Button(this);
         key.setAllCaps(false);
-        key.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
+        key.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_HEADING);
         key.setTextColor(INK);
         key.setPadding(0, 0, 0, 0);
         key.setBackground(skin(KEY, KEY_DOWN));
@@ -263,7 +263,7 @@ public class VoiceKeys extends InputMethodService {
         key.setAllCaps(false);
         key.setText("⌫");
         key.setContentDescription("Backsteg");
-        key.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        key.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_DRAFT);
         key.setTextColor(DIM);
         key.setPadding(0, 0, 0, 0);
         key.setBackground(skin(TOOL, TOOL_DOWN));
@@ -319,7 +319,7 @@ public class VoiceKeys extends InputMethodService {
     private LinearLayout.LayoutParams weight(float weight, int height) {
         LinearLayout.LayoutParams params =
                 new LinearLayout.LayoutParams(0, tall(height), weight);
-        params.setMargins(dp(2), dp(2), dp(2), dp(2));
+        params.setMargins(dp(Look.EDGE), dp(Look.EDGE), dp(Look.EDGE), dp(Look.EDGE));
         return params;
     }
 
@@ -345,7 +345,7 @@ public class VoiceKeys extends InputMethodService {
      *
      * Linjen är inte dekor. Tangentens yta har 1,27:1 mot tangentbordets
      * botten, och utan en kant går tangenterna inte att skilja från den eller
-     * från varandra. 0xFF707070 ger 3,13:1 mot ytan. Grön tangent får ingen
+     * från varandra. Look.KEY_EDGE ger 3,13:1 mot ytan. Grön tangent får ingen
      * linje: där bär ytan gränsen själv med 12,72:1.
      */
     private StateListDrawable skin(int rest, int down, int stroke) {
@@ -359,8 +359,8 @@ public class VoiceKeys extends InputMethodService {
         GradientDrawable shape = new GradientDrawable();
         shape.setShape(GradientDrawable.RECTANGLE);
         shape.setColor(fill);
-        shape.setCornerRadius(dp(7));
-        if (stroke != 0) shape.setStroke(Math.max(1, dp(1)), stroke);
+        shape.setCornerRadius(dp(Look.RADIUS_KEY));
+        if (stroke != 0) shape.setStroke(Math.max(1, dp(Look.HAIRLINE)), stroke);
         return shape;
     }
 

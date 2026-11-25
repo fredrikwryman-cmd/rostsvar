@@ -57,27 +57,12 @@ final class KeyboardController: UIInputViewController {
 
     // MARK: - Dynamic Type
 
-    /// Systemfont som växer med textstorleken i Inställningar, med ett tak.
-    ///
-    /// Tangentbordet hade bara `.systemFont(ofSize:)` rakt igenom och ändrade
-    /// sig inte en punkt — medan appen skalar allt genom `TRFont` och
-    /// iMessage-tillägget genom `preferredFont`. Taket finns för att en
-    /// tangent har en bestämd höjd: bokstaven får växa, men inte ur rutan.
-    private func scaled(_ size: CGFloat,
-                        _ weight: UIFont.Weight = .regular,
-                        style: UIFont.TextStyle = .body,
-                        cap: CGFloat) -> UIFont {
-        UIFontMetrics(forTextStyle: style)
-            .scaledFont(for: .systemFont(ofSize: size, weight: weight),
-                        maximumPointSize: cap)
-    }
-
-    /// Höjden följer textstorleken, men inte obegränsat: ett tangentbord som
-    /// tar halva skärmen hjälper ingen. 296 vid standardstorlek.
+    /// Höjden följer textstorleken, men inte obegränsat. Måtten står i
+    /// `Metric.boardMin` och `Metric.boardMax`.
     private var boardHeight: CGFloat {
         let want = UIFontMetrics(forTextStyle: .body)
-            .scaledValue(for: 296, compatibleWith: traitCollection)
-        return min(max(296, want), 430)
+            .scaledValue(for: Metric.boardMin, compatibleWith: traitCollection)
+        return min(max(Metric.boardMin, want), Metric.boardMax)
     }
 
     override func traitCollectionDidChange(_ previous: UITraitCollection?) {
@@ -94,7 +79,7 @@ final class KeyboardController: UIInputViewController {
         super.viewDidLoad()
         view.backgroundColor = bg
 
-        status.font = scaled(12, style: .caption1, cap: 20)
+        status.font = TypeScale.boardStatus.uiFont()
         status.adjustsFontForContentSizeCategory = true
         status.textColor = dim
         status.numberOfLines = 2
@@ -106,36 +91,40 @@ final class KeyboardController: UIInputViewController {
         spin.hidesWhenStopped = true
 
         rows.axis = .vertical
-        rows.spacing = 6
+        rows.spacing = Metric.rowGap
         rows.distribution = .fillEqually
 
         mic.backgroundColor = green
         mic.setTitleColor(darkInk, for: .normal)
-        mic.titleLabel?.font = scaled(20, .semibold, cap: 28)
+        mic.titleLabel?.font = TypeScale.boardMic.uiFont()
         mic.titleLabel?.adjustsFontForContentSizeCategory = true
         // Primärknappen är ett piller i appen och i iMessage-tillägget. Här
         // är den en tangent bland tangenter, men radien följer höjden på samma
         // sätt, så formen känns igen.
-        mic.layer.cornerRadius = 12
+        mic.layer.cornerRadius = Metric.micKeyRadius
         mic.addTarget(self, action: #selector(micTapped), for: .touchUpInside)
 
         let head = UIStackView(arrangedSubviews: [spin, status])
         head.axis = .horizontal
-        head.spacing = 6
+        head.spacing = Metric.rowGap
         head.alignment = .center
 
         let page = UIStackView(arrangedSubviews: [head, rows, mic])
         page.axis = .vertical
-        page.spacing = 6
+        page.spacing = Metric.rowGap
         page.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(page)
 
         NSLayoutConstraint.activate([
-            page.topAnchor.constraint(equalTo: view.topAnchor, constant: 6),
-            page.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -6),
-            page.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 4),
-            page.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -4),
-            mic.heightAnchor.constraint(equalToConstant: 50)
+            page.topAnchor.constraint(equalTo: view.topAnchor,
+                                      constant: Metric.boardInsetY),
+            page.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor,
+                                         constant: -Metric.boardInsetY),
+            page.leadingAnchor.constraint(equalTo: view.leadingAnchor,
+                                          constant: Metric.boardInsetX),
+            page.trailingAnchor.constraint(equalTo: view.trailingAnchor,
+                                           constant: -Metric.boardInsetX),
+            mic.heightAnchor.constraint(equalToConstant: Metric.micKeyHeight)
         ])
 
         // Ett tangentbord måste själv säga hur högt det är.
@@ -169,12 +158,14 @@ final class KeyboardController: UIInputViewController {
         button.setTitle(title, for: .normal)
         button.backgroundColor = keyFill
         button.setTitleColor(accent ? green : ink, for: .normal)
-        button.titleLabel?.font = accent ? scaled(16, cap: 22) : scaled(19, cap: 26)
+        button.titleLabel?.font = accent
+                ? TypeScale.boardAccent.uiFont()
+                : TypeScale.boardKey.uiFont()
         button.titleLabel?.adjustsFontForContentSizeCategory = true
         button.titleLabel?.adjustsFontSizeToFitWidth = true
         button.titleLabel?.minimumScaleFactor = 0.6
-        button.layer.cornerRadius = 7
-        button.layer.borderWidth = 1
+        button.layer.cornerRadius = Metric.keyRadius
+        button.layer.borderWidth = Metric.hairline
         button.layer.borderColor = keyEdge.cgColor
         button.addTarget(self, action: action, for: .touchUpInside)
         button.accessibilityLabel = label ?? title
@@ -184,7 +175,7 @@ final class KeyboardController: UIInputViewController {
     private func line(_ characters: String, upper: Bool) -> UIStackView {
         let row = UIStackView()
         row.axis = .horizontal
-        row.spacing = 5
+        row.spacing = Metric.keyGap
         row.distribution = .fillEqually
         for letter in characters {
             let shown = upper ? String(letter).uppercased() : String(letter)
@@ -210,7 +201,7 @@ final class KeyboardController: UIInputViewController {
         // bredden, så raden ser lika ut oavsett hur många tecken den bär.
         let third = UIStackView()
         third.axis = .horizontal
-        third.spacing = 5
+        third.spacing = Metric.keyGap
         third.distribution = .fill
 
         let shiftTitle = digits ? (extraPage ? "123" : "#+=") : (shift == .locked ? "⇪" : "⇧")
@@ -230,7 +221,7 @@ final class KeyboardController: UIInputViewController {
 
         let bottom = UIStackView()
         bottom.axis = .horizontal
-        bottom.spacing = 5
+        bottom.spacing = Metric.keyGap
         bottom.distribution = .fill
 
         let swap = key(digits ? "ABC" : "123", action: #selector(digitsTapped), accent: true,

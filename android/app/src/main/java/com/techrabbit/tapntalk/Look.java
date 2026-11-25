@@ -45,6 +45,26 @@ final class Look {
     static final int OFF = 0xFF8A8A8A;
     /** Varningens gula, används bara när något fattas. */
     static final int WARN = 0xFFFFC46B;
+    /** Varningsrutans yta: det gula mörkt nedtonat. */
+    static final int WARN_FILL = 0xFF1A1407;
+    /** Genomskinligt. En knapp i vila som bara är en ram. */
+    static final int CLEAR = 0x00000000;
+    /**
+     * Svart på en tredjedel. Bubblans kant mot en bakgrund appen inte
+     * känner: den ligger över andra appar, och en ljus app bakom skulle
+     * annars sudda ut den gröna skivans kontur.
+     */
+    static final int SHADE = 0x55000000;
+
+    // Rösttangentbordets egna ytor. Tangentbordet är mörkare än appen: det
+    // ligger under innehållet i någon annans app och ska inte lysa.
+    /** Tangentbordets botten. */
+    static final int BOARD = 0xFF101315;
+    /** Statusradens yta i tangentbordet. */
+    static final int BOARD_BAR = 0xFF1B1F21;
+    /** Tangentens yta, och samma yta nedtryckt. */
+    static final int KEY = 0xFF1E2325;
+    static final int KEY_DOWN = 0xFF2E3437;
 
     // ------------------------------------------------------------ måtten
     //
@@ -66,8 +86,16 @@ final class Look {
     static final int CARD_PAD = 14;
     /** Kortets och fältets radie. */
     static final int RADIUS_CARD = 14;
+    /** Pillerformen: halva knappens höjd. */
+    static final int RADIUS_PILL = 26;
     /** Tangentens radie i rösttangentbordet. */
-    static final int RADIUS_KEY = 8;
+    static final int RADIUS_KEY = 7;
+    /** Guidens knapp i vila: en ram utan fylld yta. */
+    static final int RADIUS_GHOST = 10;
+    /** Tala-knappens radie på hemskärmen. */
+    static final int RADIUS_MIC = 16;
+    /** Den lilla rutan: varningens ikonplatta, pillerknappen i huvudet. */
+    static final int RADIUS_SMALL = 12;
     /** Bubblans radie: en cirkel, alltså halva sidan. */
     static final int RADIUS_ROUND = 28;
 
@@ -82,7 +110,11 @@ final class Look {
     static final int GAP_L = 16;
     static final int GAP_XL = 18;
     static final int GAP_XXL = 20;
+    static final int GAP_WIDE = 22;
+    static final int GAP_XHUGE = 24;
     static final int GAP_HUGE = 28;
+    /** Den minsta knuffen: tangentens luft uppåt i tangentbordet. */
+    static final int GAP_NUDGE = 5;
 
     /** Minsta träffyta. 48 dp är Androids golv, inte ett riktmärke. */
     static final int TOUCH = 48;
@@ -92,9 +124,13 @@ final class Look {
     static final int PILL_H = 46;
     static final int PILL_W = 92;
     /** Tala-knappen på hemskärmen. */
-    static final int MIC_H = 66;
+    static final int MIC_H = 84;
+    /** Strömbrytarens minsta bredd. */
+    static final int SWITCH_W = 56;
+    /** Guidens höga rad. */
+    static final int ROW_TALL = 56;
     /** Bubblans sida. */
-    static final int BUBBLE = 56;
+    static final int BUBBLE_SIZE = 66;
     /** Textfältets minsta höjd. */
     static final int FIELD_MIN = 96;
     /** Snurran som ersätter lägesprickan. */
@@ -119,6 +155,8 @@ final class Look {
     static final int TYPE_APP_NAME = 30;
     /** Skärmrubrik. */
     static final int TYPE_TITLE = 22;
+    /** Raden över rubriken i guiden. */
+    static final int TYPE_LEAD = 21;
     /** Rubrik i ett kort, och etiketten på Tala-knappen. */
     static final int TYPE_HEADING = 19;
     /** Utkastet i fältet. */

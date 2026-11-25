@@ -60,6 +60,36 @@ struct HomeScreen: View {
     /// transkriptet, och transkriptet är känsligt enligt app-profilen.
     @Environment(\.scenePhase) private var scenePhase
 
+    /// Hur långt sidan är scrollad, i punkter. Noll eller negativt högst upp.
+    @State private var scrolled: CGFloat = 0
+
+    /// Koordinatrummet huvudets kollaps mäts i.
+    private static let page = "hemsidan"
+
+    /// Hur långt huvudet kollapsat, 0 till 1. Driven av scrollpositionen,
+    /// inte av en tid: står fingret still står huvudet still.
+    private var collapse: Double {
+        let far = max(0, scrolled) / Metric.collapse
+        return Double(min(1, far))
+    }
+
+    /// Den lilla versionen i toppfältet tonar in vid 60 procents kollaps och
+    /// är framme vid 80.
+    private var barTitle: Double {
+        let from = Metric.barReveal
+        let to = min(1, from + 0.2)
+        guard collapse > from else { return 0 }
+        return min(1, (collapse - from) / (to - from))
+    }
+
+    /// Glaset och avdelaren tonar in när innehåll börjar ligga under
+    /// fältet, inte innan.
+    private var glass: Double {
+        guard scrolled > Metric.glassFrom else { return 0 }
+        let span = Metric.glassFull - Metric.glassFrom
+        return Double(min(1, (scrolled - Metric.glassFrom) / span))
+    }
+
     var body: some View {
         ZStack {
             TRBackdrop()
@@ -80,9 +110,15 @@ struct HomeScreen: View {
                     // användaren upp textstorleken växer stapeln förbi skärmen,
                     // och först då börjar sidan rulla i stället för att klippa.
                     .frame(minHeight: geo.size.height)
+                    .trMeasureScroll(in: Self.page)
                 }
+                .coordinateSpace(name: Self.page)
                 .scrollDismissesKeyboard(.interactively)
+                .onPreferenceChange(TRScrollOffset.self) { now in
+                    scrolled = now
+                }
             }
+            .overlay(alignment: .top) { topBar }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(TR.bg.ignoresSafeArea())
@@ -132,6 +168,51 @@ struct HomeScreen: View {
             }
     }
 
+    // MARK: - Toppfältet, rev-ux 4.3
+
+    /// Den smala raden som ligger kvar när huvudet kollapsat.
+    ///
+    /// Vid scroll 0 finns den inte: genomskinlig, utan glas, utan avdelare
+    /// och utan text. Då är det det riktiga huvudet man ser, en rad längre
+    /// ned. Först när innehåll börjar ligga under fältet tonar glaset in,
+    /// och först vid 60 procents kollaps tonar ordmärket in i liten version.
+    ///
+    /// Fältet tar aldrig emot ett tryck. Guide och Om sitter i det riktiga
+    /// huvudet, och ett genomskinligt lager som slukar tryck över dem vore
+    /// en fälla.
+    private var topBar: some View {
+        HStack(spacing: Metric.gapS) {
+            Text("Tap&Talk")
+                .trFont(TypeScale.heading)
+                .foregroundStyle(TR.text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, Metric.side)
+        .frame(height: Metric.barHeight)
+        .opacity(barTitle)
+        .frame(maxWidth: .infinity)
+        .background(alignment: .bottom) {
+            ZStack(alignment: .bottom) {
+                // Glaset. Materialet räcker inte ensamt på en nästan svart
+                // skärm, så bakgrundsfärgen ligger under det: texten i
+                // fältet ska klara AA mot det som faktiskt målas, och
+                // F2F2F2 mot 0B0B0B gör det med marginal.
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .overlay(TR.bg.opacity(0.6))
+                Rectangle()
+                    .fill(TR.border.opacity(Metric.dividerAlpha * 4))
+                    .frame(height: Metric.hairline)
+            }
+            .opacity(glass)
+            .ignoresSafeArea(edges: .top)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
     // MARK: - Huvudet, §4.1
 
     private var header: some View {
@@ -154,6 +235,16 @@ struct HomeScreen: View {
             pill("Om", hint: "Om appen och tangentbordet") { showAbout = true }
         }
         .frame(height: Metric.headerHeight)
+        // Ordmärket krymper och tonar med scrollen, rev-ux 4.3 punkt 1. Det
+        // är en skyddad tillgång: storleken och placeringen ändras, texten
+        // och formen inte. Skalningen är visuell och flyttar ingenting
+        // under huvudet.
+        //
+        // Med reducerad rörelse krymper det inte. Då är det bara tonen som
+        // är kvar, och det är en crossfade, som inställningen vill.
+        .scaleEffect(reduceMotion ? 1 : 1 - Metric.collapseScale * CGFloat(collapse),
+                     anchor: .topLeading)
+        .opacity(1 - collapse)
     }
 
     /// Ikonringen med Tech Rabbits kaninsymbol.
@@ -179,7 +270,7 @@ struct HomeScreen: View {
                 .background(TR.card, in: Capsule())
                 .overlay(Capsule().strokeBorder(TR.border, lineWidth: Metric.hairline))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TRPress())
         .frame(minHeight: Metric.touch)
         .contentShape(Rectangle())
         // Etiketten börjar med den text som syns, och säger sedan vad
@@ -263,7 +354,7 @@ struct HomeScreen: View {
                     } else {
                         written
                     }
-                    Color.clear.frame(height: 1).id(Self.lastLine)
+                    Color.clear.frame(height: Metric.hairline).id(Self.lastLine)
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
             }
@@ -384,7 +475,7 @@ struct HomeScreen: View {
             ZStack {
                 TRRings(listening: state.isRecording, still: reduceMotion)
                 Button { micTapped() } label: { face }
-                    .buttonStyle(.plain)
+                    .buttonStyle(TRPress())
                     .disabled(!state.canTalk)
                     .accessibilityLabel(micWord)
                     .accessibilityHint(state.isRecording
@@ -488,7 +579,7 @@ struct HomeScreen: View {
             .overlay(Capsule().strokeBorder(
                 state.canClear ? TR.dimDot : TR.border, lineWidth: Metric.hairline))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TRPress())
         .disabled(!state.canClear)
         .animation(fade, value: state.canClear)
         .accessibilityLabel("Rensa fältet")
@@ -510,7 +601,7 @@ struct HomeScreen: View {
             .overlay(Capsule().strokeBorder(
                 state.canSend ? TR.green : TR.border, lineWidth: Metric.hairline))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TRPress())
         .disabled(!state.canSend)
         .animation(fade, value: state.canSend)
         .accessibilityLabel("Skicka texten vidare")

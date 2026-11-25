@@ -139,21 +139,21 @@ public class Home extends Activity {
         TextView title = new TextView(this);
         title.setText("Tap&Talk");
         title.setTextColor(INK);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 30);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_APP_NAME);
         head.addView(title, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         Button guide = new Button(this);
         guide.setAllCaps(false);
         guide.setText("Guide");
-        guide.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        guide.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_SUBHEAD);
         guide.setTextColor(DIM);
-        guide.setBackground(box(0x00000000, BORDER, dp(12)));
+        guide.setBackground(box(Look.CLEAR, BORDER, dp(Look.RADIUS_SMALL)));
         guide.setContentDescription("Öppna kom igång-guiden");
         guide.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { openGuide(); }
         });
-        head.addView(guide, new LinearLayout.LayoutParams(dp(92), dp(46)));
+        head.addView(guide, new LinearLayout.LayoutParams(dp(Look.PILL_W), dp(Look.PILL_H)));
         page.addView(head, row(0, 0));
 
         LinearLayout said = new LinearLayout(this);
@@ -163,14 +163,14 @@ public class Home extends Activity {
         spin.setIndeterminate(true);
         spin.setVisibility(View.GONE);
         LinearLayout.LayoutParams spinSlot =
-                new LinearLayout.LayoutParams(dp(18), dp(18));
-        spinSlot.rightMargin = dp(8);
-        spinSlot.topMargin = dp(3);
+                new LinearLayout.LayoutParams(dp(Look.GAP_XL), dp(Look.GAP_XL));
+        spinSlot.rightMargin = dp(Look.GAP_S);
+        spinSlot.topMargin = dp(Look.GAP_TICK);
         said.addView(spin, spinSlot);
 
         status = new TextView(this);
         status.setTextColor(DIM);
-        status.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        status.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_SUBHEAD);
         status.setLineSpacing(0, 1.3f);
         // Raden bär hela förklaringen — varför mikrofonen inte går igång, vad
         // taltjänsten svarade, att texten står kvar. En seende läser den av
@@ -178,15 +178,15 @@ public class Home extends Activity {
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         said.addView(status, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        page.addView(said, row(dp(8), 0));
+        page.addView(said, row(dp(Look.GAP_S), 0));
 
         // Strömbrytaren för bubblan. Den ligger högst upp eftersom den är
         // appens egentliga funktion: knappen som följer med överallt.
         LinearLayout power = new LinearLayout(this);
         power.setOrientation(LinearLayout.HORIZONTAL);
         power.setGravity(Gravity.CENTER_VERTICAL);
-        power.setBackground(box(FIELD, BORDER, dp(14)));
-        power.setPadding(dp(14), dp(12), dp(10), dp(12));
+        power.setBackground(box(FIELD, BORDER, dp(Look.RADIUS_CARD)));
+        power.setPadding(dp(Look.GAP_ML), dp(Look.GAP_M), dp(Look.GAP_SM), dp(Look.GAP_M));
 
         LinearLayout words = new LinearLayout(this);
         words.setOrientation(LinearLayout.VERTICAL);
@@ -194,15 +194,15 @@ public class Home extends Activity {
         TextView powerTitle = new TextView(this);
         powerTitle.setText("Flytande knapp");
         powerTitle.setTextColor(INK);
-        powerTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        powerTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_BUTTON);
         words.addView(powerTitle, row(0, 0));
 
         bubbleNote = new TextView(this);
         bubbleNote.setTextColor(DIM);
-        bubbleNote.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        bubbleNote.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_CAPTION);
         bubbleNote.setLineSpacing(0, 1.25f);
         bubbleNote.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        words.addView(bubbleNote, row(dp(3), 0));
+        words.addView(bubbleNote, row(dp(Look.GAP_TICK), 0));
 
         power.addView(words, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
@@ -211,13 +211,13 @@ public class Home extends Activity {
         // Etiketten börjar med den text som syns intill, "Flytande knapp",
         // och säger sedan vad strömbrytaren gör.
         bubble.setContentDescription("Flytande knapp. Starta eller stäng den.");
-        bubble.setMinimumWidth(dp(56));
-        bubble.setMinimumHeight(dp(48));
+        bubble.setMinimumWidth(dp(Look.ROW_TALL));
+        bubble.setMinimumHeight(dp(Look.TOUCH));
         bubble.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { bubbleToggled(); }
         });
         power.addView(bubble, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)));
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(Look.TOUCH)));
 
         page.addView(power, row(dp(Look.GAP_ML), 0));
 
@@ -254,7 +254,7 @@ public class Home extends Activity {
         buzz = new Switch(this);
         buzz.setContentDescription("Vibration. Slå på eller av.");
         buzz.setChecked(Haptik.on(this));
-        buzz.setMinimumWidth(dp(Look.BUBBLE));
+        buzz.setMinimumWidth(dp(Look.SWITCH_W));
         buzz.setMinimumHeight(dp(Look.TOUCH));
         buzz.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { buzzToggled(); }
@@ -268,12 +268,12 @@ public class Home extends Activity {
         // appen då bara kan diktera här inne och inte i chattarna.
         warning = new LinearLayout(this);
         warning.setOrientation(LinearLayout.VERTICAL);
-        warning.setBackground(box(0xFF1A1407, WARN, dp(14)));
-        warning.setPadding(dp(14), dp(14), dp(14), dp(14));
+        warning.setBackground(box(Look.WARN_FILL, WARN, dp(Look.RADIUS_CARD)));
+        warning.setPadding(dp(Look.GAP_ML), dp(Look.GAP_ML), dp(Look.GAP_ML), dp(Look.GAP_ML));
 
         warnText = new TextView(this);
         warnText.setTextColor(WARN);
-        warnText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        warnText.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_SUBHEAD);
         warnText.setLineSpacing(0, 1.3f);
         warnText.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         warning.addView(warnText, row(0, 0));
@@ -281,27 +281,27 @@ public class Home extends Activity {
         Button fix = new Button(this);
         fix.setAllCaps(false);
         fix.setText("Öppna guiden");
-        fix.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        fix.setTextColor(0xFF1A1407);
-        fix.setBackground(box(WARN, 0, dp(12)));
+        fix.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_BODY);
+        fix.setTextColor(Look.WARN_FILL);
+        fix.setBackground(box(WARN, 0, dp(Look.RADIUS_SMALL)));
         fix.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { openGuide(); }
         });
-        LinearLayout.LayoutParams fixRow = row(dp(12), 0);
-        fixRow.height = dp(48);
+        LinearLayout.LayoutParams fixRow = row(dp(Look.GAP_M), 0);
+        fixRow.height = dp(Look.TOUCH);
         warning.addView(fix, fixRow);
 
-        page.addView(warning, row(dp(14), 0));
+        page.addView(warning, row(dp(Look.GAP_ML), 0));
 
         draft = new EditText(this);
         draft.setId(DRAFT_ID);
-        draft.setBackground(box(FIELD, BORDER, dp(14)));
+        draft.setBackground(box(FIELD, BORDER, dp(Look.RADIUS_CARD)));
         draft.setTextColor(INK);
         draft.setHintTextColor(OFF);
-        draft.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
+        draft.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_HEADING);
         draft.setHint("Texten du dikterar hamnar här. Du kan rätta den för hand.");
         draft.setGravity(Gravity.TOP | Gravity.START);
-        draft.setPadding(dp(14), dp(14), dp(14), dp(14));
+        draft.setPadding(dp(Look.GAP_ML), dp(Look.GAP_ML), dp(Look.GAP_ML), dp(Look.GAP_ML));
         draft.setInputType(InputType.TYPE_CLASS_TEXT
                 | InputType.TYPE_TEXT_FLAG_MULTI_LINE
                 | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
@@ -311,19 +311,20 @@ public class Home extends Activity {
             @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
             @Override public void afterTextChanged(Editable s) { render(); }
         });
-        LinearLayout.LayoutParams field = row(dp(16), dp(16));
+        LinearLayout.LayoutParams field = row(dp(Look.GAP_L), dp(Look.GAP_L));
         field.height = 0;
         field.weight = 1;
         page.addView(draft, field);
 
         mic = new Button(this);
         mic.setAllCaps(false);
-        mic.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
+        mic.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_TITLE);
         mic.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { micTapped(); }
         });
-        LinearLayout.LayoutParams micRow = row(0, dp(12));
-        micRow.height = dp(84);
+        Press.on(mic);
+        LinearLayout.LayoutParams micRow = row(0, dp(Look.GAP_M));
+        micRow.height = dp(Look.MIC_H);
         page.addView(mic, micRow);
 
         LinearLayout actions = new LinearLayout(this);
@@ -331,26 +332,29 @@ public class Home extends Activity {
 
         clear = new Button(this);
         clear.setAllCaps(false);
-        clear.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
+        clear.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_HEADING);
         clear.setText("Rensa");
         clear.setContentDescription("Rensa fältet");
         clear.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { wipe(); }
         });
+        Press.on(clear);
         LinearLayout.LayoutParams clearSlot =
-                new LinearLayout.LayoutParams(0, dp(58), 1f);
-        clearSlot.rightMargin = dp(10);
+                new LinearLayout.LayoutParams(0, dp(Look.CONTROL_H), 1f);
+        clearSlot.rightMargin = dp(Look.GAP_SM);
         actions.addView(clear, clearSlot);
 
         send = new Button(this);
         send.setAllCaps(false);
-        send.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
+        send.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_HEADING);
         send.setText("Skicka");
         send.setContentDescription("Skicka texten vidare");
         send.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { share(); }
         });
-        actions.addView(send, new LinearLayout.LayoutParams(0, dp(58), 1f));
+        Press.on(send);
+        actions.addView(send, new LinearLayout.LayoutParams(0,
+                dp(Look.CONTROL_H), 1f));
 
         page.addView(actions, row(0, 0));
 
@@ -443,7 +447,7 @@ public class Home extends Activity {
         shape.setShape(GradientDrawable.RECTANGLE);
         shape.setColor(fill);
         shape.setCornerRadius(radius);
-        if (stroke != 0) shape.setStroke(dp(1), stroke);
+        if (stroke != 0) shape.setStroke(dp(Look.HAIRLINE), stroke);
         return shape;
     }
 
@@ -501,7 +505,7 @@ public class Home extends Activity {
                 ? "Klar, stäng mikrofonen"
                 : (micBlocked ? "Öppna inställningarna och tillåt mikrofonen" : "Tala, starta mikrofonen"));
         mic.setEnabled(canTalk);
-        mic.setBackground(box(canTalk ? (listening ? GREEN_DEEP : GREEN) : FIELD, canTalk ? 0 : BORDER, dp(16)));
+        mic.setBackground(box(canTalk ? (listening ? GREEN_DEEP : GREEN) : FIELD, canTalk ? 0 : BORDER, dp(Look.RADIUS_MIC)));
         mic.setTextColor(canTalk ? DARK_INK : OFF);
 
         // Samma regel som HomeState.canClear och canSend på iOS: båda väntar
@@ -509,17 +513,19 @@ public class Home extends Activity {
         // vore ingen tjänst mot användaren, och ett rensat fält mitt i en
         // tolkning skulle fyllas igen av svaret.
         boolean resting = !listening && !working;
-        // Samma roller som på iOS: Rensa är kortets yta med kant, Skicka är
-        // fylld grön med mörk text. Skicka var en grön ram förut, alltså en
-        // annan knapp än appens primärknapp på iOS. Formen är kvar
-        // rektangulär — det är Androids konvention.
+        // Samma roller som på iOS: Skicka är skärmens enda gröna
+        // primärknapp, fylld med mörk text. Rensa är sekundär — kortets yta,
+        // grå kant, aldrig grön. Formen är piller på båda plattformarna
+        // sedan punkt 10; den var rektangulär med radie 14 här.
         boolean ready = hasText && resting;
         clear.setEnabled(ready);
-        clear.setBackground(box(FIELD, ready ? DIM_DOT : BORDER, dp(14)));
+        clear.setBackground(box(FIELD, ready ? DIM_DOT : BORDER,
+                dp(Look.RADIUS_PILL)));
         clear.setTextColor(ready ? INK : OFF);
 
         send.setEnabled(ready);
-        send.setBackground(box(ready ? GREEN : FIELD, ready ? 0 : BORDER, dp(14)));
+        send.setBackground(box(ready ? GREEN : FIELD, ready ? 0 : BORDER,
+                dp(Look.RADIUS_PILL)));
         send.setTextColor(ready ? DARK_INK : OFF);
 
         draft.setFocusable(!listening);

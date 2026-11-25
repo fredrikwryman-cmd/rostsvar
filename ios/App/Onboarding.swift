@@ -152,7 +152,7 @@ struct Onboarding: View {
                     .accessibilityHidden(true)
                 Text(title)
                     .trHeading()
-                Spacer(minLength: 8)
+                Spacer(minLength: Metric.gapS)
                 if selfCheck {
                     TRBadge("kontrollera själv")
                 }
@@ -232,8 +232,8 @@ private struct ProofField: UIViewRepresentable {
         field.textColor = UIColor(TR.text)
         field.tintColor = UIColor(TR.green)
         field.keyboardAppearance = .dark
-        field.layer.cornerRadius = 22
-        field.layer.borderWidth = 1.5
+        field.layer.cornerRadius = Metric.cardRadius
+        field.layer.borderWidth = Metric.edge
         field.layer.borderColor = UIColor(TR.border).cgColor
         field.textContainerInset = UIEdgeInsets(top: 14, left: 12, bottom: 14, right: 12)
         field.delegate = context.coordinator

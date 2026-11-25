@@ -76,12 +76,16 @@ public class Bubble extends Service {
      * de åtta sekunder NO_ANSWER tillåter. Står stilla på "…" när telefonen
      * har stängt av animationer.
      */
+    /** Punkternas takt medan taltjänsten tolkar. */
+    private static final long BEAT = 400L;
+
     private final Runnable tick = new Runnable() {
         @Override public void run() {
             if (!working || listening) return;
             dots = dots % 3 + 1;
             paint();
-            hand.postDelayed(tick, 400);
+            long step = Motion.pulse(Bubble.this, BEAT);
+            if (step > 0L) hand.postDelayed(tick, step);
         }
     };
     /**
@@ -267,13 +271,13 @@ public class Bubble extends Service {
     }
 
     private void show() {
-        int size = dp(66);
+        int size = dp(Look.BUBBLE_SIZE);
 
         knob = new TextView(this);
         knob.setText("Tala");
         knob.setAllCaps(false);
         knob.setGravity(Gravity.CENTER);
-        knob.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        knob.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_BODY);
         paint();
 
         where = new WindowManager.LayoutParams(
@@ -318,7 +322,7 @@ public class Bubble extends Service {
         GradientDrawable circle = new GradientDrawable();
         circle.setShape(GradientDrawable.OVAL);
         circle.setColor(listening ? Look.GREEN_DEEP : Look.GREEN);
-        circle.setStroke(dp(2), listening ? Look.GREEN : 0x55000000);
+        circle.setStroke(dp(Look.EDGE), listening ? Look.GREEN : Look.SHADE);
         knob.setBackground(circle);
         knob.setTextColor(Look.DARK_INK);
         // Tre lägen, inte två: vila, lyssnar, och tolkar. Utan det sista ser
@@ -326,16 +330,34 @@ public class Bubble extends Service {
         // Beskrivningen sätts här tillsammans med texten, inte en gång i
         // show(). Förr sa den "tryck för att diktera" också medan mikrofonen
         // var på och medan tolkningen pågick.
+        final String word;
+        final String said;
         if (listening) {
-            knob.setText("Klar");
-            knob.setContentDescription("Klar. Mikrofonen är på, tryck för att stänga den.");
+            word = "Klar";
+            said = "Klar. Mikrofonen är på, tryck för att stänga den.";
         } else if (working) {
-            // Inte String.repeat: bygget kompileras mot Java 8.
-            knob.setText(Motion.wanted(Bubble.this) ? BEATS[Math.max(1, dots) - 1] : "…");
-            knob.setContentDescription("Tap&Talk tolkar det du sa. Vänta ett ögonblick.");
+            // Inte String.repeat: bygget kompileras mot Java 8. Står pulsen
+            // still blir punkterna tre och orörliga.
+            word = Motion.pulse(Bubble.this, BEAT) > 0L
+                    ? BEATS[Math.max(1, dots) - 1] : "…";
+            said = "Tap&Talk tolkar det du sa. Vänta ett ögonblick.";
         } else {
-            knob.setText("Tala");
-            knob.setContentDescription("Tala. Tap&Talk, tryck för att diktera.");
+            word = "Tala";
+            said = "Tala. Tap&Talk, tryck för att diktera.";
+        }
+        knob.setContentDescription(said);
+        if (word.equals(knob.getText().toString())) {
+            knob.setText(word);
+        } else {
+            // Lägesbytet tonar i stället för att hoppa. Tiden kommer från
+            // Motion: det vanliga lägesbytet vid vanlig rörelse, crossfaden
+            // på 160 ms när telefonen har stängt av animationer. Ett hopp är
+            // också rörelse.
+            final TextView face = knob;
+            Motion.crossfade(face, Motion.swap(Bubble.this, Motion.STATE),
+                    new Runnable() {
+                        @Override public void run() { face.setText(word); }
+                    });
         }
         if (!listening) {
             knob.setScaleX(1f);
@@ -392,7 +414,7 @@ public class Bubble extends Service {
                 case MotionEvent.ACTION_MOVE:
                     int dx = Math.round(touch.getRawX() - fromX);
                     int dy = Math.round(touch.getRawY() - fromY);
-                    if (Math.abs(dx) > dp(8) || Math.abs(dy) > dp(8)) moved = true;
+                    if (Math.abs(dx) > dp(Look.GAP_S) || Math.abs(dy) > dp(Look.GAP_S)) moved = true;
                     if (!moved) return true;
                     where.x = wasX + dx;
                     where.y = wasY + dy;
@@ -553,7 +575,8 @@ public class Bubble extends Service {
     private void beat(boolean on) {
         hand.removeCallbacks(tick);
         dots = 3;
-        if (on && Motion.wanted(this)) hand.postDelayed(tick, 400);
+        long step = Motion.pulse(this, BEAT);
+        if (on && step > 0L) hand.postDelayed(tick, step);
     }
 
     private void quiet() {
@@ -648,7 +671,7 @@ public class Bubble extends Service {
             // ingenting, och bubblan andades vad användaren än hade ställt
             // in. Att mikrofonen är på syns ändå: knappen säger Klar och är
             // djupare grön.
-            if (!Motion.wanted(Bubble.this)) {
+            if (Motion.paused(Bubble.this)) {
                 knob.setScaleX(1f);
                 knob.setScaleY(1f);
                 return;

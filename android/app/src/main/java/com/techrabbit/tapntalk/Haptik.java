@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
 
@@ -52,7 +53,7 @@ final class Haptik {
     static final int PRIVACY = 9;
     /** Texten lämnas vidare. */
     static final int SEND = 10;
-    /** Mikrofonen öppnas. */
+    /** Mikrofonen öppnas. Tyngre än när den stängs. */
     static final int RECORD_START = 11;
     /** Mikrofonen stängs. */
     static final int RECORD_STOP = 12;
@@ -144,13 +145,15 @@ final class Haptik {
                 constant = HapticFeedbackConstants.REJECT;
                 break;
             case STATE_CHANGE:
-            case RECORD_STOP:
-                // Mikrofonen stängs tyngre än den öppnas, som på iOS.
+            case RECORD_START:
+                // Mikrofonen öppnas tyngre än den stängs: det är att öppna
+                // den som behöver kännas. rev-ux avsnitt 7, och
+                // ändringslistans rad om Tala-knappen.
                 constant = HapticFeedbackConstants.LONG_PRESS;
                 break;
             case PRESS:
             case SEND:
-            case RECORD_START:
+            case RECORD_STOP:
                 constant = HapticFeedbackConstants.VIRTUAL_KEY;
                 break;
             default:
@@ -175,7 +178,7 @@ final class Haptik {
      */
     private static void buzz(Context context, int event) {
         if (context == null) return;
-        Vibrator motor = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+        Vibrator motor = motor(context);
         if (motor == null || !motor.hasVibrator()) return;
         int effect;
         switch (event) {
@@ -183,7 +186,7 @@ final class Haptik {
                 effect = VibrationEffect.EFFECT_DOUBLE_CLICK;
                 break;
             case REMOVE:
-            case RECORD_STOP:
+            case RECORD_START:
             case STATE_CHANGE:
                 effect = VibrationEffect.EFFECT_HEAVY_CLICK;
                 break;
@@ -209,8 +212,35 @@ final class Haptik {
 
     /** Sant när telefonen har en vibrator att vibrera med. */
     static boolean possible(Context context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return false;
-        Vibrator motor = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+        if (context == null) return false;
+        Vibrator motor = motor(context);
         return motor != null && motor.hasVibrator();
+    }
+
+    /**
+     * Telefonens vibrator.
+     *
+     * Från Android 12 kan en telefon ha flera motorer, och
+     * {@code VIBRATOR_SERVICE} är ersatt av {@link VibratorManager}. Den
+     * gamla vägen står kvar under: appen går att installera från API 30.
+     */
+    private static Vibrator motor(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            VibratorManager all = (VibratorManager)
+                    context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+            return all == null ? null : all.getDefaultVibrator();
+        }
+        return legacy(context);
+    }
+
+    /**
+     * Vägen under Android 12. {@code VIBRATOR_SERVICE} är ersatt sedan API
+     * 31, men appen går att installera från 30, så anropet måste finnas
+     * kvar. Det står i en egen metod för att dämpningen ska gälla just den
+     * här raden och inte dölja nästa varning någon annanstans i filen.
+     */
+    @SuppressWarnings("deprecation")
+    private static Vibrator legacy(Context context) {
+        return (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
     }
 }

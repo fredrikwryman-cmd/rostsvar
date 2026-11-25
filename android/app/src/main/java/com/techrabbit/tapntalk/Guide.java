@@ -157,20 +157,20 @@ public class Guide extends Activity {
 
         LinearLayout page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
-        page.setPadding(dp(20), dp(28), dp(20), dp(24));
+        page.setPadding(dp(Look.GAP_XXL), dp(Look.GAP_HUGE), dp(Look.GAP_XXL), dp(Look.GAP_XHUGE));
         page.setFitsSystemWindows(true);
         scroll.addView(page);
 
         TextView title = new TextView(this);
         title.setText("Kom igång");
         title.setTextColor(Look.INK);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 30);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_APP_NAME);
         page.addView(title, line(0, 0));
 
         counter = new TextView(this);
         counter.setTextColor(Look.DIM);
-        counter.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        page.addView(counter, line(dp(4), dp(18)));
+        counter.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_SUBHEAD);
+        page.addView(counter, line(dp(Look.GAP_TINY), dp(Look.GAP_XL)));
 
         for (int i = 0; i < STEPS; i++) {
             final int which = i;
@@ -179,9 +179,9 @@ public class Guide extends Activity {
             rad.setGravity(Gravity.CENTER_VERTICAL);
             // Listan såg ut som fem knappar men var fem etiketter, och steget
             // gick bara framåt: den som ville läsa om steg 2 kom inte dit.
-            rad.setMinimumHeight(dp(48));
-            rad.setPadding(dp(4), dp(4), dp(8), dp(4));
-            rad.setBackground(Look.skin(0x00000000, Look.FIELD, dp(10)));
+            rad.setMinimumHeight(dp(Look.TOUCH));
+            rad.setPadding(dp(Look.GAP_TINY), dp(Look.GAP_TINY), dp(Look.GAP_S), dp(Look.GAP_TINY));
+            rad.setBackground(Look.skin(Look.CLEAR, Look.FIELD, dp(Look.RADIUS_GHOST)));
             rad.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) {
                     picked = true;
@@ -191,8 +191,8 @@ public class Guide extends Activity {
             });
 
             marks[i] = new TextView(this);
-            marks[i].setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
-            marks[i].setMinWidth(dp(28));
+            marks[i].setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_BUTTON);
+            marks[i].setMinWidth(dp(Look.GAP_HUGE));
             // Bocken och ringen säger ingenting till den som inte ser dem.
             // Hela raden bär texten i stället, satt i render().
             marks[i].setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -200,49 +200,49 @@ public class Guide extends Activity {
 
             labels[i] = new TextView(this);
             labels[i].setText(NAMES[i]);
-            labels[i].setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            labels[i].setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_BODY);
             labels[i].setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             rad.addView(labels[i]);
 
             rows[i] = rad;
-            page.addView(rad, line(dp(5), 0));
+            page.addView(rad, line(dp(Look.GAP_NUDGE), 0));
         }
 
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(Look.box(Look.FIELD, Look.BORDER, dp(16), dp(1)));
-        card.setPadding(dp(18), dp(18), dp(18), dp(18));
+        card.setBackground(Look.box(Look.FIELD, Look.BORDER, dp(Look.RADIUS_MIC), dp(Look.HAIRLINE)));
+        card.setPadding(dp(Look.GAP_XL), dp(Look.GAP_XL), dp(Look.GAP_XL), dp(Look.GAP_XL));
 
         heading = new TextView(this);
         heading.setTextColor(Look.INK);
-        heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 21);
+        heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_LEAD);
         card.addView(heading, line(0, 0));
 
         body = new TextView(this);
         body.setTextColor(Look.DIM);
-        body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        body.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_BODY);
         body.setLineSpacing(0, 1.35f);
-        card.addView(body, line(dp(10), dp(16)));
+        card.addView(body, line(dp(Look.GAP_SM), dp(Look.GAP_L)));
 
         action = new Button(this);
         action.setAllCaps(false);
-        action.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        action.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_DRAFT);
         action.setTextColor(Look.DARK_INK);
-        action.setBackground(Look.skin(Look.GREEN, Look.GREEN_DEEP, dp(14)));
+        action.setBackground(Look.skin(Look.GREEN, Look.GREEN_DEEP, dp(Look.RADIUS_CARD)));
         action.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { act(); }
         });
         LinearLayout.LayoutParams tall = line(0, 0);
-        tall.height = dp(56);
+        tall.height = dp(Look.ROW_TALL);
         card.addView(action, tall);
 
         aside = new TextView(this);
         aside.setTextColor(Look.OFF);
-        aside.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        aside.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_CAPTION);
         aside.setLineSpacing(0, 1.3f);
-        card.addView(aside, line(dp(12), 0));
+        card.addView(aside, line(dp(Look.GAP_M), 0));
 
-        page.addView(card, line(dp(20), 0));
+        page.addView(card, line(dp(Look.GAP_XXL), 0));
 
         proof = new LinearLayout(this);
         proof.setOrientation(LinearLayout.VERTICAL);
@@ -250,14 +250,14 @@ public class Guide extends Activity {
 
         test = new EditText(this);
         test.setId(TEST_ID);
-        test.setBackground(Look.box(Look.FIELD, Look.BORDER, dp(14), dp(1)));
+        test.setBackground(Look.box(Look.FIELD, Look.BORDER, dp(Look.RADIUS_CARD), dp(Look.HAIRLINE)));
         test.setTextColor(Look.INK);
         test.setHintTextColor(Look.OFF);
-        test.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        test.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_DRAFT);
         test.setHint("Tryck här och tryck sedan på Tala");
         test.setGravity(Gravity.TOP | Gravity.START);
-        test.setPadding(dp(14), dp(14), dp(14), dp(14));
-        test.setMinHeight(dp(96));
+        test.setPadding(dp(Look.GAP_ML), dp(Look.GAP_ML), dp(Look.GAP_ML), dp(Look.GAP_ML));
+        test.setMinHeight(dp(Look.FIELD_MIN));
         test.setInputType(InputType.TYPE_CLASS_TEXT
                 | InputType.TYPE_TEXT_FLAG_MULTI_LINE
                 | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
@@ -267,28 +267,28 @@ public class Guide extends Activity {
             @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
             @Override public void afterTextChanged(Editable s) { showReceipt(); }
         });
-        proof.addView(test, line(dp(16), 0));
+        proof.addView(test, line(dp(Look.GAP_L), 0));
 
         receipt = new TextView(this);
-        receipt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        receipt.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_BODY);
         receipt.setLineSpacing(0, 1.3f);
         // Kvittot är svaret på provet. Det ska höras, inte bara synas.
         receipt.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        proof.addView(receipt, line(dp(12), 0));
+        proof.addView(receipt, line(dp(Look.GAP_M), 0));
 
         page.addView(proof, line(0, 0));
 
         close = new Button(this);
         close.setAllCaps(false);
         close.setText("Stäng guiden");
-        close.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        close.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_BODY);
         close.setTextColor(Look.DIM);
-        close.setBackground(Look.box(0x00000000, Look.BORDER, dp(14), dp(1)));
+        close.setBackground(Look.box(Look.CLEAR, Look.BORDER, dp(Look.RADIUS_CARD), dp(Look.HAIRLINE)));
         close.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { finish(); }
         });
-        LinearLayout.LayoutParams last = line(dp(22), 0);
-        last.height = dp(52);
+        LinearLayout.LayoutParams last = line(dp(Look.GAP_WIDE), 0);
+        last.height = dp(Look.CONTROL_H);
         page.addView(close, last);
 
         setContentView(scroll);

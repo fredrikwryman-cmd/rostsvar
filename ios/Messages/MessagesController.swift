@@ -61,13 +61,13 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
         draft.tintColor = Palette.ui(Palette.green)
         draft.keyboardAppearance = .dark
         // Samma form som fältet på startskärmen: radie 22, kant 1,5.
-        draft.layer.cornerRadius = 22
-        draft.layer.borderWidth = 1.5
+        draft.layer.cornerRadius = Metric.cardRadius
+        draft.layer.borderWidth = Metric.edge
         draft.layer.borderColor = Palette.ui(Palette.border).cgColor
         draft.textContainerInset = UIEdgeInsets(top: 14, left: 12, bottom: 14, right: 12)
         draft.accessibilityLabel = "Ditt utkast"
         draft.accessibilityHint = "Går att rätta för hand när dikteringen är över."
-        draft.heightAnchor.constraint(greaterThanOrEqualToConstant: 120).isActive = true
+        draft.heightAnchor.constraint(greaterThanOrEqualToConstant: Metric.draftMinHeight).isActive = true
 
         paint(mic, prominent: false)
         paint(stop, prominent: false)
@@ -88,25 +88,29 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
 
         let row = UIStackView(arrangedSubviews: [mic, stop])
         row.distribution = .fillEqually
-        row.spacing = 10
+        row.spacing = Metric.gapSM
 
         let head = UIStackView(arrangedSubviews: [spin, status])
         head.axis = .horizontal
-        head.spacing = 6
+        head.spacing = Metric.gapXS
         head.alignment = .center
 
         let stack = UIStackView(arrangedSubviews: [head, draft, row, send, aside])
         stack.axis = .vertical
-        stack.spacing = 10
+        stack.spacing = Metric.gapSM
         stack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(stack)
 
         let area = view.safeAreaLayoutGuide
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: area.topAnchor, constant: 12),
-            stack.bottomAnchor.constraint(equalTo: area.bottomAnchor, constant: -12),
-            stack.leadingAnchor.constraint(equalTo: area.leadingAnchor, constant: 16),
-            stack.trailingAnchor.constraint(equalTo: area.trailingAnchor, constant: -16)
+            stack.topAnchor.constraint(equalTo: area.topAnchor,
+                                       constant: Metric.gapM),
+            stack.bottomAnchor.constraint(equalTo: area.bottomAnchor,
+                                          constant: -Metric.gapM),
+            stack.leadingAnchor.constraint(equalTo: area.leadingAnchor,
+                                           constant: Metric.gapL),
+            stack.trailingAnchor.constraint(equalTo: area.trailingAnchor,
+                                            constant: -Metric.gapL)
         ])
         render()
     }
@@ -146,10 +150,10 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
         button.setTitleColor(Palette.ui(prominent ? Palette.onGreen : Palette.text),
                              for: .normal)
         button.setTitleColor(Palette.ui(Palette.disabled), for: .disabled)
-        button.layer.borderWidth = 1
+        button.layer.borderWidth = Metric.hairline
         button.layer.borderColor =
             Palette.ui(prominent ? Palette.green : Palette.dimDot).cgColor
-        let high: CGFloat = 52
+        let high: CGFloat = Metric.controlHeight
         button.heightAnchor.constraint(greaterThanOrEqualToConstant: high).isActive = true
         // Pillerform: radien är halva höjden, som Capsule i appen.
         button.layer.cornerRadius = high / 2

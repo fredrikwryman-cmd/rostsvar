@@ -49,6 +49,15 @@ final class Motion {
     }
 
     /**
+     * Hur ofta en puls får slå, i millisekunder, eller noll när den ska stå
+     * still. Vyerna frågar efter en tid och behöver inte veta varför svaret
+     * blev som det blev.
+     */
+    static long pulse(Context context, long normal) {
+        return wanted(context) ? normal : 0L;
+    }
+
+    /**
      * Sant när en puls, en andning eller en vandrande markör ska stå still.
      * Det som står still ska stå still, inte försvinna: formen är en del av
      * skärmen.
@@ -64,11 +73,16 @@ final class Motion {
      * @param change körs mitt i toningen, när vyn är genomskinlig.
      */
     static void crossfade(final View view, final Runnable change) {
-        if (view == null) {
+        crossfade(view, CROSSFADE, change);
+    }
+
+    /** Samma toning, men med en tid vyn hämtat ur {@link #swap}. */
+    static void crossfade(final View view, long millis, final Runnable change) {
+        if (view == null || millis <= 0L) {
             if (change != null) change.run();
             return;
         }
-        long half = CROSSFADE / 2;
+        long half = millis / 2;
         view.animate().cancel();
         view.setAlpha(1f);
         view.animate().alpha(0f).setDuration(half).withEndAction(new Runnable() {
