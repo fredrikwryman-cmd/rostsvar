@@ -32,7 +32,7 @@ if errorlevel 1 (
 where py >nul 2>nul
 if errorlevel 1 (set "PY=python") else (set "PY=py")
 
-echo Bygger Tap&Talk for Android ...
+echo Bygger Tap^&Talk for Android ...
 "%PY%" "%HERE%android\build_debug.py"
 if errorlevel 1 (
   echo.

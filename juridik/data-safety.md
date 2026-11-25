@@ -98,9 +98,12 @@ Ingen av dessa behandlas av appen, och inget i koden rör dem:
 
 ## 6. Privacy policy URL
 
-→ `https://aimstudios.se/tapandtalk/integritetspolicy`
-**[FREDRIK]** Adressen måste finnas och svara 200 innan formuläret skickas in.
-Texten ligger i `juridik/integritetspolicy.md` och ska publiceras där.
+→ `https://fredrikwryman-cmd.github.io/rostsvar/`
+
+Publicerad i direktiv 36. Sidan byggs ur `juridik/integritetspolicy.md` och
+ligger som `docs/index.html`, utgiven med GitHub Pages från `docs/` på main.
+**[FREDRIK]** Ska policyn på sikt ligga på aimstudios.se i stället byts adressen
+i båda butikerna när den sidan finns.
 
 ## 7. Övriga deklarationer som gränsar till det här
 
