@@ -1,6 +1,7 @@
 package com.techrabbit.tapntalk;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -304,7 +305,7 @@ public class Bubble extends Service {
         knob.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { tapped(); }
         });
-        knob.setOnTouchListener(new Drag(size));
+        touch(knob, new Drag(size));
         try {
             windows.addView(knob, where);
         } catch (RuntimeException refused) {
@@ -314,6 +315,20 @@ public class Bubble extends Service {
             say("Bubblan kunde inte visas. Kontrollera Visa över andra appar.");
             stopSelf();
         }
+    }
+
+    /**
+     * Sätter en touch-lyssnare på en vy som redan har en klicklyssnare.
+     *
+     * Lint räknar en touch-lyssnare utan performClick som otillgänglig
+     * (ClickableViewAccessibility). Regeln är rätt i allmänhet och fel här:
+     * klickvägen finns, den ligger i en egen OnClickListener, och det är den
+     * TalkBack går igenom. Undantaget står på ett ställe med skälet, i
+     * stället för utspritt över anropen.
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    private static void touch(View view, View.OnTouchListener listener) {
+        view.setOnTouchListener(listener);
     }
 
     /** Grönt i vila, djupare grönt medan mikrofonen är på. */

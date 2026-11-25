@@ -1,5 +1,6 @@
 package com.techrabbit.tapntalk;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
@@ -153,6 +154,11 @@ final class Speech {
      * vidare, och den som ringde får ta hand om det som vilken nekad start
      * som helst.
      */
+    // Spärren står i onDeviceFirst, som kräver API 31, och den är mätt i
+    // SpeechTest. Lint ser inte igenom ett villkor som ligger i en egen
+    // metod, och den metoden är där med flit: regeln ska gå att mäta utan
+    // telefon.
+    @SuppressLint("NewApi")
     static SpeechRecognizer open(Context context, Speech picker) {
         if (onDeviceFirst(Build.VERSION.SDK_INT, deviceReady(context))) {
             try {

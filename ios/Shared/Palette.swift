@@ -53,6 +53,17 @@ enum Palette {
     /// Det gröna nedtonat, för en knapp som är nedtryckt eller som lyssnar.
     static let greenDeep = 0x12A426
 
+    /// Varningens gula, och ytan under den.
+    ///
+    /// Androids `Look` har haft de här två sedan varningsrutan på hemskärmen
+    /// ritades; iOS hade dem inte, eftersom ingen yta här behövde dem förrän
+    /// felytan i punkt 14. Värdena är hämtade därifrån ordagrant, inte valda
+    /// på nytt: filens hela poäng är att de två plattformarna inte ska skilja
+    /// sig i värde. Uppmätt ger `warn` mot `warnFill` 11,9:1 och mot `bg`
+    /// 12,6:1.
+    static let warn = 0xFFC46B
+    static let warnFill = 0x1A1407
+
     /// Tangentens yta i tangentbordet, och linjen runt den.
     ///
     /// Ytan är kvar på 0x242424. Den har 1,27:1 mot tangentbordets botten och

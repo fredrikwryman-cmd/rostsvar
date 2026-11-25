@@ -50,6 +50,12 @@ final class Look {
     /** Genomskinligt. En knapp i vila som bara är en ram. */
     static final int CLEAR = 0x00000000;
     /**
+     * Svart, helt täckande. Mörkläggningen bakom ett ark ligger här, och
+     * styrkan sätts med vyns alfa i stället för i färgen: den ska kunna
+     * tonas in och ut.
+     */
+    static final int BLACKOUT = 0xFF000000;
+    /**
      * Svart på en tredjedel. Bubblans kant mot en bakgrund appen inte
      * känner: den ligger över andra appar, och en ljus app bakom skulle
      * annars sudda ut den gröna skivans kontur.

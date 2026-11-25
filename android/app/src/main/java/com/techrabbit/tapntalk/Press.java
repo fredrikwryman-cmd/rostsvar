@@ -1,6 +1,8 @@
 package com.techrabbit.tapntalk;
 
-import android.view.MotionEvent;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.animation.StateListAnimator;
 import android.view.View;
 
 /**
@@ -11,9 +13,15 @@ import android.view.View;
  * knapp som bara byter nyans känns långsammare än den är, särskilt den stora
  * Tala-knappen, där hela ytan är densamma före och efter trycket.
  *
- * Lyssnaren svarar alltid falskt. Trycket går vidare som förut, knappen får
- * sitt klick, och TalkBack går sin egen väg in utan att röra det här.
- * Skalningen är dekor och får aldrig stå i vägen för handlingen.
+ * Rörelsen hänger på vyns nedtryckta tillstånd genom en
+ * {@link StateListAnimator}, inte på en egen {@code OnTouchListener}.
+ * Skillnaden är inte kosmetisk: en lyssnare som fångar varje
+ * {@code ACTION_DOWN} och svarar falskt kommer i vägen för
+ * tillgänglighetstjänsterna, och lint säger det rakt ut
+ * (ClickableViewAccessibility). Tillståndet är dessutom sannare — det följer
+ * knappens egen {@code pressed}, så ett tryck som glider ut ur knappen eller
+ * avbryts av en scroll släpper skalan av sig själv, utan att vi behöver
+ * räkna händelser.
  *
  * Med reducerad rörelse tonas knappen i stället för att krympa: tiden
  * kommer från {@link Motion}, och inställningen gäller rörelse, inte
@@ -33,36 +41,37 @@ final class Press {
     /** Lägger trycket på en vy. */
     static void on(final View view) {
         if (view == null) return;
-        view.setOnTouchListener(new View.OnTouchListener() {
-            @Override public boolean onTouch(View touched, MotionEvent event) {
-                switch (event.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        down(touched, true);
-                        break;
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
-                        down(touched, false);
-                        break;
-                    default:
-                        break;
-                }
-                return false;
-            }
-        });
+        long time = Motion.swap(view.getContext(), TAP);
+        boolean still = Motion.paused(view.getContext());
+
+        // Vyn kan ha legat nedtryckt eller tonad från en tidigare
+        // inställning. Utgångsläget skrivs om varje gång trycket läggs på.
+        view.setScaleX(1f);
+        view.setScaleY(1f);
+        view.setAlpha(1f);
+
+        StateListAnimator press = new StateListAnimator();
+        press.addState(new int[]{android.R.attr.state_pressed},
+                still ? dim(DIM, time) : size(SCALE, time));
+        press.addState(new int[]{},
+                still ? dim(1f, time) : size(1f, time));
+        view.setStateListAnimator(press);
     }
 
-    private static void down(View view, boolean pressed) {
-        long time = Motion.swap(view.getContext(), TAP);
-        if (Motion.paused(view.getContext())) {
-            view.animate().cancel();
-            view.setScaleX(1f);
-            view.setScaleY(1f);
-            view.animate().alpha(pressed ? DIM : 1f).setDuration(time).start();
-            return;
-        }
-        float to = pressed ? SCALE : 1f;
-        view.animate().cancel();
-        view.setAlpha(1f);
-        view.animate().scaleX(to).scaleY(to).setDuration(time).start();
+    /** Skalan. Målet sätts av tillståndet, därför är animatorns mål null. */
+    private static AnimatorSet size(float to, long time) {
+        AnimatorSet both = new AnimatorSet();
+        both.playTogether(ObjectAnimator.ofFloat((View) null, View.SCALE_X, to),
+                ObjectAnimator.ofFloat((View) null, View.SCALE_Y, to));
+        both.setDuration(time);
+        return both;
+    }
+
+    /** Tonen, för den som bett om mindre rörelse. */
+    private static AnimatorSet dim(float to, long time) {
+        AnimatorSet one = new AnimatorSet();
+        one.playTogether(ObjectAnimator.ofFloat((View) null, View.ALPHA, to));
+        one.setDuration(time);
+        return one;
     }
 }

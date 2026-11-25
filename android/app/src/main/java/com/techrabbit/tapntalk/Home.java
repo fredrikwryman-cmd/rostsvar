@@ -20,6 +20,7 @@ import android.view.WindowManager;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Switch;
@@ -63,6 +64,16 @@ public class Home extends Activity {
     /** Av-knappen för haptiken. Samma nyckel som iOS: `haptik_av`. */
     private Switch buzz;
     private EditText draft;
+    /**
+     * Raden under fältet i tomt läge, rev-ux 2.2: den förklarar vad man får
+     * av att trycka på Tala. Försvinner så snart det finns text — då är det
+     * texten man ska läsa, inte en förklaring av varför den finns.
+     */
+    private TextView empty;
+    /** Sidan som sjunker när delningsarket ligger över den. */
+    private LinearLayout page;
+    /** Mörkläggningen bakom arket. Tar aldrig emot ett tryck. */
+    private View shade;
     private Button mic;
     /**
      * Rensa. Fanns bara på iOS: här måste man markera allt och radera för
@@ -99,7 +110,7 @@ public class Home extends Activity {
             // Texten står redan i fältet: delresultaten skrevs dit medan
             // användaren talade. Hördes inget får det inte påstås att något
             // står kvar, och hördes något får det inte påstås att inget gjorde.
-            note = Notices.afterSilence(heardThisRound(), Notices.TALK);
+            problem(Notices.afterSilence(heardThisRound(), Notices.TALK));
             render();
         }
     };
@@ -107,6 +118,15 @@ public class Home extends Activity {
     private String base = "";
     /** Sant när mikrofonen är avslagen för appen i systeminställningarna. */
     private boolean micBlocked;
+    /**
+     * Sant när beskedet i statusraden är ett fel och inte en upplysning.
+     *
+     * Texten är densamma antingen vägen — den kommer ur {@link Notices} och
+     * säger redan vad som hände, vad det betyder och vad man gör nu. Det som
+     * skiljer är ytan: ett fel får en egen ruta i stället för att ligga som
+     * dämpad grå text bland allt annat. rev-ux 2.2.
+     */
+    private boolean trouble;
     /** Vad användaren bad strömbrytaren om, senast. */
     private boolean wantBubble;
     private String note = "Tryck på Tala och diktera. Du läser texten och väljer själv var den skickas.";
@@ -125,7 +145,7 @@ public class Home extends Activity {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE,
                 WindowManager.LayoutParams.FLAG_SECURE);
 
-        LinearLayout page = new LinearLayout(this);
+        page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
         page.setBackgroundColor(BG);
         page.setPadding(dp(Look.SIDE), dp(Look.PAGE_TOP),
@@ -311,10 +331,17 @@ public class Home extends Activity {
             @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
             @Override public void afterTextChanged(Editable s) { render(); }
         });
-        LinearLayout.LayoutParams field = row(dp(Look.GAP_L), dp(Look.GAP_L));
+        LinearLayout.LayoutParams field = row(dp(Look.GAP_L), dp(Look.GAP_S));
         field.height = 0;
         field.weight = 1;
         page.addView(draft, field);
+
+        empty = new TextView(this);
+        empty.setText(EMPTY_VALUE);
+        empty.setTextColor(OFF);
+        empty.setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.TYPE_CAPTION);
+        empty.setLineSpacing(0, 1.25f);
+        page.addView(empty, row(0, dp(Look.GAP_S)));
 
         mic = new Button(this);
         mic.setAllCaps(false);
@@ -358,10 +385,28 @@ public class Home extends Activity {
 
         page.addView(actions, row(0, 0));
 
-        setContentView(page);
+        // Roten finns för delningsarket: sidan ska kunna sjunka och mörkna
+        // bakom det, och en mörkläggning behöver ett lager att ligga i.
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(BG);
+        root.addView(page, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+
+        shade = new View(this);
+        shade.setBackgroundColor(Look.BLACKOUT);
+        shade.setAlpha(0f);
+        shade.setClickable(false);
+        shade.setFocusable(false);
+        shade.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        root.addView(shade, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+
+        setContentView(root);
 
         if (!Speech.available(this)) {
-            note = Notices.NO_SERVICE;
+            problem(Notices.NO_SERVICE);
         }
         render();
 
@@ -397,20 +442,20 @@ public class Home extends Activity {
         if (!bubble.isChecked()) {
             Bubble.stop(this);
             wantBubble = false;
-            note = "Bubblan är stängd. Slå på den igen när du vill ha den framme.";
+            say("Bubblan är stängd. Slå på den igen när du vill ha den framme.");
             render();
             return;
         }
         if (!granted()) {
             wantBubble = false;
-            note = "Bubblan behöver mikrofonen. Välj Tillåt i rutan som visas.";
+            say("Bubblan behöver mikrofonen. Välj Tillåt i rutan som visas.");
             render();
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION);
             return;
         }
         if (!Bubble.mayShow(this)) {
             wantBubble = false;
-            note = "Bubblan får inte visas över andra appar än. Guiden visar var det slås på.";
+            say("Bubblan får inte visas över andra appar än. Guiden visar var det slås på.");
             render();
             openGuide();
             return;
@@ -427,10 +472,10 @@ public class Home extends Activity {
         }
         Bubble.start(this);
         wantBubble = true;
-        note = Writer.enabled(this)
+        say(Writer.enabled(this)
                 ? "Bubblan ligger framme. Lämna appen, tryck på den och tala."
                 : "Bubblan ligger framme. Slå på tillgängligheten i guiden för att texten "
-                + "ska hamna direkt i fältet.";
+                + "ska hamna direkt i fältet.");
         render();
     }
 
@@ -466,6 +511,24 @@ public class Home extends Activity {
         if (!text.contentEquals(view.getText())) view.setText(text);
     }
 
+    /**
+     * Beskedet i statusraden.
+     *
+     * Raden bar förut allt på samma yta: att mikrofonen är på, att texten är
+     * klar, och att taltjänsten inte nådde nätet. Nu skiljs upplysning och
+     * fel, och det är ytan som skiljer dem. Texten är densamma som förut.
+     */
+    private void say(String text) {
+        note = text;
+        trouble = false;
+    }
+
+    /** Samma rad, men något gick fel. rev-ux 2.2. */
+    private void problem(String text) {
+        note = text;
+        trouble = true;
+    }
+
     /** Allt som syns härleds ur läget, så att knapparna aldrig ljuger. */
     private void render() {
         boolean hasText = draft.getText().toString().trim().length() > 0;
@@ -473,6 +536,19 @@ public class Home extends Activity {
 
         write(status, note);
         spin.setVisibility(working && !listening ? View.VISIBLE : View.GONE);
+
+        // Felytan. Samma mening som förut, på en yta som syns: gul text i en
+        // gul ram mot en nästan svart platta. Uppmätt 11,9:1.
+        status.setTextColor(trouble ? WARN : DIM);
+        status.setBackground(trouble
+                ? box(Look.WARN_FILL, WARN, dp(Look.RADIUS_SMALL))
+                : null);
+        int pad = trouble ? dp(Look.GAP_SM) : 0;
+        status.setPadding(pad, pad, pad, pad);
+
+        // Tomt läge, rev-ux 2.2. Raden förklarar värdet och går så fort det
+        // finns något att läsa i stället.
+        empty.setVisibility(hasText ? View.GONE : View.VISIBLE);
 
         // Varningen namnger det som faktiskt fattas, i stället för att säga
         // samma sak vad det än är.
@@ -542,7 +618,7 @@ public class Home extends Activity {
             return;
         }
         if (working) {
-            note = "Texten tolkas. Vänta ett ögonblick.";
+            say("Texten tolkas. Vänta ett ögonblick.");
             render();
             return;
         }
@@ -552,7 +628,7 @@ public class Home extends Activity {
             return;
         }
         if (!granted()) {
-            note = "Mikrofonen behövs för att diktera. Välj Tillåt i rutan som visas.";
+            say("Mikrofonen behövs för att diktera. Välj Tillåt i rutan som visas.");
             render();
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION);
             return;
@@ -572,8 +648,8 @@ public class Home extends Activity {
         } catch (RuntimeException missing) {
             // Tillverkarnas skal har inte alla rutor. Guiden gör samma sak i
             // open(): hellre ett besked om var inställningen ligger.
-            note = "Telefonen öppnade inte inställningarna. Slå på mikrofonen för "
-                    + "Tap&Talk under Appar i telefonens inställningar.";
+            problem("Telefonen öppnade inte inställningarna. Slå på mikrofonen för "
+                    + "Tap&Talk under Appar i telefonens inställningar.");
             render();
         }
     }
@@ -590,9 +666,9 @@ public class Home extends Activity {
         // Visas rutan inte längre är mikrofonen avslagen för appen, och då är
         // systeminställningarna enda vägen vidare.
         micBlocked = !shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO);
-        note = micBlocked
+        problem(micBlocked
                 ? "Mikrofonen är avstängd för Tap&Talk. Tryck på Tillåt mikrofon för att öppna inställningarna."
-                : "Utan mikrofon kan appen inte diktera. Tryck på Tala igen och välj Tillåt.";
+                : "Utan mikrofon kan appen inte diktera. Tryck på Tala igen och välj Tillåt.");
         render();
     }
 
@@ -601,7 +677,7 @@ public class Home extends Activity {
         // Bubblan eller rösttangentbordet kan hålla mikrofonen. Hellre ett
         // besked om var den är än ett upptaget-fel från taltjänsten.
         if (!Mic.take(this)) {
-            note = Notices.BUSY_ELSEWHERE;
+            problem(Notices.BUSY_ELSEWHERE);
             render();
             return;
         }
@@ -611,7 +687,7 @@ public class Home extends Activity {
                 // mikrofonen låst för bubblan och tangentbordet i sjuttio
                 // sekunder, utan att någon lyssnar.
                 Mic.release(this);
-                note = Notices.NO_SERVICE;
+                problem(Notices.NO_SERVICE);
                 render();
                 return;
             }
@@ -622,7 +698,7 @@ public class Home extends Activity {
                 // att skapa. Spärren är tagen och måste tillbaka.
                 speech = null;
                 Mic.release(this);
-                note = Notices.failure(SpeechRecognizer.ERROR_CLIENT, Notices.TALK);
+                problem(Notices.failure(SpeechRecognizer.ERROR_CLIENT, Notices.TALK));
                 render();
                 return;
             }
@@ -635,7 +711,7 @@ public class Home extends Activity {
 
         listening = true;
         working = true;
-        note = "Mikrofonen är på. Tala svenska och tryck på Klar när du är färdig.";
+        say("Mikrofonen är på. Tala svenska och tryck på Klar när du är färdig.");
         render();
         try {
             speech.startListening(ask);
@@ -645,7 +721,7 @@ public class Home extends Activity {
             closeRound();
             speech.destroy();
             speech = null;
-            note = Notices.failure(SpeechRecognizer.ERROR_CLIENT, Notices.TALK);
+            problem(Notices.failure(SpeechRecognizer.ERROR_CLIENT, Notices.TALK));
             render();
         }
     }
@@ -669,7 +745,7 @@ public class Home extends Activity {
             speech.setRecognitionListener(new Ears());
             listening = true;
             working = true;
-            note = "Mikrofonen är på. Tala svenska och tryck på Klar när du är färdig.";
+            say("Mikrofonen är på. Tala svenska och tryck på Klar när du är färdig.");
             render();
             speech.startListening(Speech.request(getPackageName()));
             return true;
@@ -693,7 +769,7 @@ public class Home extends Activity {
     private void stopListening() {
         if (!listening) return;
         listening = false;
-        note = "Tolkar det du sa …";
+        say("Tolkar det du sa …");
         render();
         if (speech != null) speech.stopListening();
         hand.removeCallbacks(giveUp);
@@ -713,7 +789,7 @@ public class Home extends Activity {
     @Override protected void onStop() {
         super.onStop();
         if (listening) {
-            note = "Mikrofonen stängdes när du lämnade appen. Tryck på Tala för att fortsätta.";
+            say("Mikrofonen stängdes när du lämnade appen. Tryck på Tala för att fortsätta.");
         }
         // Omgången är över vad som än pågick, och mikrofonen ska inte ligga
         // tagen för de andra ytorna när skärmen inte finns.
@@ -727,14 +803,17 @@ public class Home extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        // Delningsarket kan ha stängts, eller delningen gjorts klar. Sidan
+        // ska vara sig själv igen när den syns.
+        recede(false);
         if (granted()) micBlocked = false;
         // Taltjänsten kan ha kommit eller försvunnit medan appen låg undan —
         // nätet, eller en rösttjänst som avinstallerats. Hellre ett besked i
         // förväg än ett fel efter att användaren talat färdigt.
         if (!Speech.available(this)) {
-            note = Notices.NO_SERVICE;
+            problem(Notices.NO_SERVICE);
         } else if (Notices.NO_SERVICE.equals(note)) {
-            note = "Tryck på Tala och diktera. Du läser texten och väljer själv var den skickas.";
+            say("Tryck på Tala och diktera. Du läser texten och väljer själv var den skickas.");
         }
         // Bubblan kan ha stängts från sin egen notis medan appen låg undan.
         wantBubble = Bubble.running();
@@ -754,7 +833,7 @@ public class Home extends Activity {
     /** Lyssnaren fyller fältet löpande och lämnar sista tolkningen som text. */
     private final class Ears implements RecognitionListener {
         @Override public void onReadyForSpeech(Bundle params) {
-            note = "Tala nu. Tryck på Klar när du är färdig.";
+            say("Tala nu. Tryck på Klar när du är färdig.");
             render();
         }
         @Override public void onBeginningOfSpeech() { }
@@ -763,7 +842,7 @@ public class Home extends Activity {
         @Override public void onEndOfSpeech() {
             if (listening) {
                 listening = false;
-                note = "Tolkar det du sa …";
+                say("Tolkar det du sa …");
                 render();
                 // Talet är slut, tolkningen inte. Omgången hålls öppen tills
                 // svaret kommer, eller tills tiden går ut.
@@ -779,7 +858,7 @@ public class Home extends Activity {
             if (!working) return;
             heard(results, true);
             closeRound();
-            note = "Läs igenom texten, rätta den om du vill, och tryck på Skicka.";
+            say("Läs igenom texten, rätta den om du vill, och tryck på Skicka.");
             render();
         }
         @Override public void onError(int code) {
@@ -793,7 +872,7 @@ public class Home extends Activity {
             // Hann något höras står det kvar i fältet, och då är det inte
             // sant att inget uppfattades. Regeln bor i Notices.afterFailure.
             if (code == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) micBlocked = !granted();
-            note = Notices.afterFailure(code, heardThisRound(), Notices.TALK);
+            problem(Notices.afterFailure(code, heardThisRound(), Notices.TALK));
             render();
         }
         @Override public void onEvent(int type, Bundle params) { }
@@ -817,7 +896,7 @@ public class Home extends Activity {
         Haptik.fire(clear, Haptik.PRESS);
         draft.setText("");
         base = "";
-        note = "Fältet är tomt. Tryck på Tala och diktera igen.";
+        say("Fältet är tomt. Tryck på Tala och diktera igen.");
         render();
     }
 
@@ -832,6 +911,34 @@ public class Home extends Activity {
         out.setType("text/plain");
         out.putExtra(Intent.EXTRA_TEXT, text);
         out.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+        recede(true);
         startActivity(Intent.createChooser(out, "Skicka texten"));
     }
+
+    /**
+     * Sidan bakom delningsarket, rev-ux 4.1.
+     *
+     * Delningsrutan är systemets eget ark och ligger över appen. Utan det här
+     * låg hemskärmen kvar i full storlek och full styrka bakom den, som om
+     * ingenting hänt. Måtten är samma som på iOS: 0,94 och 0,45.
+     *
+     * Vid reducerad rörelse krymper sidan inte. Då är mörkläggningen kvar och
+     * ingenting flyttar sig.
+     */
+    private void recede(boolean behind) {
+        if (page == null || shade == null) return;
+        long time = Motion.travel(this, Motion.STATE);
+        boolean still = Motion.paused(this);
+        float to = behind && !still ? Motion.RECEDE : 1f;
+        page.animate().cancel();
+        page.animate().scaleX(to).scaleY(to).setDuration(time).start();
+        shade.animate().cancel();
+        shade.animate().alpha(behind ? Motion.RECEDE_DIM : 0f)
+                .setDuration(time).start();
+    }
+
+    /** Raden under fältet när det är tomt. */
+    private static final String EMPTY_VALUE =
+            "Inget skrivet än. Texten stannar i telefonen tills du själv "
+            + "väljer var den skickas.";
 }

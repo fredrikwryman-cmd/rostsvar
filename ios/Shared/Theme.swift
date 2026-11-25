@@ -122,6 +122,10 @@ enum Metric {
     static let boardMin: CGFloat = 296
     static let boardMax: CGFloat = 430
 
+    /// Ikonen som byts börjar på 60 procents storlek och växer till full.
+    /// rev-ux 5.4.
+    static let iconFrom: CGFloat = 0.6
+
     /// Avdelare och kanter som inte bär en komponentgräns.
     static let hairline: CGFloat = 1
     /// Kanten runt kort, fält och ringar. Bär gränsen, därför tjockare.

@@ -33,6 +33,13 @@ struct HomeScreen: View {
     /// till dikteringen svarat, så att det inte skrivs över av svaret.
     @State private var leftWhileListening = false
 
+    /// Sant när beskedet i ingressen är ett fel och inte en upplysning.
+    ///
+    /// Texten är densamma antingen vägen: den kommer ur `Notice` och säger
+    /// redan vad som hände, vad det betyder och vad man gör nu. Det som
+    /// skiljer är ytan. rev-ux 2.2.
+    @State private var failed = false
+
     @State private var showGuide = false
     @State private var showAbout = false
     @State private var showShare = false
@@ -99,11 +106,16 @@ struct HomeScreen: View {
                         header.padding(.top, Metric.gapXS)
                         ingress.padding(.top, Metric.gapML)
                         field.padding(.top, Metric.gapL)
+                        if !state.hasText {
+                            emptyHint.padding(.top, Metric.gapS)
+                                .transition(.opacity)
+                        }
                         micBlock.padding(.top, Metric.gapXXL)
                         actions.padding(.top, Metric.gapL)
                             .padding(.bottom, Metric.gapSM)
                     }
                     .padding(.horizontal, Metric.side)
+                    .animation(fade, value: state.hasText)
                     // Vid vanliga textstorlekar är minimihöjden hela skärmen.
                     // Då står sidan still och ser ut precis som förut: fältet
                     // tar det som blir över, foten står kvar längst ner. Ställer
@@ -121,6 +133,11 @@ struct HomeScreen: View {
             .overlay(alignment: .top) { topBar }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Delningsrutan är systemets eget ark. Sidan under är appens, och
+        // den sjunker och mörknar medan arket ligger över. rev-ux 4.1.
+        // Bakgrunden ligger utanför: det är sidan som sjunker, inte ytan
+        // den ligger på.
+        .trRecede(showShare)
         .background(TR.bg.ignoresSafeArea())
         // Fotografiet till app switchern tas under övergången, alltså redan
         // vid inactive. Ett ställe, för hela skärmen.
@@ -287,11 +304,42 @@ struct HomeScreen: View {
     private var ingress: some View {
         Text(note)
             .trFont(TypeScale.body)
-            .foregroundStyle(TR.muted)
+            .foregroundStyle(failed ? TR.warn : TR.muted)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
+            // Felytan, rev-ux 2.2. Raden bar förut allt på samma dämpade
+            // grå: att mikrofonen är på, att texten är klar, och att
+            // taltjänsten inte nådde nätet. Gick något fel får raden en egen
+            // ruta, så att det syns utan att man läser. Samma yta som
+            // varningsrutan på Android, och samma två värden i paletten.
+            .padding(failed ? Metric.gapSM : 0)
+            .background {
+                if failed {
+                    RoundedRectangle(cornerRadius: Metric.noteRadius)
+                        .fill(TR.warnFill)
+                        .overlay(RoundedRectangle(cornerRadius: Metric.noteRadius)
+                            .strokeBorder(TR.warn, lineWidth: Metric.hairline))
+                }
+            }
+            .animation(fade, value: failed)
             .accessibilityAddTraits(.updatesFrequently)
     }
+
+    /// Tomt läge, rev-ux 2.2: raden under fältet som säger vad man får av
+    /// att trycka på Tala. Den försvinner så snart det finns text — då är
+    /// det texten man ska läsa, inte en förklaring av varför den finns.
+    private var emptyHint: some View {
+        Text(Self.emptyValue)
+            .trFont(TypeScale.footnote)
+            .foregroundStyle(TR.faint)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Samma mening som Androids `EMPTY_VALUE`.
+    private static let emptyValue =
+        "Inget skrivet än. Texten stannar i telefonen tills du själv väljer "
+        + "var den skickas."
 
     // MARK: - Textfältet, §4.3
 
@@ -423,7 +471,9 @@ struct HomeScreen: View {
                     .foregroundStyle(chip.ink)
             }
             Spacer(minLength: Metric.gapS)
-            Text("\(state.draft.count) tecken")
+            // Siffran rullar en siffra i taget, rev-ux 4.2 A10. Förut byttes
+            // hela raden: 99 → 100 ritade om också nian som blev en nolla.
+            TRRoll(value: state.draft.count, unit: "tecken")
                 .trFont(TypeScale.counter)
                 .foregroundStyle(TR.faint)
         }
@@ -566,7 +616,7 @@ struct HomeScreen: View {
     private var clearButton: some View {
         Button {
             state.clear()
-            note = "Fältet är tomt. Tryck på Tala och diktera igen."
+            say("Fältet är tomt. Tryck på Tala och diktera igen.")
         } label: {
             let ink = state.canClear ? TR.text : TR.disabled
             HStack(spacing: Metric.gapS) {
@@ -592,7 +642,7 @@ struct HomeScreen: View {
         } label: {
             let ink = state.canSend ? TR.onGreen : TR.disabled
             HStack(spacing: Metric.gapS) {
-                TRIcon.plane(Metric.actionIcon, color: ink)
+                sendIcon(ink)
                 Text("Skicka").trFont(TypeScale.button).foregroundStyle(ink)
             }
             .frame(maxWidth: .infinity)
@@ -607,6 +657,39 @@ struct HomeScreen: View {
         .accessibilityLabel("Skicka texten vidare")
     }
 
+    /// Ikonen på Skicka, rev-ux 5.4.
+    ///
+    /// Tomt fält: pappersplanet, som säger vad knappen gör. Finns det text
+    /// blir det en pil, som säger att det finns något att skicka nu. Bytet
+    /// är en crossfade med scale 0,6 → 1 på 160 ms, och vid reducerad
+    /// rörelse bara crossfaden.
+    ///
+    /// Avsteg från ändringslistan, uppmätt: där står pilen i `#1CF038`, men
+    /// knappen är sedan punkt 10 skärmens enda gröna primärknapp och fylld
+    /// med just den färgen. En pil i #1CF038 på #1CF038 syns inte. Det
+    /// gröna bärs därför av ytan och pilen av `onGreen`, 15,8:1 mot fyllningen.
+    @ViewBuilder private func sendIcon(_ ink: Color) -> some View {
+        ZStack {
+            if state.hasText {
+                TRIcon.arrow(Metric.actionIcon, color: ink)
+                    .transition(iconSwap)
+            } else {
+                TRIcon.plane(Metric.actionIcon, color: ink)
+                    .transition(iconSwap)
+            }
+        }
+        .frame(width: Metric.actionIcon, height: Metric.actionIcon)
+        .animation(.easeInOut(duration: Move.swap), value: state.hasText)
+    }
+
+    /// Scale plus crossfade, eller bara crossfade när rörelse ska vara
+    /// reducerad. Skalning är rörelse, och den tas bort; bytet står kvar.
+    private var iconSwap: AnyTransition {
+        reduceMotion
+            ? .opacity
+            : .scale(scale: Metric.iconFrom).combined(with: .opacity)
+    }
+
     // MARK: - Dikteringen
 
     private func micTapped() {
@@ -619,7 +702,7 @@ struct HomeScreen: View {
         }
         guard ears.isAvailable else {
             Haptics.fire(.warning)
-            note = Notice.unavailable
+            problem(Notice.unavailable)
             return
         }
 
@@ -627,7 +710,7 @@ struct HomeScreen: View {
         let id = UUID()
         generation = id
         state.ask()
-        note = "Kontrollerar mikrofon och taligenkänning …"
+        say("Kontrollerar mikrofon och taligenkänning …")
         ears.authorize { refused in
             guard generation == id else { return }
             guard let refused else {
@@ -640,9 +723,9 @@ struct HomeScreen: View {
             Haptics.fire(.warning)
             micBlocked = Dictation.permissionRefused
             state.rest()
-            note = micBlocked
+            problem(micBlocked
                 ? "Mikrofonen är avstängd för Tap&Talk. Tryck på Tillåt mikrofon för att öppna inställningarna."
-                : refused
+                : refused)
         }
     }
 
@@ -671,26 +754,42 @@ struct HomeScreen: View {
                     settle("Läs igenom texten, rätta den om du vill, och tryck på Skicka.")
                 } else {
                     Haptics.fire(.warning)
-                    settle(why)
+                    settle(why, failed: true)
                 }
             }
         })
         if let refused {
             Haptics.fire(.warning)
             state.rest()
-            note = refused
+            problem(refused)
             return
         }
         state.beginRecording()
-        note = "Mikrofonen är på. Tala svenska och tryck på Klar när du är färdig."
+        say("Mikrofonen är på. Tala svenska och tryck på Klar när du är färdig.")
     }
 
     /// Svarets besked, med raden om att appen lämnades först när det hände.
     /// Dikteringens eget svar får aldrig radera den upplysningen.
-    private func settle(_ message: String) {
-        guard leftWhileListening else { note = message; return }
+    private func settle(_ message: String, failed bad: Bool = false) {
+        guard leftWhileListening else {
+            if bad { problem(message) } else { say(message) }
+            return
+        }
         leftWhileListening = false
-        note = "Mikrofonen stängdes när du lämnade appen. " + message
+        let whole = "Mikrofonen stängdes när du lämnade appen. " + message
+        if bad { problem(whole) } else { say(whole) }
+    }
+
+    /// Beskedet i ingressen. Allt som inte är ett fel går här.
+    private func say(_ message: String) {
+        note = message
+        failed = false
+    }
+
+    /// Samma rad, men något gick fel. Då får den en egen yta. rev-ux 2.2.
+    private func problem(_ message: String) {
+        note = message
+        failed = true
     }
 
     /// Användaren är klar. Dikteringen avslutar ljudet själv och svarar genom
@@ -699,7 +798,7 @@ struct HomeScreen: View {
         guard state.isRecording else { return }
         Haptics.fire(.recordStop)
         state.finishRecording()
-        note = "Tolkar det du sa …"
+        say("Tolkar det du sa …")
         ears.finish()
     }
 
@@ -711,9 +810,9 @@ struct HomeScreen: View {
     private func checkService() {
         guard state.phase == .idle else { return }
         if !ears.isAvailable {
-            note = Notice.unavailable
+            problem(Notice.unavailable)
         } else if note == Notice.unavailable {
-            note = "Tryck på Tala och diktera. Du läser texten och väljer själv var den skickas."
+            say("Tryck på Tala och diktera. Du läser texten och väljer själv var den skickas.")
         }
     }
 
@@ -731,7 +830,7 @@ struct HomeScreen: View {
         guard state.isRecording else { return }
         state.finishRecording()
         leftWhileListening = true
-        note = "Mikrofonen stängdes när du lämnade appen. Texten står kvar."
+        say("Mikrofonen stängdes när du lämnade appen. Texten står kvar.")
         ears.finish()
     }
 

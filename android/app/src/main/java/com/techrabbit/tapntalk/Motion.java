@@ -28,6 +28,10 @@ final class Motion {
      * hoppar, och ett hopp är också rörelse.
      */
     static final long CROSSFADE = 160L;
+    /** Sidan bakom ett ark. Samma tal som `Move.recedeScale` på iOS. */
+    static final float RECEDE = 0.94f;
+    /** Hur mycket mörkare den blir. Samma tal som `Move.recedeDim`. */
+    static final float RECEDE_DIM = 0.45f;
 
     /** Lägesbytets vanliga längd, 200 ms. */
     static final long STATE = 200L;

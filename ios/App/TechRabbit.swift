@@ -33,6 +33,8 @@ enum TR {
     static let dimDot = hex(Palette.dimDot)
     /// Linjen längs det gröna bandets kant. §5.
     static let bandEdge = hex(Palette.bandEdge)
+    static let warn = hex(Palette.warn)
+    static let warnFill = hex(Palette.warnFill)
 
     /// Fältets yta är card på 92 % opacitet. §2.
     static var fieldFill: Color { card.opacity(0.92) }
@@ -296,6 +298,88 @@ struct TRSheet<Content: View>: View {
     }
 }
 
+// MARK: - Levande värden, rev-ux 4.2 A10
+
+/// Ett tal där bara de siffror som ändras rör sig.
+///
+/// Teckenräknaren bytte förut hela raden på en gång: 99 → 100 ritade om
+/// allt, också nian som blev en nolla på samma plats. Här har varje position
+/// sin egen identitet, och identiteten är siffran. Byts en siffra rullar den
+/// ut uppåt och nästa in underifrån; står den still rör den sig inte alls.
+///
+/// Med reducerad rörelse byts rullningen mot en crossfade. Siffran byts
+/// fortfarande position för position — det är rörelsen som tas bort, inte
+/// uppdelningen.
+struct TRRoll: View {
+    let value: Int
+    /// Ordet efter talet. Står utanför rullningen: det ändras inte.
+    let unit: String
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var digits: [Character] { Array(String(value)) }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(digits.enumerated()), id: \.offset) { place in
+                Text(String(place.element))
+                    // Identiteten är siffran, inte positionen. Byts den
+                    // ersätts vyn, och först då finns det något att animera.
+                    .id(place.element)
+                    .transition(roll)
+            }
+            Text(" " + unit)
+        }
+        // Talet är siffror på en rad, och ska inte läsas en siffra i taget.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(value) \(unit)")
+        .animation(Move.change(reduced: reduceMotion), value: value)
+    }
+
+    private var roll: AnyTransition {
+        if reduceMotion { return .opacity }
+        return .asymmetric(
+            insertion: .move(edge: .bottom).combined(with: .opacity),
+            removal: .move(edge: .top).combined(with: .opacity))
+    }
+}
+
+// MARK: - Sidan bakom ett ark, rev-ux 4.1
+
+/// Sidan sjunker och mörknar när ett ark ligger över den.
+///
+/// Systemets delningsruta är ett eget ark som appen inte ritar, men sidan
+/// under är appens. Utan det här låg hemskärmen kvar i full storlek och full
+/// styrka bakom rutan, som om ingenting hänt; med det syns att arket ligger
+/// ovanpå något.
+///
+/// Mörkläggningen tar aldrig emot ett tryck: arket ligger över, och när det
+/// stängs ska skärmen vara densamma som förut.
+struct TRRecede: ViewModifier {
+    let behind: Bool
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(behind && !reduceMotion ? Move.recedeScale : 1)
+            .overlay {
+                Color.black
+                    .opacity(behind ? Move.recedeDim : 0)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+            }
+            .animation(Move.travel(reduced: reduceMotion), value: behind)
+    }
+}
+
+extension View {
+    /// Lägger sidan bakom ett ark. `behind` är sant medan arket visas.
+    func trRecede(_ behind: Bool) -> some View {
+        modifier(TRRecede(behind: behind))
+    }
+}
+
 // MARK: - Scrollen, §4.3
 
 /// Hur långt sidan är scrollad, läst ur layouten och inte ur en tid.
@@ -544,6 +628,21 @@ enum TRIcon {
             p.addLine(to: CGPoint(x: 7, y: 20))
             p.addLine(to: CGPoint(x: 17, y: 20))
             p.addLine(to: CGPoint(x: 18, y: 7))
+        }
+        .stroke(color, style: stroke(size))
+        .frame(width: size, height: size)
+    }
+
+    /// Skicka-pilen, rev-ux 5.4. Pappersplanet säger vad knappen gör; pilen
+    /// säger att det finns något att skicka nu. Samma streckbredd och samma
+    /// 24-rutnät som de andra: "M12 20V5 M5 12l7-7 7 7".
+    static func arrow(_ size: CGFloat, color: Color) -> some View {
+        TRGlyph { p in
+            p.move(to: CGPoint(x: 12, y: 20))
+            p.addLine(to: CGPoint(x: 12, y: 5))
+            p.move(to: CGPoint(x: 5, y: 12))
+            p.addLine(to: CGPoint(x: 12, y: 5))
+            p.addLine(to: CGPoint(x: 19, y: 12))
         }
         .stroke(color, style: stroke(size))
         .frame(width: size, height: size)

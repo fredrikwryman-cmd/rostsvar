@@ -1,6 +1,7 @@
 package com.techrabbit.tapntalk;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.GradientDrawable;
@@ -285,7 +286,7 @@ public class VoiceKeys extends InputMethodService {
         key.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { erase(); }
         });
-        key.setOnTouchListener(new View.OnTouchListener() {
+        touch(key, new View.OnTouchListener() {
             @Override public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
@@ -314,6 +315,20 @@ public class VoiceKeys extends InputMethodService {
             }
         });
         return key;
+    }
+
+    /**
+     * Sätter en touch-lyssnare på en tangent som redan har en klicklyssnare.
+     *
+     * Lint räknar en touch-lyssnare utan performClick som otillgänglig
+     * (ClickableViewAccessibility). Här finns klickvägen: tangenten har en
+     * OnClickListener, och det är den TalkBack går igenom med ACTION_CLICK.
+     * Touch-lyssnaren sköter bara repetitionen vid långtryck. Undantaget
+     * står på ett ställe med skälet, i stället för utspritt över anropen.
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    private static void touch(View view, View.OnTouchListener listener) {
+        view.setOnTouchListener(listener);
     }
 
     private LinearLayout.LayoutParams weight(float weight, int height) {
