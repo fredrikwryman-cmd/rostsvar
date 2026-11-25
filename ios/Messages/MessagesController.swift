@@ -25,7 +25,13 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
     /// En rad som säger var huvudvägen går. Tillägget är genvägen i
     /// Meddelanden; tangentbordet gör samma sak i varje app.
     private let aside = UILabel()
+    /// Märket överst i kortet: vad det är man läser. rev-ux 5.3.
+    private let badge = UILabel()
     private let draft = UITextView()
+    /// Tiden nederst i kortet, dämpad, högerställd.
+    private let stamp = UILabel()
+    /// När utkastet kom. Nollas när fältet töms, sätts när det får text.
+    private var written: Date?
     private let mic = UIButton(type: .system)
     private let stop = UIButton(type: .system)
     private let send = UIButton(type: .system)
@@ -50,24 +56,39 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
         spin.color = Palette.ui(Palette.muted)
         spin.hidesWhenStopped = true
 
-        draft.font = .preferredFont(forTextStyle: .body)
+        // Märket, texten, tiden: innehållskortet ur rev-ux 5.3. Förut var
+        // utkastet ett fält med kant, utan att säga vad det var man läste.
+        // Formen är kortets nu, och fältet inuti är bara texten. Funktionen
+        // är densamma: utkastet går att rätta och skickas med Skicka.
+        badge.font = TypeScale.badge.uiFont()
+        badge.adjustsFontForContentSizeCategory = true
+        badge.textColor = Palette.ui(Palette.faint)
+        badge.text = Self.mark
+        // Fältet bär redan samma ord till skärmläsaren. Två gånger är en
+        // gång för mycket.
+        badge.isAccessibilityElement = false
+
+        draft.font = TypeScale.draft.uiFont()
         draft.adjustsFontForContentSizeCategory = true
         draft.isEditable = true
         draft.isSelectable = true
         draft.delegate = self
         draft.inputAccessoryView = dismissBar()
-        draft.backgroundColor = Palette.ui(Palette.card)
+        // Ytan, kanten och radien ligger på kortet. Fältet är texten.
+        draft.backgroundColor = .clear
         draft.textColor = Palette.ui(Palette.text)
         draft.tintColor = Palette.ui(Palette.green)
         draft.keyboardAppearance = .dark
-        // Samma form som fältet på startskärmen: radie 22, kant 1,5.
-        draft.layer.cornerRadius = Metric.cardRadius
-        draft.layer.borderWidth = Metric.edge
-        draft.layer.borderColor = Palette.ui(Palette.border).cgColor
-        draft.textContainerInset = UIEdgeInsets(top: 14, left: 12, bottom: 14, right: 12)
-        draft.accessibilityLabel = "Ditt utkast"
+        draft.textContainerInset = .zero
+        draft.textContainer.lineFragmentPadding = 0
+        draft.accessibilityLabel = Self.mark
         draft.accessibilityHint = "Går att rätta för hand när dikteringen är över."
         draft.heightAnchor.constraint(greaterThanOrEqualToConstant: Metric.draftMinHeight).isActive = true
+
+        stamp.font = TypeScale.counter.uiFont()
+        stamp.adjustsFontForContentSizeCategory = true
+        stamp.textColor = Palette.ui(Palette.faint)
+        stamp.textAlignment = .right
 
         paint(mic, prominent: false)
         paint(stop, prominent: false)
@@ -95,7 +116,21 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
         head.spacing = Metric.gapXS
         head.alignment = .center
 
-        let stack = UIStackView(arrangedSubviews: [head, draft, row, send, aside])
+        // Kortet: märket, texten, tiden. Måtten, radien och färgerna ur
+        // temat, samma som kortet på startskärmen.
+        let card = UIStackView(arrangedSubviews: [badge, draft, stamp])
+        card.axis = .vertical
+        card.spacing = Metric.gapS
+        card.isLayoutMarginsRelativeArrangement = true
+        card.directionalLayoutMargins = NSDirectionalEdgeInsets(
+            top: Metric.cardPad, leading: Metric.cardPad,
+            bottom: Metric.fieldBottom, trailing: Metric.cardPad)
+        card.backgroundColor = Palette.ui(Palette.card)
+        card.layer.cornerRadius = Metric.cardRadius
+        card.layer.borderWidth = Metric.edge
+        card.layer.borderColor = Palette.ui(Palette.border).cgColor
+
+        let stack = UIStackView(arrangedSubviews: [head, card, row, send, aside])
         stack.axis = .vertical
         stack.spacing = Metric.gapSM
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -169,6 +204,23 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
         // varje gång panelen ritas om medan användaren skriver.
         if draft.text != state.draft { draft.text = state.draft }
         draft.isEditable = state.canEdit
+        // Tiden i kortets fot: när utkastet kom. Den sätts en gång per
+        // utkast och nollas när fältet töms, så att den inte tickar vidare
+        // medan man rättar en bokstav.
+        if state.hasDraft {
+            if written == nil { written = Date() }
+        } else {
+            written = nil
+        }
+        if let written {
+            let time = Self.clock.string(from: written)
+            stamp.text = time
+            stamp.accessibilityLabel = "Dikterat klockan " + time
+            stamp.isHidden = false
+        } else {
+            stamp.text = ""
+            stamp.isHidden = true
+        }
         // Väntan ska synas: taltjänstens sista tolkning och överlämningen
         // till Meddelanden tar båda sekunder.
         let waiting = state.phase == .finishing || state.phase == .sending
@@ -180,6 +232,18 @@ final class MessagesController: MSMessagesAppViewController, UITextViewDelegate 
         stop.isEnabled = state.canCancel
         send.isEnabled = state.canSend && activeConversation != nil
     }
+
+    /// Märket i kortet. Samma ord som skärmläsaren får om fältet.
+    private static let mark = "Ditt utkast"
+
+    /// Klockan i kortets fot. Systemets eget format, så att tolv eller
+    /// tjugofyra timmar följer telefonen och inte oss.
+    private static let clock: DateFormatter = {
+        let shown = DateFormatter()
+        shown.dateStyle = .none
+        shown.timeStyle = .short
+        return shown
+    }()
 
     // MARK: - Meddelanden
 

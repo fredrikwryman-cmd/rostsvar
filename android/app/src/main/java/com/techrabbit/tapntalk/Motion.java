@@ -36,6 +36,20 @@ final class Motion {
     /** Lägesbytets vanliga längd, 200 ms. */
     static final long STATE = 200L;
 
+    /** Sidbytet, 320 ms. Samma tal som `Move.push` på iOS. */
+    static final long PUSH = 320L;
+    /**
+     * Hur mycket senare nästa rad kommer in, 35 ms. Samma tal som
+     * `Move.stagger`.
+     */
+    static final long STAGGER = 35L;
+    /**
+     * Vägen ut tar ungefär 70 procent av vägen in. rev-ux 4.1 punkt 5.
+     */
+    static long leaving(long normal) {
+        return normal * 7L / 10L;
+    }
+
     /**
      * Hur länge ett lägesbyte får ta på den här telefonen.
      *

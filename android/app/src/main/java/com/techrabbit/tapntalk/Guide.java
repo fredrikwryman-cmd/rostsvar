@@ -70,6 +70,8 @@ public class Guide extends Activity {
     private final LinearLayout[] rows = new LinearLayout[STEPS];
     private final TextView[] marks = new TextView[STEPS];
     private final TextView[] labels = new TextView[STEPS];
+    /** Kortet som bär steget. Glider ut och in när steget byts. */
+    private LinearLayout card;
     private TextView heading;
     private TextView body;
     private Button action;
@@ -90,6 +92,29 @@ public class Guide extends Activity {
     private boolean micBlocked;
     /** Tangentbordet öppnas en gång när provet visas, sedan får användaren råda. */
     private boolean opened;
+    /**
+     * Vilka steg som var avbockade när listan senast ritades.
+     *
+     * Checkarna uppdaterades förut tyst: man kom tillbaka från
+     * Inställningar och en ring hade blivit en bock utan att något hände.
+     * Nu jämförs läget mot det här, och bara den check som faktiskt slått
+     * om både vibrerar och växer fram. rev-ux 7.
+     */
+    private final boolean[] wasDone = new boolean[STEPS];
+    /** Falskt tills listan ritats en gång: första ritningen är ingen ändring. */
+    private boolean drawn;
+    /**
+     * Räknaren för stegbyten. Hinner man välja ett nytt steg medan det
+     * förra glider ut ska den gamla vägen in inte fullföljas.
+     */
+    private int turn;
+    /**
+     * Sant medan kortet glider. Då rör ingen annan dess innehåll: både
+     * {@code onResume} och {@code onWindowFocusChanged} ritar om när man
+     * kommer tillbaka från Inställningar, och utan den här släppte den andra
+     * in nya texten i kortet medan den gamla ännu gled ut.
+     */
+    private boolean sliding;
 
     // ----------------------------------------------------------------- läget
 
@@ -185,8 +210,7 @@ public class Guide extends Activity {
             rad.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) {
                     picked = true;
-                    step = which;
-                    render();
+                    go(which);
                 }
             });
 
@@ -208,7 +232,7 @@ public class Guide extends Activity {
             page.addView(rad, line(dp(Look.GAP_NUDGE), 0));
         }
 
-        LinearLayout card = new LinearLayout(this);
+        card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setBackground(Look.box(Look.FIELD, Look.BORDER, dp(Look.RADIUS_MIC), dp(Look.HAIRLINE)));
         card.setPadding(dp(Look.GAP_XL), dp(Look.GAP_XL), dp(Look.GAP_XL), dp(Look.GAP_XL));
@@ -325,8 +349,115 @@ public class Guide extends Activity {
         // provet står man kvar där även om något stängs av under tiden. Och
         // har användaren själv valt ett steg i listan rör sig ingenting.
         int next = firstUndone();
-        if (!picked && next > step) step = next;
-        render();
+        go(!picked && next > step ? next : step);
+    }
+
+    /**
+     * Byter steg, rev-ux 4.1.
+     *
+     * Steget bytte förut innehåll på plats: samma kort, ny text, ingenting
+     * som sa vilken väg man gick. Nu glider det som lämnas ut åt vänster och
+     * nästa in från höger, och bakåt åt andra hållet. Innehållet kommer in i
+     * ordning: rubriken först, sedan texten, knappen sist.
+     *
+     * Vid reducerad rörelse är hela bytet en toning på 160 ms: ingen
+     * förflyttning och ingen förskjutning mellan raderna.
+     */
+    private void go(int next) {
+        if (next == step) {
+            // Samma steg som redan visas. Då ska ingenting glida: det enda
+            // som kan ha ändrats är checkarna, och de ritas om nedan.
+            render();
+            return;
+        }
+        final boolean forward = next > step;
+        step = next;
+        final float wide = card == null ? 0f : card.getWidth();
+        if (card == null || wide <= 0f) {
+            // Första ritningen, innan kortet har en bredd att glida över.
+            render();
+            return;
+        }
+        if (Motion.paused(this)) {
+            Motion.crossfade(card, new Runnable() {
+                @Override public void run() { render(); }
+            });
+            return;
+        }
+        final int mine = ++turn;
+        final long out = Motion.leaving(Motion.PUSH);
+        sliding = true;
+        card.animate().cancel();
+        card.animate().translationX(forward ? -wide : wide).alpha(0f)
+                .setDuration(out).withEndAction(new Runnable() {
+            @Override public void run() {
+                if (mine != turn) return;
+                sliding = false;
+                render();
+                card.setTranslationX(forward ? wide : -wide);
+                card.animate().translationX(0f).alpha(1f)
+                        .setDuration(Motion.PUSH).start();
+                enter();
+            }
+        }).start();
+    }
+
+    /**
+     * Raderna i det nya steget tonar in efter varandra, 35 ms mellan varje:
+     * rubrik, text, notering, knapp. Knappen sist, eftersom den är det man
+     * ska göra när resten är läst.
+     */
+    private void enter() {
+        View[] order = {heading, body, aside, action};
+        for (int i = 0; i < order.length; i++) {
+            View row = order[i];
+            if (row == null) continue;
+            row.animate().cancel();
+            row.setAlpha(0f);
+            row.animate().alpha(1f).setDuration(Motion.STATE)
+                    .setStartDelay(i * Motion.STAGGER).start();
+        }
+    }
+
+    /**
+     * En check som slått om. Bocken växer fram ur sin egen mitt och handen
+     * får ett success. Bara den som ändrats, rev-ux 7.
+     */
+    private void tick(View mark) {
+        Haptik.fire(mark, Haptik.SUCCESS);
+        if (Motion.paused(this)) {
+            Motion.crossfade(mark, null);
+            return;
+        }
+        mark.animate().cancel();
+        mark.setScaleX(GROW_FROM);
+        mark.setScaleY(GROW_FROM);
+        mark.setAlpha(0f);
+        mark.animate().scaleX(1f).scaleY(1f).alpha(1f)
+                .setDuration(Motion.STATE).start();
+    }
+
+    /** Bocken börjar på 60 procent. Samma tal som `Metric.iconFrom` på iOS. */
+    private static final float GROW_FROM = 0.6f;
+
+    /**
+     * En halvfärdig glidning ska inte ligga kvar över en vända i bakgrunden.
+     * Kortet ställs tillbaka där det hör hemma, och fylls igen av nästa
+     * ritning.
+     */
+    @Override protected void onPause() {
+        super.onPause();
+        sliding = false;
+        if (card == null) return;
+        card.animate().cancel();
+        card.setTranslationX(0f);
+        card.setAlpha(1f);
+        View[] order = {heading, body, aside, action};
+        for (int i = 0; i < order.length; i++) {
+            if (order[i] == null) continue;
+            order[i].animate().cancel();
+            order[i].setAlpha(1f);
+        }
     }
 
     private void render() {
@@ -342,13 +473,33 @@ public class Guide extends Activity {
                     "Steg " + (i + 1) + " av " + STEPS + ", " + NAMES[i]
                     + ". " + lage + ". Tryck för att läsa steget.");
             rows[i].setSelected(i == step);
+
+            // Bara den check som faktiskt slått om animeras. De andra står
+            // still: fem bockar som hoppar säger inte vilken som ändrades.
+            if (klar != wasDone[i]) {
+                wasDone[i] = klar;
+                if (klar && drawn) tick(marks[i]);
+            }
         }
+        drawn = true;
 
         boolean testing = step == STEP_TEST;
         counter.setText(testing ? "Allt är påslaget. Prova att diktera."
                 : "Steg " + (step + 1) + " av " + STEPS);
         proof.setVisibility(testing ? View.VISIBLE : View.GONE);
 
+        if (!sliding) fill();
+        showReceipt();
+    }
+
+    /**
+     * Kortets innehåll för det steg man står på.
+     *
+     * Skilt från {@link #render()} för glidningens skull: listan och
+     * räknaren ska gå att rita om när som helst, men kortets text byts bara
+     * när det är ur bild.
+     */
+    private void fill() {
         switch (step) {
             case STEP_MIC:
                 heading.setText("Tillåt mikrofonen");
@@ -414,7 +565,6 @@ public class Guide extends Activity {
                         + "alla andra appar där du skriver.");
                 break;
         }
-        showReceipt();
     }
 
     /** Kvittot: fältet fick text, och det var vårt tangentbord som skrev. */
@@ -504,10 +654,10 @@ public class Guide extends Activity {
         if (micOk(this)) {
             micBlocked = false;
             picked = false;
-            step = firstUndone();
-        } else {
-            micBlocked = !shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO);
+            go(firstUndone());
+            return;
         }
+        micBlocked = !shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO);
         render();
     }
 
@@ -516,8 +666,7 @@ public class Guide extends Activity {
         super.onWindowFocusChanged(focus);
         if (!focus) return;
         int next = firstUndone();
-        if (!picked && next > step) step = next;
-        render();
+        go(!picked && next > step ? next : step);
         // Tangentbordet fälls upp en gång när provet nås, sedan råder
         // användaren. Det görs här, när fönstret verkligen har fokus.
         if (step == STEP_TEST && !opened) {

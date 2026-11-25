@@ -21,11 +21,17 @@ import UIKit
 struct Onboarding: View {
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Mikrofonen och taligenkänningen, det enda guiden kan läsa av.
-    @State private var micDone = false
+    ///
+    /// Läses av redan här och inte först i `onAppear`. Annars började guiden
+    /// alltid på nej, och en redan tillåten mikrofon såg ut att slå om i det
+    /// ögonblick guiden öppnades: bocken växte fram och handen fick ett
+    /// success för något användaren gjort för en vecka sedan.
+    @State private var micDone = Dictation.permitted
     /// Sant när iOS inte frågar igen. Då är Inställningar enda vägen.
-    @State private var micRefused = false
+    @State private var micRefused = !Dictation.permitted && Dictation.permissionRefused
     /// Texten användaren dikterar i provfältet.
     @State private var typed = ""
     /// Språket som tangentbordet i fältet rapporterar, när det rapporterar något.
@@ -147,9 +153,7 @@ struct Onboarding: View {
     ) -> some View {
         TRCard {
             HStack(alignment: .firstTextBaseline, spacing: Metric.gapS) {
-                Image(systemName: checked ? "checkmark.circle.fill" : "\(number).circle")
-                    .foregroundStyle(checked ? TR.green : TR.faint)
-                    .accessibilityHidden(true)
+                mark(number, checked: checked)
                 Text(title)
                     .trHeading()
                 Spacer(minLength: Metric.gapS)
@@ -167,11 +171,48 @@ struct Onboarding: View {
         }
     }
 
+    /// Märket framför ett steg: siffran, eller bocken när appen själv har
+    /// läst av att steget är gjort.
+    ///
+    /// Bocken byttes förut in rakt av. Nu växer den fram ur sin egen mitt,
+    /// från 60 procent, i par med success-haptiken i `reread`. Bara det
+    /// märke som slått om rör sig: de andra står kvar som de stod.
+    /// rev-ux 7.
+    @ViewBuilder private func mark(_ number: Int, checked: Bool) -> some View {
+        ZStack {
+            if checked {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(TR.green)
+                    .transition(grow)
+            } else {
+                Image(systemName: "\(number).circle")
+                    .foregroundStyle(TR.faint)
+                    .transition(grow)
+            }
+        }
+        .accessibilityHidden(true)
+        .animation(Move.travel(reduced: reduceMotion), value: checked)
+    }
+
+    /// Växer fram, eller bara tonar in när rörelse ska vara reducerad.
+    private var grow: AnyTransition {
+        reduceMotion
+            ? .opacity
+            : .scale(scale: Metric.iconFrom).combined(with: .opacity)
+    }
+
     // MARK: - Läget
 
+    /// Läses om varje gång appen kommer fram igen.
+    ///
+    /// Slår en check om här har användaren varit i Inställningar och kommit
+    /// tillbaka. Förut hände det tyst. Nu kvitteras det i handen också, en
+    /// gång, och bara när det verkligen ändrades. rev-ux 7.
     private func reread() {
+        let was = micDone
         micDone = Dictation.permitted
         micRefused = !micDone && Dictation.permissionRefused
+        if micDone && !was { Haptics.fire(.success) }
     }
 
     /// Frågar om mikrofon och taligenkänning. Dictation äger frågan, så

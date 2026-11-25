@@ -263,9 +263,21 @@ final class KeyboardController: UIInputViewController {
     ///
     /// Raden fanns men annonserades aldrig, så den som lyssnar tryckte på
     /// Tala och fick ingenting tillbaka — inte heller "Mikrofonen är låst".
+    ///
+    /// Bytet tonas, 160 ms. Förut hoppade raden: texten byttes rakt av, och
+    /// eftersom den får vara två rader kunde höjden byta i samma ruta.
+    /// rev-ux 4.2 A8. En crossfade är också formen vid reducerad rörelse,
+    /// så den behöver ingen egen gren.
     private func tell(_ text: String) {
         guard status.text != text else { return }
-        status.text = text
+        // Namnet `animations` står utskrivet: UIView.transition tar både
+        // animations och completion, och en namnlös klammer läser som ett
+        // gåtfullt första argument.
+        UIView.transition(with: status,
+                          duration: Move.swap,
+                          options: [.transitionCrossDissolve,
+                                    .allowUserInteraction],
+                          animations: { self.status.text = text })
         guard !text.isEmpty else { return }
         UIAccessibility.post(notification: .announcement, argument: text)
     }
@@ -274,6 +286,10 @@ final class KeyboardController: UIInputViewController {
 
     @objc private func letterTapped(_ sender: UIButton) {
         guard let text = sender.title(for: .normal) else { return }
+        // Tangenten är ett `key` ur kartan i Haptics: selection, samma som
+        // ett steg i en väljare. Tangentbordet hade ingen haptik alls, medan
+        // appens knappar har haft det sedan början. rev-ux 7.
+        Haptics.fire(.key)
         stopDictation()
         textDocumentProxy.insertText(text)
         // Ett enkelt skift gäller ett tecken. Låst skift ligger kvar.
@@ -284,21 +300,25 @@ final class KeyboardController: UIInputViewController {
     }
 
     @objc private func spaceTapped() {
+        Haptics.fire(.key)
         stopDictation()
         textDocumentProxy.insertText(" ")
     }
 
     @objc private func returnTapped() {
+        Haptics.fire(.key)
         stopDictation()
         textDocumentProxy.insertText("\n")
     }
 
     @objc private func eraseTapped() {
+        Haptics.fire(.key)
         stopDictation()
         textDocumentProxy.deleteBackward()
     }
 
     @objc private func shiftTapped() {
+        Haptics.fire(.key)
         if digits {
             extraPage.toggle()
         } else {
@@ -312,6 +332,7 @@ final class KeyboardController: UIInputViewController {
     }
 
     @objc private func digitsTapped() {
+        Haptics.fire(.key)
         digits.toggle()
         extraPage = false
         shift = .off
@@ -320,6 +341,7 @@ final class KeyboardController: UIInputViewController {
 
     /// Tillbaka till det tangentbord användaren hade innan.
     @objc private func backTapped() {
+        Haptics.fire(.key)
         stopDictation()
         advanceToNextInputMode()
     }
